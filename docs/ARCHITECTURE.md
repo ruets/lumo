@@ -111,24 +111,24 @@ Pure TypeScript, no dependency on the database or the framework, unit-tested. Mo
 
 REST JSON under `/api/v1`, Fastify + Zod schemas that generate validation, shared types and the OpenAPI spec.
 
-| Method and path                                                                                    | Role                                                                |
-| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `GET /me`                                                                                          | Profile, household, role, balances (personal and pot)               |
-| `GET /today?date=`                                                                                 | Items due that day with progress; Today screen                      |
-| `GET/POST /items`, `PATCH/DELETE /items/:id`                                                       | Habits and tasks                                                    |
-| `POST /items/:id/completions`                                                                      | Complete (optional `date`); returns the completion and the balances |
-| `DELETE /completions/:id`                                                                          | Undo                                                                |
-| `POST /completions/:id/approve`, `POST /completions/:id/reject`                                    | Adult approval                                                      |
-| `GET/POST /rewards`, `PATCH /rewards/:id`                                                          | Wishes                                                              |
-| `POST /rewards/:id/redemptions`                                                                    | Redeem                                                              |
-| `DELETE /redemptions/:id`                                                                          | Undo a redemption (refund)                                          |
-| `POST /transfers`                                                                                  | Personal → pot transfer                                             |
-| `GET /ledger?wallet=&cursor=`                                                                      | Paginated history                                                   |
-| `POST /ledger/adjustments`                                                                         | Manual adjustment (owner)                                           |
-| `GET /stats?from=&to=`                                                                             | Rates, streaks, heatmap                                             |
-| `GET /household`, `PATCH /members/:id`, `POST /household/invites`, `DELETE /household/invites/:id` | Household management (see below)                                    |
-| `POST /devices`                                                                                    | Push token                                                          |
-| `GET /events`                                                                                      | SSE stream of household changes                                     |
+| Method and path                                                                                                                               | Role                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `GET /me`                                                                                                                                     | Profile, household, role, balances (personal and pot)               |
+| `GET /today?date=`                                                                                                                            | Items due that day with progress; Today screen                      |
+| `GET/POST /items`, `PATCH/DELETE /items/:id`                                                                                                  | Habits and tasks                                                    |
+| `POST /items/:id/completions`                                                                                                                 | Complete (optional `date`); returns the completion and the balances |
+| `DELETE /completions/:id`                                                                                                                     | Undo                                                                |
+| `POST /completions/:id/approve`, `POST /completions/:id/reject`                                                                               | Adult approval                                                      |
+| `GET/POST /rewards`, `PATCH /rewards/:id`                                                                                                     | Wishes                                                              |
+| `POST /rewards/:id/redemptions`                                                                                                               | Redeem                                                              |
+| `DELETE /redemptions/:id`                                                                                                                     | Undo a redemption (refund)                                          |
+| `POST /transfers`                                                                                                                             | Personal → pot transfer                                             |
+| `GET /ledger?wallet=&cursor=`                                                                                                                 | Paginated history                                                   |
+| `POST /ledger/adjustments`                                                                                                                    | Manual adjustment (owner)                                           |
+| `GET /stats?from=&to=`                                                                                                                        | Rates, streaks, heatmap                                             |
+| `GET /household`, `PATCH /household`, `PATCH /members/:id`, `DELETE /members/:id`, `POST /household/invites`, `DELETE /household/invites/:id` | Household management (see below)                                    |
+| `POST /devices`                                                                                                                               | Push token                                                          |
+| `GET /events`                                                                                                                                 | SSE stream of household changes                                     |
 
 RFC 9457 errors (`application/problem+json`) with a stable `code`. Breaking changes go through `/api/v2`.
 
@@ -236,9 +236,13 @@ Reference mock-up: the "Lumo — app mock-up" canvas (dark theme, Unbounded and 
 
 **Undoing a wish redemption.** `DELETE /redemptions/{id}`: `redemptions.undone_at` (migration 0002) and an `undo` counter-entry of the exact amount paid, in the original wallet (personal or pot), in the same transaction. Same rights as undoing a completion (`redemption:undo`: yourself, the owner for everyone, an adult for a child). An undone redemption no longer counts toward the usage limit (`remaining` goes back up); a second undo returns 409 `already_undone`. In the history (Progress, web and mobile), each redemption that has not been refunded has an "Undo redemption" button with confirmation; it needs the network.
 
-**Household management.** `GET /household` returns the household settings and its members (display name, role, `canCreateItems`) to every member, plus the pending invitations to the owner only. `PATCH /members/:id` (owner only) changes a role and/or a child's permission to create items; the domain rule `assertRoleChange` keeps at least one owner (409 `last_owner`). `POST /household/invites` creates an invitation, whose token is shown once at creation; `DELETE /household/invites/:id` revokes a pending one. Joining: a link `https://<server>/?invite=<token>` opens the web join form; on mobile, "I have an invitation" on the sign-in screen takes the code (the owner shares it through the system share sheet). Both call `POST /auth/local/register`; with OIDC the invitation travels in `GET /auth/login?invite=`. The web page is `/household`, the mobile screen is reached from Settings. Removing a member and editing the household's own settings (name, time zone, week start, backdate window) are not done yet.
+**Household management.** `GET /household` returns the household settings and its members (display name, role, `canCreateItems`) to every member, plus the pending invitations to the owner only. `PATCH /members/:id` (owner only) changes a role and/or a child's permission to create items; the domain rule `assertRoleChange` keeps at least one owner (409 `last_owner`). `POST /household/invites` creates an invitation, whose token is shown once at creation; `DELETE /household/invites/:id` revokes a pending one. Joining: a link `https://<server>/?invite=<token>` opens the web join form; on mobile, "I have an invitation" on the sign-in screen takes the code (the owner shares it through the system share sheet). Both call `POST /auth/local/register`; with OIDC the invitation travels in `GET /auth/login?invite=`. The web page is `/household`, the mobile screen is reached from Settings.
 
-**Not done yet**: read-only PWA, Playwright and Maestro, removing a member, household settings, avatars, notifications, language stored on the user profile.
+`PATCH /household` (owner) edits the name, time zone, first day of the week (ISO 1–7) and backdate window (0–30 days); the time zone is validated against the IANA database. Changing it only affects days computed from then on: completions already recorded keep their `local_date`. `DELETE /members/:id` (owner) removes a member: never yourself (409 `cannot_remove_self`) and never the last owner (409 `last_owner`), both domain rules (`assertCanRemoveMember`). The member loses every way in (sessions, devices, credentials, memberships) and is unassigned from items and wishes, their pending approvals are rejected, but their history stays: completions, ledger entries and wallet are kept, and the user row remains so old entries still show a name. Erasing the credentials frees the username and means an OIDC member must be invited again to come back.
+
+Joining through Authentik: on web the join form's Authentik button carries the invitation (`/auth/login?invite=`); on mobile the code typed in the join form is sent with the code exchange (`invite` in `/auth/mobile/exchange`). The server side is covered by tests against a fake OIDC provider; it has not been tried against a real Authentik yet.
+
+**Not done yet**: read-only PWA, Playwright and Maestro, avatars, notifications, language stored on the user profile.
 
 ## Deployment
 

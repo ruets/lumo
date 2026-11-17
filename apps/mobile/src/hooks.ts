@@ -133,3 +133,14 @@ export const useUpdateMember = () =>
 	);
 export const useCreateInvite = () => useHouseholdWrite((role: "adult" | "child") => api.createInvite(role));
 export const useRevokeInvite = () => useHouseholdWrite((id: string) => api.revokeInvite(id));
+export const useRemoveMember = () => useHouseholdWrite((id: string) => api.removeMember(id));
+
+/** Household settings also feed `/me` (household name) and every date computation: refresh everything. */
+export function useUpdateHousehold() {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (input: Parameters<typeof api.updateHousehold>[0]) => api.updateHousehold(input),
+		onError: (err) => showToast(describeError(err)),
+		onSettled: () => void qc.invalidateQueries(),
+	});
+}

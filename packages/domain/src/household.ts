@@ -12,3 +12,21 @@ export function assertRoleChange(input: { currentRole: Role; newRole: Role; owne
 		throw new DomainError("last_owner", "A household needs at least one owner");
 	}
 }
+
+/**
+ * Removing a member: never yourself (leaving is a separate decision) and never the last owner.
+ * `ownerCount` is the number of owners before the removal.
+ */
+export function assertCanRemoveMember(input: {
+	actorId: string;
+	targetId: string;
+	targetRole: Role;
+	ownerCount: number;
+}): void {
+	if (input.actorId === input.targetId) {
+		throw new DomainError("cannot_remove_self", "You cannot remove yourself from the household");
+	}
+	if (input.targetRole === "owner" && input.ownerCount <= 1) {
+		throw new DomainError("last_owner", "A household needs at least one owner");
+	}
+}

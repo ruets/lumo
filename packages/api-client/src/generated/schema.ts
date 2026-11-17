@@ -52,7 +52,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Change the household name, time zone, first day of the week or backdate window (owner) */
+        patch: operations["patchApiV1Household"];
         trace?: never;
     };
     "/api/v1/members/{id}": {
@@ -65,7 +66,8 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /** Remove a member from the household, keeping their history (owner) */
+        delete: operations["deleteApiV1MembersId"];
         options?: never;
         head?: never;
         /** Change a member's role or permission to create items (owner) */
@@ -520,6 +522,115 @@ export interface operations {
                         }[];
                     };
                 };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    patchApiV1Household: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    timezone?: string;
+                    weekStart?: number;
+                    backdateDays?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        household: {
+                            id: string;
+                            name: string;
+                            timezone: string;
+                            weekStart: number;
+                            backdateDays: number;
+                        };
+                        members: {
+                            userId: string;
+                            displayName: string;
+                            /** @enum {string} */
+                            role: "owner" | "adult" | "child";
+                            canCreateItems: boolean;
+                        }[];
+                        invites: {
+                            id: string;
+                            /** @enum {string} */
+                            role: "owner" | "adult" | "child";
+                            expiresAt: string;
+                            createdAt: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1MembersId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Error (RFC 9457) with a stable `code` */
             default: {

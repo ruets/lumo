@@ -33,6 +33,7 @@ export type MeResponse = Response<"/api/v1/me", "get", 200>;
 export type HouseholdResponse = Response<"/api/v1/household", "get", 200>;
 export type Member = HouseholdResponse["members"][number];
 export type PendingInvite = HouseholdResponse["invites"][number];
+export type UpdateHouseholdInput = BodyOf<"/api/v1/household", "patch">;
 export type UpdateMemberInput = BodyOf<"/api/v1/members/{id}", "patch">;
 export type Item = Response<"/api/v1/items", "post", 201>;
 export type CreateItemInput = BodyOf<"/api/v1/items", "post">;
@@ -170,6 +171,8 @@ export function createClient(options: ClientOptions) {
 		getStats: (query: QueryOf<"/api/v1/stats", "get"> = {}) => request<StatsResponse>("GET", `/stats${qs(query)}`),
 		// --- Household
 		getHousehold: () => request<HouseholdResponse>("GET", "/household"),
+		updateHousehold: (input: UpdateHouseholdInput) => request<HouseholdResponse>("PATCH", "/household", input),
+		removeMember: (id: string) => request<void>("DELETE", `/members/${id}`),
 		updateMember: (id: string, input: UpdateMemberInput) => request<Member>("PATCH", `/members/${id}`, input),
 		createInvite: (role: "adult" | "child") =>
 			request<{ token: string; expiresAt: string }>("POST", "/household/invites", { role }),
@@ -193,8 +196,15 @@ export function createClient(options: ClientOptions) {
 		}) => request<TokenPair | { ok: true }>("POST", "/auth/local/register", input),
 		loginLocal: (input: { username: string; password: string; client: "web" | "mobile" }) =>
 			request<TokenPair | { ok: true }>("POST", "/auth/local/login", input),
-		exchangeMobile: (input: { code: string; codeVerifier: string; redirectUri: string; nonce: string }) =>
-			request<TokenPair>("POST", "/auth/mobile/exchange", input),
+		exchangeMobile: (input: {
+			code: string;
+			codeVerifier: string;
+			redirectUri: string;
+			nonce: string;
+			state?: string;
+			/** Invitation code, when the person is joining an existing household. */
+			invite?: string;
+		}) => request<TokenPair>("POST", "/auth/mobile/exchange", input),
 		refresh: (refreshToken: string) => request<TokenPair>("POST", "/auth/refresh", { refreshToken }),
 		logout: (refreshToken?: string) => request<void>("POST", "/auth/logout", refreshToken ? { refreshToken } : {}),
 	};
