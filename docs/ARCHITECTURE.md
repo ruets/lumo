@@ -192,7 +192,7 @@ Deux applis séparées (React pour le web, React Native/Expo pour le mobile). El
 | Données      | TanStack Query + client généré | TanStack Query, cache persisté                             |
 | Styles       | Tailwind v4 + tokens           | `StyleSheet` + tokens (NativeWind écarté, voir ci-dessous) |
 | Hors ligne   | PWA en lecture (à faire)       | File des validations rejouée avec `Idempotency-Key`        |
-| Distribution | Servi par l'API                | APK Android via EAS Build (iOS plus tard)                  |
+| Distribution | Servi par l'API                | APK Android construit par la CI (Gradle), iOS plus tard    |
 
 ### Implémentation (étape 3)
 
@@ -240,6 +240,9 @@ Maquette de référence : le canvas « Lumo — maquette de l'appli » (thème s
 - Migrations appliquées au démarrage de `app`, seul process qui écrit.
 - Logs JSON (pino), `/healthz`, `/readyz`, `/metrics` optionnel.
 - Images construites par la CI, scannées (Trivy), versionnées en SemVer.
+- **CI GitHub Actions** (`.github/workflows`) :
+  - `ci.yml` : lint, typecheck, tests (spec OpenAPI à jour et file hors ligne comprises), build ; puis l'image unique web + API, testée (le conteneur démarre, sert le web et répond à l'API) et scannée par Trivy ; puis publication sur `ghcr.io/<propriétaire>/<dépôt>` à chaque push sur `main` (`edge` et le SHA) et sur tag `vX.Y.Z` (SemVer et `latest`). Les pull requests ne publient jamais. Image `linux/amd64` seulement (le build ARM sous émulation est trop lent).
+  - `mobile.yml` : APK Android construit sur le runner (`expo prebuild` puis Gradle), sans compte Expo ni secret, signé avec la clé de debug d'Expo (suffisant pour l'installer sur ses propres téléphones). Disponible en artefact, et joint à la release GitHub sur tag. L'adresse du serveur étant choisie dans l'appli, un seul APK sert tous les foyers. `versionCode` = numéro d'exécution (`apps/mobile/app.config.ts`). EAS Build reste possible pour un jour publier sur un store.
 
 ## Qualité
 

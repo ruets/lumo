@@ -1,0 +1,79 @@
+name: Mobile
+
+# Builds the Android APK on the runner (expo prebuild + Gradle), with no Expo account or secret.
+# The APK is signed with Expo's debug key, which is enough to install it on your own phones.
+# The server address is chosen in the app at first launch, so one APK works for every household.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+    paths:
+      - "apps/mobile/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/mobile.yml"
+  pull_request:
+    paths:
+      - "apps/mobile/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/mobile.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # attach the APK to the GitHub release on tags
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: pnpm install --frozen-lockfile
+      # The app imports the workspace packages from their built output.
+      - run: pnpm turbo run build --filter='./packages/*'
+      - run: pnpm --filter @lumo/mobile test
+      - run: pnpm --filter @lumo/mobile typecheck
+      - name: Generate the native Android project
+        working-directory: apps/mobile
+        run: pnpm exec expo prebuild --platform android --no-install
+        env:
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+      - name: Build the release APK
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleRelease --no-daemon
+      - name: Name the APK
+        id: apk
+        run: |
+          name="lumo-android-${GITHUB_REF_NAME//\//-}-${GITHUB_SHA::7}.apk"
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "$name"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.name }}
+          path: ${{ steps.apk.outputs.name }}
+          if-no-files-found: error
+          retention-days: 30
+      - name: Attach the APK to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.apk.outputs.name }}
+          generate_release_notes: true
