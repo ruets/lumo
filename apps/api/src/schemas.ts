@@ -168,6 +168,8 @@ export const rewardView = z.object({
 	link: z.string().nullable(),
 	archivedAt: z.string().nullable(),
 	assigneeIds: z.array(z.string()),
+	/** Échanges encore possibles dans la période (liste seulement) ; `null` : sans limite ou non calculé. */
+	remaining: z.number().int().nullable(),
 });
 
 export const redemptionResult = z.object({
@@ -213,6 +215,8 @@ export const ledgerEntryView = z.object({
 	note: z.string().nullable(),
 	createdBy: z.string(),
 	createdAt: z.string(),
+	/** Nom de l'habitude, tâche ou envie concernée (validations, annulations, échanges). */
+	label: z.string().nullable(),
 });
 
 // ---- Aujourd'hui et progrès -------------------------------------------------------------
@@ -228,6 +232,8 @@ export const todayView = z.object({
 			pending: z.number().int(),
 			target: z.number().int(),
 			done: z.boolean(),
+			/** Validations annulables de ce jour, pour `DELETE /completions/{id}`. */
+			completionIds: z.array(z.string()),
 		}),
 	),
 });

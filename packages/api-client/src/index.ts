@@ -34,6 +34,9 @@ export type Item = Response<"/api/v1/items", "post", 201>;
 export type CreateItemInput = BodyOf<"/api/v1/items", "post">;
 export type UpdateItemInput = BodyOf<"/api/v1/items/{id}", "patch">;
 export type TodayResponse = Response<"/api/v1/today", "get", 200>;
+export type TodayItem = TodayResponse["items"][number];
+export type RewardList = Response<"/api/v1/rewards", "get", 200>["rewards"];
+export type LedgerEntry = LedgerPage["entries"][number];
 export type CompletionResult = Response<"/api/v1/items/{id}/completions", "post", 201>;
 export type Reward = Response<"/api/v1/rewards", "post", 201>;
 export type CreateRewardInput = BodyOf<"/api/v1/rewards", "post">;
@@ -72,6 +75,11 @@ export class ApiError extends Error {
 	}
 }
 
+/** `idempotencyKey` : fixé par l'appelant pour rejouer une écriture sans la dupliquer (file hors ligne). */
+export interface RequestOptions {
+	idempotencyKey?: string;
+}
+
 export interface ClientOptions {
 	baseUrl: string;
 	/** Jeton d'accès (mobile). Absent côté web : le cookie de session suffit. */
@@ -82,12 +90,12 @@ export interface ClientOptions {
 export function createClient(options: ClientOptions) {
 	const doFetch = options.fetch ?? fetch;
 
-	async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+	async function request<T>(method: string, path: string, body?: unknown, opts: RequestOptions = {}): Promise<T> {
 		const headers: Record<string, string> = { accept: "application/json" };
 		const token = await options.getAccessToken?.();
 		if (token) headers.authorization = `Bearer ${token}`;
 		if (body !== undefined) headers["content-type"] = "application/json";
-		if (method !== "GET") headers["idempotency-key"] = crypto.randomUUID();
+		if (method !== "GET") headers["idempotency-key"] = opts.idempotencyKey ?? crypto.randomUUID();
 
 		const res = await doFetch(`${options.baseUrl}/api/v1${path}`, {
 			method,
@@ -120,9 +128,10 @@ export function createClient(options: ClientOptions) {
 		createItem: (input: CreateItemInput) => request<Item>("POST", "/items", input),
 		updateItem: (id: string, input: UpdateItemInput) => request<Item>("PATCH", `/items/${id}`, input),
 		archiveItem: (id: string) => request<void>("DELETE", `/items/${id}`),
-		complete: (itemId: string, date?: string) =>
-			request<CompletionResult>("POST", `/items/${itemId}/completions`, date ? { date } : {}),
-		undoCompletion: (id: string) => request<CompletionResult>("DELETE", `/completions/${id}`),
+		complete: (itemId: string, date?: string, opts?: RequestOptions) =>
+			request<CompletionResult>("POST", `/items/${itemId}/completions`, date ? { date } : {}, opts),
+		undoCompletion: (id: string, opts?: RequestOptions) =>
+			request<CompletionResult>("DELETE", `/completions/${id}`, undefined, opts),
 		approveCompletion: (id: string) => request<CompletionResult>("POST", `/completions/${id}/approve`),
 		rejectCompletion: (id: string) => request<CompletionResult>("POST", `/completions/${id}/reject`),
 		listPendingCompletions: () =>
@@ -131,8 +140,13 @@ export function createClient(options: ClientOptions) {
 		listRewards: () => request<Response<"/api/v1/rewards", "get", 200>>("GET", "/rewards"),
 		createReward: (input: CreateRewardInput) => request<Reward>("POST", "/rewards", input),
 		updateReward: (id: string, input: UpdateRewardInput) => request<Reward>("PATCH", `/rewards/${id}`, input),
-		redeemReward: (id: string) =>
-			request<Response<"/api/v1/rewards/{id}/redemptions", "post", 201>>("POST", `/rewards/${id}/redemptions`),
+		redeemReward: (id: string, opts?: RequestOptions) =>
+			request<Response<"/api/v1/rewards/{id}/redemptions", "post", 201>>(
+				"POST",
+				`/rewards/${id}/redemptions`,
+				undefined,
+				opts,
+			),
 		transferToShared: (amount: number) =>
 			request<Response<"/api/v1/transfers", "post", 201>>("POST", "/transfers", { amount }),
 		getLedger: (query: QueryOf<"/api/v1/ledger", "get"> = {}) => request<LedgerPage>("GET", `/ledger${qs(query)}`),

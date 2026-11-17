@@ -35,7 +35,13 @@ describe("GET /today", () => {
 		});
 
 		await h.owner.api.post(`/items/${water.id}/completions`);
-		expect((await h.owner.api.get("/today")).json().items[0]).toMatchObject({ approved: 3, done: true });
+		const full = (await h.owner.api.get("/today")).json().items[0];
+		expect(full).toMatchObject({ approved: 3, done: true });
+		expect(full.completionIds).toHaveLength(3);
+
+		// L'identifiant renvoyé permet d'annuler la validation.
+		expect((await h.owner.api.del(`/completions/${full.completionIds[0]}`)).statusCode).toBe(200);
+		expect((await h.owner.api.get("/today")).json().items[0]).toMatchObject({ approved: 2, done: false });
 	});
 
 	it("accepte une date, épingle en premier, et n'affiche que mes éléments", async () => {

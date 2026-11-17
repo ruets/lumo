@@ -26,7 +26,7 @@ export const rewardRoutes = [
 		summary: "Lister les envies",
 		tag: "Envies",
 		response: z.object({ rewards: z.array(rewardView) }),
-		handler: ({ db, actor }) => ({ rewards: listRewards(db, actor) }),
+		handler: ({ db, actor, now }) => ({ rewards: listRewards(db, actor, now) }),
 	}),
 	route({
 		method: "post",

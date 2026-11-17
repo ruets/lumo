@@ -814,6 +814,7 @@ export interface operations {
                             pending: number;
                             target: number;
                             done: boolean;
+                            completionIds: string[];
                         }[];
                     };
                 };
@@ -1148,6 +1149,7 @@ export interface operations {
                             link: string | null;
                             archivedAt: string | null;
                             assigneeIds: string[];
+                            remaining: number | null;
                         }[];
                     };
                 };
@@ -1218,6 +1220,7 @@ export interface operations {
                         link: string | null;
                         archivedAt: string | null;
                         assigneeIds: string[];
+                        remaining: number | null;
                     };
                 };
             };
@@ -1286,6 +1289,7 @@ export interface operations {
                         link: string | null;
                         archivedAt: string | null;
                         assigneeIds: string[];
+                        remaining: number | null;
                     };
                 };
             };
@@ -1446,6 +1450,7 @@ export interface operations {
                             note: string | null;
                             createdBy: string;
                             createdAt: string;
+                            label: string | null;
                         }[];
                         nextCursor: string | null;
                     };
@@ -1507,6 +1512,7 @@ export interface operations {
                             note: string | null;
                             createdBy: string;
                             createdAt: string;
+                            label: string | null;
                         };
                     };
                 };

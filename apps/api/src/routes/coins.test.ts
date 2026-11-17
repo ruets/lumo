@@ -48,6 +48,18 @@ describe("valider : les pièces sont calculées par le serveur, dans la même tr
 		expect(await balances(h.owner)).toEqual({ personal: 5, shared: 0 });
 	});
 
+	it("l'historique nomme l'habitude, l'annulation et l'envie échangée", async () => {
+		const item = await makeHabit(h.owner, { name: "Lire", reward: 5 });
+		const done = await complete(h.owner, item.id);
+		await h.owner.api.del(`/completions/${done.json().completion.id}`);
+		await complete(h.owner, item.id);
+		const reward = (await h.owner.api.post("/rewards", { name: "Ciné", cost: 3 })).json();
+		await h.owner.api.post(`/rewards/${reward.id}/redemptions`);
+		const labels = (await h.owner.api.get("/ledger")).json().entries.map((e: { label: string | null }) => e.label);
+		// Horloge figée : l'ordre entre écritures simultanées n'est pas défini, on compare sans l'ordre.
+		expect([...labels].sort()).toEqual(["Ciné", "Lire", "Lire", "Lire"]);
+	});
+
 	it("refuse tout montant envoyé par le client", async () => {
 		const item = await makeHabit(h.owner, { reward: 5 });
 		const res = await complete(h.owner, item.id, { amount: 1000 });
@@ -372,11 +384,16 @@ describe("envies et échanges", () => {
 	it("limite d'usage par période : 1 par semaine, puis de nouveau possible la semaine suivante", async () => {
 		await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 20, note: "bonus" });
 		const reward = (await makeReward(h.adult, { cost: 1, limitCount: 1, limitPeriod: "week" })).json();
+		const remaining = async () =>
+			(await h.kid.api.get("/rewards")).json().rewards.find((r: { id: string }) => r.id === reward.id).remaining;
+		expect(await remaining()).toBe(1);
 		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).statusCode).toBe(201);
+		expect(await remaining()).toBe(0);
 		const second = await h.kid.api.post(`/rewards/${reward.id}/redemptions`);
 		expect(second.statusCode).toBe(409);
 		expect(second.json().code).toBe("limit_reached");
 		ctx.clock.now = new Date("2026-11-24T10:00:00Z"); // semaine suivante
+		expect(await remaining()).toBe(1);
 		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).statusCode).toBe(201);
 	});
 

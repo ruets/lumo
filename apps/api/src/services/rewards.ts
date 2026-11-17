@@ -24,7 +24,7 @@ function assigneesOf(db: DbOrTx, ids: string[]): Map<string, string[]> {
 	return map;
 }
 
-const toView = (r: RewardRow, assigneeIds: string[]): RewardView => ({
+const toView = (r: RewardRow, assigneeIds: string[], remaining: number | null = null): RewardView => ({
 	id: r.id,
 	name: r.name,
 	description: r.description,
@@ -35,7 +35,27 @@ const toView = (r: RewardRow, assigneeIds: string[]): RewardView => ({
 	link: r.link,
 	archivedAt: r.archivedAt?.toISOString() ?? null,
 	assigneeIds,
+	remaining,
 });
+
+/** Échanges de l'acteur dans la période de limite courante (jours locaux du foyer). */
+function usedInPeriodOf(db: DbOrTx, actor: ActorCtx, reward: RewardRow, now: Date): number {
+	if (!reward.limitPeriod) return 0;
+	const start = periodStart(reward.limitPeriod, localDate(now, actor.timezone), actor.weekStart);
+	return db
+		.select({ at: redemptions.redeemedAt })
+		.from(redemptions)
+		.where(
+			and(
+				eq(redemptions.rewardId, reward.id),
+				eq(redemptions.userId, actor.userId),
+				// marge d'un jour : le filtre exact se fait en jour local, fuseau du foyer compris
+				gte(redemptions.redeemedAt, new Date(now.getTime() - 400 * 86_400_000)),
+			),
+		)
+		.all()
+		.filter((r) => localDate(r.at, actor.timezone) >= start).length;
+}
 
 function assertMembers(db: DbOrTx, actor: ActorCtx, ids: string[]) {
 	if (ids.length === 0) return;
@@ -84,7 +104,7 @@ export function createReward(tx: Tx, actor: ActorCtx, input: z.output<typeof cre
 }
 
 /** Adultes : toutes les envies actives. Enfants : celles qu'ils peuvent échanger. */
-export function listRewards(db: DbOrTx, actor: ActorCtx): RewardView[] {
+export function listRewards(db: DbOrTx, actor: ActorCtx, now: Date): RewardView[] {
 	const rows = db
 		.select()
 		.from(rewards)
@@ -95,7 +115,13 @@ export function listRewards(db: DbOrTx, actor: ActorCtx): RewardView[] {
 		rows.map((r) => r.id),
 	);
 	return rows
-		.map((r) => toView(r, assignees.get(r.id) ?? []))
+		.map((r) =>
+			toView(
+				r,
+				assignees.get(r.id) ?? [],
+				r.limitCount === null ? null : Math.max(0, r.limitCount - usedInPeriodOf(db, actor, r, now)),
+			),
+		)
 		.filter(
 			(v) =>
 				actor.role !== "child" || can(actor, "reward:redeem", { fundedFrom: v.fundedFrom, assigneeIds: v.assigneeIds }),
@@ -153,24 +179,7 @@ export function redeemReward(tx: Tx, actor: ActorCtx, rewardId: string, now: Dat
 		throw errors.forbidden("Tu ne peux pas échanger cette envie");
 	}
 
-	const today = localDate(now, actor.timezone);
-	let usedInPeriod = 0;
-	if (reward.limitPeriod) {
-		const start = periodStart(reward.limitPeriod, today, actor.weekStart);
-		usedInPeriod = tx
-			.select({ at: redemptions.redeemedAt })
-			.from(redemptions)
-			.where(
-				and(
-					eq(redemptions.rewardId, rewardId),
-					eq(redemptions.userId, actor.userId),
-					// marge d'un jour : le filtre exact se fait en jour local, fuseau du foyer compris
-					gte(redemptions.redeemedAt, new Date(now.getTime() - 400 * 86_400_000)),
-				),
-			)
-			.all()
-			.filter((r) => localDate(r.at, actor.timezone) >= start).length;
-	}
+	const usedInPeriod = usedInPeriodOf(tx, actor, reward, now);
 
 	const walletId = walletFor(tx, actor.householdId, reward.fundedFrom, actor.userId);
 	const { amount } = planRedemption({

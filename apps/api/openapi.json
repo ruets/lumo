@@ -18,9 +18,7 @@
 		"/api/v1/me": {
 			"get": {
 				"summary": "Profil, foyer, rôle et soldes",
-				"tags": [
-					"Profil"
-				],
+				"tags": ["Profil"],
 				"operationId": "getApiV1Me",
 				"responses": {
 					"200": {
@@ -40,17 +38,10 @@
 													"type": "string"
 												},
 												"avatarUrl": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												}
 											},
-											"required": [
-												"id",
-												"displayName",
-												"avatarUrl"
-											],
+											"required": ["id", "displayName", "avatarUrl"],
 											"additionalProperties": false
 										},
 										"household": {
@@ -66,20 +57,12 @@
 													"type": "string"
 												}
 											},
-											"required": [
-												"id",
-												"name",
-												"timezone"
-											],
+											"required": ["id", "name", "timezone"],
 											"additionalProperties": false
 										},
 										"role": {
 											"type": "string",
-											"enum": [
-												"owner",
-												"adult",
-												"child"
-											]
+											"enum": ["owner", "adult", "child"]
 										},
 										"wallets": {
 											"type": "object",
@@ -96,10 +79,7 @@
 															"maximum": 9007199254740991
 														}
 													},
-													"required": [
-														"id",
-														"balance"
-													],
+													"required": ["id", "balance"],
 													"additionalProperties": false
 												},
 												"shared": {
@@ -114,26 +94,15 @@
 															"maximum": 9007199254740991
 														}
 													},
-													"required": [
-														"id",
-														"balance"
-													],
+													"required": ["id", "balance"],
 													"additionalProperties": false
 												}
 											},
-											"required": [
-												"personal",
-												"shared"
-											],
+											"required": ["personal", "shared"],
 											"additionalProperties": false
 										}
 									},
-									"required": [
-										"user",
-										"household",
-										"role",
-										"wallets"
-									],
+									"required": ["user", "household", "role", "wallets"],
 									"additionalProperties": false
 								}
 							}
@@ -145,12 +114,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -189,9 +153,7 @@
 		"/api/v1/household/invites": {
 			"post": {
 				"summary": "Inviter un membre (owner)",
-				"tags": [
-					"Foyer"
-				],
+				"tags": ["Foyer"],
 				"operationId": "postApiV1HouseholdInvites",
 				"requestBody": {
 					"required": true,
@@ -202,15 +164,10 @@
 								"properties": {
 									"role": {
 										"type": "string",
-										"enum": [
-											"adult",
-											"child"
-										]
+										"enum": ["adult", "child"]
 									}
 								},
-								"required": [
-									"role"
-								],
+								"required": ["role"],
 								"additionalProperties": false
 							}
 						}
@@ -231,10 +188,7 @@
 											"type": "string"
 										}
 									},
-									"required": [
-										"token",
-										"expiresAt"
-									],
+									"required": ["token", "expiresAt"],
 									"additionalProperties": false
 								}
 							}
@@ -246,12 +200,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -290,9 +239,7 @@
 		"/api/v1/items": {
 			"post": {
 				"summary": "Créer une habitude ou une tâche",
-				"tags": [
-					"Éléments"
-				],
+				"tags": ["Éléments"],
 				"operationId": "postApiV1Items",
 				"parameters": [
 					{
@@ -329,9 +276,7 @@
 																"const": "daily"
 															}
 														},
-														"required": [
-															"type"
-														]
+														"required": ["type"]
 													},
 													{
 														"type": "object",
@@ -350,10 +295,7 @@
 																}
 															}
 														},
-														"required": [
-															"type",
-															"days"
-														]
+														"required": ["type", "days"]
 													},
 													{
 														"type": "object",
@@ -368,10 +310,7 @@
 																"maximum": 7
 															}
 														},
-														"required": [
-															"type",
-															"count"
-														]
+														"required": ["type", "count"]
 													},
 													{
 														"type": "object",
@@ -386,10 +325,7 @@
 																"maximum": 31
 															}
 														},
-														"required": [
-															"type",
-															"day"
-														]
+														"required": ["type", "day"]
 													}
 												]
 											},
@@ -424,10 +360,7 @@
 											"creditsTo": {
 												"default": "personal",
 												"type": "string",
-												"enum": [
-													"personal",
-													"shared"
-												]
+												"enum": ["personal", "shared"]
 											},
 											"pinned": {
 												"default": false,
@@ -448,11 +381,7 @@
 												}
 											}
 										},
-										"required": [
-											"kind",
-											"schedule",
-											"name"
-										],
+										"required": ["kind", "schedule", "name"],
 										"additionalProperties": false
 									},
 									{
@@ -504,10 +433,7 @@
 											"creditsTo": {
 												"default": "personal",
 												"type": "string",
-												"enum": [
-													"personal",
-													"shared"
-												]
+												"enum": ["personal", "shared"]
 											},
 											"pinned": {
 												"default": false,
@@ -528,10 +454,7 @@
 												}
 											}
 										},
-										"required": [
-											"kind",
-											"name"
-										],
+										"required": ["kind", "name"],
 										"additionalProperties": false
 									}
 								]
@@ -552,19 +475,13 @@
 										},
 										"kind": {
 											"type": "string",
-											"enum": [
-												"habit",
-												"task"
-											]
+											"enum": ["habit", "task"]
 										},
 										"name": {
 											"type": "string"
 										},
 										"description": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"schedule": {
 											"anyOf": [
@@ -578,9 +495,7 @@
 																	"const": "daily"
 																}
 															},
-															"required": [
-																"type"
-															],
+															"required": ["type"],
 															"additionalProperties": false
 														},
 														{
@@ -600,10 +515,7 @@
 																	}
 																}
 															},
-															"required": [
-																"type",
-																"days"
-															],
+															"required": ["type", "days"],
 															"additionalProperties": false
 														},
 														{
@@ -619,10 +531,7 @@
 																	"maximum": 7
 																}
 															},
-															"required": [
-																"type",
-																"count"
-															],
+															"required": ["type", "count"],
 															"additionalProperties": false
 														},
 														{
@@ -638,10 +547,7 @@
 																	"maximum": 31
 																}
 															},
-															"required": [
-																"type",
-																"day"
-															],
+															"required": ["type", "day"],
 															"additionalProperties": false
 														}
 													]
@@ -663,16 +569,10 @@
 										},
 										"creditsTo": {
 											"type": "string",
-											"enum": [
-												"personal",
-												"shared"
-											]
+											"enum": ["personal", "shared"]
 										},
 										"dueAt": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"pinned": {
 											"type": "boolean"
@@ -681,10 +581,7 @@
 											"type": "boolean"
 										},
 										"archivedAt": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"createdBy": {
 											"type": "string"
@@ -723,12 +620,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -765,9 +657,7 @@
 			},
 			"get": {
 				"summary": "Lister les éléments visibles",
-				"tags": [
-					"Éléments"
-				],
+				"tags": ["Éléments"],
 				"operationId": "getApiV1Items",
 				"parameters": [
 					{
@@ -777,10 +667,7 @@
 						"schema": {
 							"default": "false",
 							"type": "string",
-							"enum": [
-								"true",
-								"false"
-							]
+							"enum": ["true", "false"]
 						}
 					}
 				],
@@ -802,19 +689,13 @@
 													},
 													"kind": {
 														"type": "string",
-														"enum": [
-															"habit",
-															"task"
-														]
+														"enum": ["habit", "task"]
 													},
 													"name": {
 														"type": "string"
 													},
 													"description": {
-														"type": [
-															"string",
-															"null"
-														]
+														"type": ["string", "null"]
 													},
 													"schedule": {
 														"anyOf": [
@@ -828,9 +709,7 @@
 																				"const": "daily"
 																			}
 																		},
-																		"required": [
-																			"type"
-																		],
+																		"required": ["type"],
 																		"additionalProperties": false
 																	},
 																	{
@@ -850,10 +729,7 @@
 																				}
 																			}
 																		},
-																		"required": [
-																			"type",
-																			"days"
-																		],
+																		"required": ["type", "days"],
 																		"additionalProperties": false
 																	},
 																	{
@@ -869,10 +745,7 @@
 																				"maximum": 7
 																			}
 																		},
-																		"required": [
-																			"type",
-																			"count"
-																		],
+																		"required": ["type", "count"],
 																		"additionalProperties": false
 																	},
 																	{
@@ -888,10 +761,7 @@
 																				"maximum": 31
 																			}
 																		},
-																		"required": [
-																			"type",
-																			"day"
-																		],
+																		"required": ["type", "day"],
 																		"additionalProperties": false
 																	}
 																]
@@ -913,16 +783,10 @@
 													},
 													"creditsTo": {
 														"type": "string",
-														"enum": [
-															"personal",
-															"shared"
-														]
+														"enum": ["personal", "shared"]
 													},
 													"dueAt": {
-														"type": [
-															"string",
-															"null"
-														]
+														"type": ["string", "null"]
 													},
 													"pinned": {
 														"type": "boolean"
@@ -931,10 +795,7 @@
 														"type": "boolean"
 													},
 													"archivedAt": {
-														"type": [
-															"string",
-															"null"
-														]
+														"type": ["string", "null"]
 													},
 													"createdBy": {
 														"type": "string"
@@ -966,9 +827,7 @@
 											}
 										}
 									},
-									"required": [
-										"items"
-									],
+									"required": ["items"],
 									"additionalProperties": false
 								}
 							}
@@ -980,12 +839,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -1024,9 +878,7 @@
 		"/api/v1/items/{id}": {
 			"patch": {
 				"summary": "Modifier un élément",
-				"tags": [
-					"Éléments"
-				],
+				"tags": ["Éléments"],
 				"operationId": "patchApiV1ItemsId",
 				"parameters": [
 					{
@@ -1083,9 +935,7 @@
 														"const": "daily"
 													}
 												},
-												"required": [
-													"type"
-												]
+												"required": ["type"]
 											},
 											{
 												"type": "object",
@@ -1104,10 +954,7 @@
 														}
 													}
 												},
-												"required": [
-													"type",
-													"days"
-												]
+												"required": ["type", "days"]
 											},
 											{
 												"type": "object",
@@ -1122,10 +969,7 @@
 														"maximum": 7
 													}
 												},
-												"required": [
-													"type",
-													"count"
-												]
+												"required": ["type", "count"]
 											},
 											{
 												"type": "object",
@@ -1140,10 +984,7 @@
 														"maximum": 31
 													}
 												},
-												"required": [
-													"type",
-													"day"
-												]
+												"required": ["type", "day"]
 											}
 										]
 									},
@@ -1159,10 +1000,7 @@
 									},
 									"creditsTo": {
 										"type": "string",
-										"enum": [
-											"personal",
-											"shared"
-										]
+										"enum": ["personal", "shared"]
 									},
 									"dueAt": {
 										"anyOf": [
@@ -1211,19 +1049,13 @@
 										},
 										"kind": {
 											"type": "string",
-											"enum": [
-												"habit",
-												"task"
-											]
+											"enum": ["habit", "task"]
 										},
 										"name": {
 											"type": "string"
 										},
 										"description": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"schedule": {
 											"anyOf": [
@@ -1237,9 +1069,7 @@
 																	"const": "daily"
 																}
 															},
-															"required": [
-																"type"
-															],
+															"required": ["type"],
 															"additionalProperties": false
 														},
 														{
@@ -1259,10 +1089,7 @@
 																	}
 																}
 															},
-															"required": [
-																"type",
-																"days"
-															],
+															"required": ["type", "days"],
 															"additionalProperties": false
 														},
 														{
@@ -1278,10 +1105,7 @@
 																	"maximum": 7
 																}
 															},
-															"required": [
-																"type",
-																"count"
-															],
+															"required": ["type", "count"],
 															"additionalProperties": false
 														},
 														{
@@ -1297,10 +1121,7 @@
 																	"maximum": 31
 																}
 															},
-															"required": [
-																"type",
-																"day"
-															],
+															"required": ["type", "day"],
 															"additionalProperties": false
 														}
 													]
@@ -1322,16 +1143,10 @@
 										},
 										"creditsTo": {
 											"type": "string",
-											"enum": [
-												"personal",
-												"shared"
-											]
+											"enum": ["personal", "shared"]
 										},
 										"dueAt": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"pinned": {
 											"type": "boolean"
@@ -1340,10 +1155,7 @@
 											"type": "boolean"
 										},
 										"archivedAt": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"createdBy": {
 											"type": "string"
@@ -1382,12 +1194,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -1424,9 +1231,7 @@
 			},
 			"delete": {
 				"summary": "Archiver un élément",
-				"tags": [
-					"Éléments"
-				],
+				"tags": ["Éléments"],
 				"operationId": "deleteApiV1ItemsId",
 				"parameters": [
 					{
@@ -1460,12 +1265,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -1504,9 +1304,7 @@
 		"/api/v1/today": {
 			"get": {
 				"summary": "Éléments dus ce jour avec leur avancement",
-				"tags": [
-					"Éléments"
-				],
+				"tags": ["Éléments"],
 				"operationId": "getApiV1Today",
 				"parameters": [
 					{
@@ -1544,19 +1342,13 @@
 															},
 															"kind": {
 																"type": "string",
-																"enum": [
-																	"habit",
-																	"task"
-																]
+																"enum": ["habit", "task"]
 															},
 															"name": {
 																"type": "string"
 															},
 															"description": {
-																"type": [
-																	"string",
-																	"null"
-																]
+																"type": ["string", "null"]
 															},
 															"schedule": {
 																"anyOf": [
@@ -1570,9 +1362,7 @@
 																						"const": "daily"
 																					}
 																				},
-																				"required": [
-																					"type"
-																				],
+																				"required": ["type"],
 																				"additionalProperties": false
 																			},
 																			{
@@ -1592,10 +1382,7 @@
 																						}
 																					}
 																				},
-																				"required": [
-																					"type",
-																					"days"
-																				],
+																				"required": ["type", "days"],
 																				"additionalProperties": false
 																			},
 																			{
@@ -1611,10 +1398,7 @@
 																						"maximum": 7
 																					}
 																				},
-																				"required": [
-																					"type",
-																					"count"
-																				],
+																				"required": ["type", "count"],
 																				"additionalProperties": false
 																			},
 																			{
@@ -1630,10 +1414,7 @@
 																						"maximum": 31
 																					}
 																				},
-																				"required": [
-																					"type",
-																					"day"
-																				],
+																				"required": ["type", "day"],
 																				"additionalProperties": false
 																			}
 																		]
@@ -1655,16 +1436,10 @@
 															},
 															"creditsTo": {
 																"type": "string",
-																"enum": [
-																	"personal",
-																	"shared"
-																]
+																"enum": ["personal", "shared"]
 															},
 															"dueAt": {
-																"type": [
-																	"string",
-																	"null"
-																]
+																"type": ["string", "null"]
 															},
 															"pinned": {
 																"type": "boolean"
@@ -1673,10 +1448,7 @@
 																"type": "boolean"
 															},
 															"archivedAt": {
-																"type": [
-																	"string",
-																	"null"
-																]
+																"type": ["string", "null"]
 															},
 															"createdBy": {
 																"type": "string"
@@ -1723,23 +1495,20 @@
 													},
 													"done": {
 														"type": "boolean"
+													},
+													"completionIds": {
+														"type": "array",
+														"items": {
+															"type": "string"
+														}
 													}
 												},
-												"required": [
-													"item",
-													"approved",
-													"pending",
-													"target",
-													"done"
-												],
+												"required": ["item", "approved", "pending", "target", "done", "completionIds"],
 												"additionalProperties": false
 											}
 										}
 									},
-									"required": [
-										"date",
-										"items"
-									],
+									"required": ["date", "items"],
 									"additionalProperties": false
 								}
 							}
@@ -1751,12 +1520,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -1795,9 +1559,7 @@
 		"/api/v1/items/{id}/completions": {
 			"post": {
 				"summary": "Valider un élément (les pièces sont calculées par le serveur)",
-				"tags": [
-					"Validations"
-				],
+				"tags": ["Validations"],
 				"operationId": "postApiV1ItemsIdCompletions",
 				"parameters": [
 					{
@@ -1864,26 +1626,16 @@
 												},
 												"status": {
 													"type": "string",
-													"enum": [
-														"pending",
-														"approved",
-														"rejected"
-													]
+													"enum": ["pending", "approved", "rejected"]
 												},
 												"approvedBy": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												},
 												"completedAt": {
 													"type": "string"
 												},
 												"undoneAt": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												}
 											},
 											"required": [
@@ -1912,17 +1664,11 @@
 													"maximum": 9007199254740991
 												}
 											},
-											"required": [
-												"personal",
-												"shared"
-											],
+											"required": ["personal", "shared"],
 											"additionalProperties": false
 										}
 									},
-									"required": [
-										"completion",
-										"balances"
-									],
+									"required": ["completion", "balances"],
 									"additionalProperties": false
 								}
 							}
@@ -1934,12 +1680,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -1978,9 +1719,7 @@
 		"/api/v1/completions": {
 			"get": {
 				"summary": "Validations en attente d'accord (owner et adultes)",
-				"tags": [
-					"Validations"
-				],
+				"tags": ["Validations"],
 				"operationId": "getApiV1Completions",
 				"parameters": [
 					{
@@ -2021,26 +1760,16 @@
 													},
 													"status": {
 														"type": "string",
-														"enum": [
-															"pending",
-															"approved",
-															"rejected"
-														]
+														"enum": ["pending", "approved", "rejected"]
 													},
 													"approvedBy": {
-														"type": [
-															"string",
-															"null"
-														]
+														"type": ["string", "null"]
 													},
 													"completedAt": {
 														"type": "string"
 													},
 													"undoneAt": {
-														"type": [
-															"string",
-															"null"
-														]
+														"type": ["string", "null"]
 													}
 												},
 												"required": [
@@ -2057,9 +1786,7 @@
 											}
 										}
 									},
-									"required": [
-										"completions"
-									],
+									"required": ["completions"],
 									"additionalProperties": false
 								}
 							}
@@ -2071,12 +1798,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -2115,9 +1837,7 @@
 		"/api/v1/completions/{id}": {
 			"delete": {
 				"summary": "Annuler une validation (contre-écriture au journal)",
-				"tags": [
-					"Validations"
-				],
+				"tags": ["Validations"],
 				"operationId": "deleteApiV1CompletionsId",
 				"parameters": [
 					{
@@ -2167,26 +1887,16 @@
 												},
 												"status": {
 													"type": "string",
-													"enum": [
-														"pending",
-														"approved",
-														"rejected"
-													]
+													"enum": ["pending", "approved", "rejected"]
 												},
 												"approvedBy": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												},
 												"completedAt": {
 													"type": "string"
 												},
 												"undoneAt": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												}
 											},
 											"required": [
@@ -2215,17 +1925,11 @@
 													"maximum": 9007199254740991
 												}
 											},
-											"required": [
-												"personal",
-												"shared"
-											],
+											"required": ["personal", "shared"],
 											"additionalProperties": false
 										}
 									},
-									"required": [
-										"completion",
-										"balances"
-									],
+									"required": ["completion", "balances"],
 									"additionalProperties": false
 								}
 							}
@@ -2237,12 +1941,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -2281,9 +1980,7 @@
 		"/api/v1/completions/{id}/approve": {
 			"post": {
 				"summary": "Approuver la validation d'un enfant",
-				"tags": [
-					"Validations"
-				],
+				"tags": ["Validations"],
 				"operationId": "postApiV1CompletionsIdApprove",
 				"parameters": [
 					{
@@ -2333,26 +2030,16 @@
 												},
 												"status": {
 													"type": "string",
-													"enum": [
-														"pending",
-														"approved",
-														"rejected"
-													]
+													"enum": ["pending", "approved", "rejected"]
 												},
 												"approvedBy": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												},
 												"completedAt": {
 													"type": "string"
 												},
 												"undoneAt": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												}
 											},
 											"required": [
@@ -2381,17 +2068,11 @@
 													"maximum": 9007199254740991
 												}
 											},
-											"required": [
-												"personal",
-												"shared"
-											],
+											"required": ["personal", "shared"],
 											"additionalProperties": false
 										}
 									},
-									"required": [
-										"completion",
-										"balances"
-									],
+									"required": ["completion", "balances"],
 									"additionalProperties": false
 								}
 							}
@@ -2403,12 +2084,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -2447,9 +2123,7 @@
 		"/api/v1/completions/{id}/reject": {
 			"post": {
 				"summary": "Rejeter la validation d'un enfant",
-				"tags": [
-					"Validations"
-				],
+				"tags": ["Validations"],
 				"operationId": "postApiV1CompletionsIdReject",
 				"parameters": [
 					{
@@ -2499,26 +2173,16 @@
 												},
 												"status": {
 													"type": "string",
-													"enum": [
-														"pending",
-														"approved",
-														"rejected"
-													]
+													"enum": ["pending", "approved", "rejected"]
 												},
 												"approvedBy": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												},
 												"completedAt": {
 													"type": "string"
 												},
 												"undoneAt": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												}
 											},
 											"required": [
@@ -2547,17 +2211,11 @@
 													"maximum": 9007199254740991
 												}
 											},
-											"required": [
-												"personal",
-												"shared"
-											],
+											"required": ["personal", "shared"],
 											"additionalProperties": false
 										}
 									},
-									"required": [
-										"completion",
-										"balances"
-									],
+									"required": ["completion", "balances"],
 									"additionalProperties": false
 								}
 							}
@@ -2569,12 +2227,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -2613,9 +2266,7 @@
 		"/api/v1/rewards": {
 			"get": {
 				"summary": "Lister les envies",
-				"tags": [
-					"Envies"
-				],
+				"tags": ["Envies"],
 				"operationId": "getApiV1Rewards",
 				"responses": {
 					"200": {
@@ -2637,10 +2288,7 @@
 														"type": "string"
 													},
 													"description": {
-														"type": [
-															"string",
-															"null"
-														]
+														"type": ["string", "null"]
 													},
 													"cost": {
 														"type": "integer",
@@ -2649,10 +2297,7 @@
 													},
 													"fundedFrom": {
 														"type": "string",
-														"enum": [
-															"personal",
-															"shared"
-														]
+														"enum": ["personal", "shared"]
 													},
 													"limitCount": {
 														"anyOf": [
@@ -2670,12 +2315,7 @@
 														"anyOf": [
 															{
 																"type": "string",
-																"enum": [
-																	"day",
-																	"week",
-																	"month",
-																	"year"
-																]
+																"enum": ["day", "week", "month", "year"]
 															},
 															{
 																"type": "null"
@@ -2683,22 +2323,28 @@
 														]
 													},
 													"link": {
-														"type": [
-															"string",
-															"null"
-														]
+														"type": ["string", "null"]
 													},
 													"archivedAt": {
-														"type": [
-															"string",
-															"null"
-														]
+														"type": ["string", "null"]
 													},
 													"assigneeIds": {
 														"type": "array",
 														"items": {
 															"type": "string"
 														}
+													},
+													"remaining": {
+														"anyOf": [
+															{
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															{
+																"type": "null"
+															}
+														]
 													}
 												},
 												"required": [
@@ -2711,15 +2357,14 @@
 													"limitPeriod",
 													"link",
 													"archivedAt",
-													"assigneeIds"
+													"assigneeIds",
+													"remaining"
 												],
 												"additionalProperties": false
 											}
 										}
 									},
-									"required": [
-										"rewards"
-									],
+									"required": ["rewards"],
 									"additionalProperties": false
 								}
 							}
@@ -2731,12 +2376,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -2773,9 +2413,7 @@
 			},
 			"post": {
 				"summary": "Créer une envie (owner et adultes)",
-				"tags": [
-					"Envies"
-				],
+				"tags": ["Envies"],
 				"operationId": "postApiV1Rewards",
 				"parameters": [
 					{
@@ -2820,10 +2458,7 @@
 									"fundedFrom": {
 										"default": "personal",
 										"type": "string",
-										"enum": [
-											"personal",
-											"shared"
-										]
+										"enum": ["personal", "shared"]
 									},
 									"link": {
 										"anyOf": [
@@ -2863,12 +2498,7 @@
 										"anyOf": [
 											{
 												"type": "string",
-												"enum": [
-													"day",
-													"week",
-													"month",
-													"year"
-												]
+												"enum": ["day", "week", "month", "year"]
 											},
 											{
 												"type": "null"
@@ -2876,10 +2506,7 @@
 										]
 									}
 								},
-								"required": [
-									"name",
-									"cost"
-								],
+								"required": ["name", "cost"],
 								"additionalProperties": false
 							}
 						}
@@ -2900,10 +2527,7 @@
 											"type": "string"
 										},
 										"description": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"cost": {
 											"type": "integer",
@@ -2912,10 +2536,7 @@
 										},
 										"fundedFrom": {
 											"type": "string",
-											"enum": [
-												"personal",
-												"shared"
-											]
+											"enum": ["personal", "shared"]
 										},
 										"limitCount": {
 											"anyOf": [
@@ -2933,12 +2554,7 @@
 											"anyOf": [
 												{
 													"type": "string",
-													"enum": [
-														"day",
-														"week",
-														"month",
-														"year"
-													]
+													"enum": ["day", "week", "month", "year"]
 												},
 												{
 													"type": "null"
@@ -2946,22 +2562,28 @@
 											]
 										},
 										"link": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"archivedAt": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"assigneeIds": {
 											"type": "array",
 											"items": {
 												"type": "string"
 											}
+										},
+										"remaining": {
+											"anyOf": [
+												{
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												{
+													"type": "null"
+												}
+											]
 										}
 									},
 									"required": [
@@ -2974,7 +2596,8 @@
 										"limitPeriod",
 										"link",
 										"archivedAt",
-										"assigneeIds"
+										"assigneeIds",
+										"remaining"
 									],
 									"additionalProperties": false
 								}
@@ -2987,12 +2610,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -3031,9 +2649,7 @@
 		"/api/v1/rewards/{id}": {
 			"patch": {
 				"summary": "Modifier ou archiver une envie",
-				"tags": [
-					"Envies"
-				],
+				"tags": ["Envies"],
 				"operationId": "patchApiV1RewardsId",
 				"parameters": [
 					{
@@ -3087,10 +2703,7 @@
 									},
 									"fundedFrom": {
 										"type": "string",
-										"enum": [
-											"personal",
-											"shared"
-										]
+										"enum": ["personal", "shared"]
 									},
 									"link": {
 										"anyOf": [
@@ -3129,12 +2742,7 @@
 										"anyOf": [
 											{
 												"type": "string",
-												"enum": [
-													"day",
-													"week",
-													"month",
-													"year"
-												]
+												"enum": ["day", "week", "month", "year"]
 											},
 											{
 												"type": "null"
@@ -3165,10 +2773,7 @@
 											"type": "string"
 										},
 										"description": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"cost": {
 											"type": "integer",
@@ -3177,10 +2782,7 @@
 										},
 										"fundedFrom": {
 											"type": "string",
-											"enum": [
-												"personal",
-												"shared"
-											]
+											"enum": ["personal", "shared"]
 										},
 										"limitCount": {
 											"anyOf": [
@@ -3198,12 +2800,7 @@
 											"anyOf": [
 												{
 													"type": "string",
-													"enum": [
-														"day",
-														"week",
-														"month",
-														"year"
-													]
+													"enum": ["day", "week", "month", "year"]
 												},
 												{
 													"type": "null"
@@ -3211,22 +2808,28 @@
 											]
 										},
 										"link": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"archivedAt": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										},
 										"assigneeIds": {
 											"type": "array",
 											"items": {
 												"type": "string"
 											}
+										},
+										"remaining": {
+											"anyOf": [
+												{
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												{
+													"type": "null"
+												}
+											]
 										}
 									},
 									"required": [
@@ -3239,7 +2842,8 @@
 										"limitPeriod",
 										"link",
 										"archivedAt",
-										"assigneeIds"
+										"assigneeIds",
+										"remaining"
 									],
 									"additionalProperties": false
 								}
@@ -3252,12 +2856,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -3296,9 +2895,7 @@
 		"/api/v1/rewards/{id}/redemptions": {
 			"post": {
 				"summary": "Échanger une envie contre des pièces",
-				"tags": [
-					"Envies"
-				],
+				"tags": ["Envies"],
 				"operationId": "postApiV1RewardsIdRedemptions",
 				"parameters": [
 					{
@@ -3349,13 +2946,7 @@
 													"type": "string"
 												}
 											},
-											"required": [
-												"id",
-												"rewardId",
-												"userId",
-												"walletId",
-												"redeemedAt"
-											],
+											"required": ["id", "rewardId", "userId", "walletId", "redeemedAt"],
 											"additionalProperties": false
 										},
 										"balances": {
@@ -3372,17 +2963,11 @@
 													"maximum": 9007199254740991
 												}
 											},
-											"required": [
-												"personal",
-												"shared"
-											],
+											"required": ["personal", "shared"],
 											"additionalProperties": false
 										}
 									},
-									"required": [
-										"redemption",
-										"balances"
-									],
+									"required": ["redemption", "balances"],
 									"additionalProperties": false
 								}
 							}
@@ -3394,12 +2979,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -3438,9 +3018,7 @@
 		"/api/v1/transfers": {
 			"post": {
 				"summary": "Virer des pièces de son porte-monnaie vers la cagnotte",
-				"tags": [
-					"Pièces"
-				],
+				"tags": ["Pièces"],
 				"operationId": "postApiV1Transfers",
 				"parameters": [
 					{
@@ -3465,9 +3043,7 @@
 										"type": "number"
 									}
 								},
-								"required": [
-									"amount"
-								],
+								"required": ["amount"],
 								"additionalProperties": false
 							}
 						}
@@ -3498,17 +3074,11 @@
 													"maximum": 9007199254740991
 												}
 											},
-											"required": [
-												"personal",
-												"shared"
-											],
+											"required": ["personal", "shared"],
 											"additionalProperties": false
 										}
 									},
-									"required": [
-										"transferId",
-										"balances"
-									],
+									"required": ["transferId", "balances"],
 									"additionalProperties": false
 								}
 							}
@@ -3520,12 +3090,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -3564,9 +3129,7 @@
 		"/api/v1/ledger": {
 			"get": {
 				"summary": "Historique d'un porte-monnaie, paginé par curseur",
-				"tags": [
-					"Pièces"
-				],
+				"tags": ["Pièces"],
 				"operationId": "getApiV1Ledger",
 				"parameters": [
 					{
@@ -3576,10 +3139,7 @@
 						"schema": {
 							"default": "personal",
 							"type": "string",
-							"enum": [
-								"personal",
-								"shared"
-							]
+							"enum": ["personal", "shared"]
 						}
 					},
 					{
@@ -3613,10 +3173,7 @@
 									"properties": {
 										"wallet": {
 											"type": "string",
-											"enum": [
-												"personal",
-												"shared"
-											]
+											"enum": ["personal", "shared"]
 										},
 										"walletId": {
 											"type": "string"
@@ -3644,37 +3201,25 @@
 													},
 													"reason": {
 														"type": "string",
-														"enum": [
-															"completion",
-															"undo",
-															"redemption",
-															"transfer",
-															"adjustment"
-														]
+														"enum": ["completion", "undo", "redemption", "transfer", "adjustment"]
 													},
 													"refId": {
-														"type": [
-															"string",
-															"null"
-														]
+														"type": ["string", "null"]
 													},
 													"transferId": {
-														"type": [
-															"string",
-															"null"
-														]
+														"type": ["string", "null"]
 													},
 													"note": {
-														"type": [
-															"string",
-															"null"
-														]
+														"type": ["string", "null"]
 													},
 													"createdBy": {
 														"type": "string"
 													},
 													"createdAt": {
 														"type": "string"
+													},
+													"label": {
+														"type": ["string", "null"]
 													}
 												},
 												"required": [
@@ -3686,25 +3231,17 @@
 													"transferId",
 													"note",
 													"createdBy",
-													"createdAt"
+													"createdAt",
+													"label"
 												],
 												"additionalProperties": false
 											}
 										},
 										"nextCursor": {
-											"type": [
-												"string",
-												"null"
-											]
+											"type": ["string", "null"]
 										}
 									},
-									"required": [
-										"wallet",
-										"walletId",
-										"balance",
-										"entries",
-										"nextCursor"
-									],
+									"required": ["wallet", "walletId", "balance", "entries", "nextCursor"],
 									"additionalProperties": false
 								}
 							}
@@ -3716,12 +3253,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -3760,9 +3292,7 @@
 		"/api/v1/ledger/adjustments": {
 			"post": {
 				"summary": "Ajustement manuel de pièces (owner)",
-				"tags": [
-					"Pièces"
-				],
+				"tags": ["Pièces"],
 				"operationId": "postApiV1LedgerAdjustments",
 				"parameters": [
 					{
@@ -3806,11 +3336,7 @@
 										"maxLength": 500
 									}
 								},
-								"required": [
-									"userId",
-									"amount",
-									"note"
-								],
+								"required": ["userId", "amount", "note"],
 								"additionalProperties": false
 							}
 						}
@@ -3840,37 +3366,25 @@
 												},
 												"reason": {
 													"type": "string",
-													"enum": [
-														"completion",
-														"undo",
-														"redemption",
-														"transfer",
-														"adjustment"
-													]
+													"enum": ["completion", "undo", "redemption", "transfer", "adjustment"]
 												},
 												"refId": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												},
 												"transferId": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												},
 												"note": {
-													"type": [
-														"string",
-														"null"
-													]
+													"type": ["string", "null"]
 												},
 												"createdBy": {
 													"type": "string"
 												},
 												"createdAt": {
 													"type": "string"
+												},
+												"label": {
+													"type": ["string", "null"]
 												}
 											},
 											"required": [
@@ -3882,14 +3396,13 @@
 												"transferId",
 												"note",
 												"createdBy",
-												"createdAt"
+												"createdAt",
+												"label"
 											],
 											"additionalProperties": false
 										}
 									},
-									"required": [
-										"entry"
-									],
+									"required": ["entry"],
 									"additionalProperties": false
 								}
 							}
@@ -3901,12 +3414,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
@@ -3945,9 +3453,7 @@
 		"/api/v1/stats": {
 			"get": {
 				"summary": "Séries, taux de réussite et heatmap",
-				"tags": [
-					"Progrès"
-				],
+				"tags": ["Progrès"],
 				"operationId": "getApiV1Stats",
 				"parameters": [
 					{
@@ -4010,10 +3516,7 @@
 																"maximum": 9007199254740991
 															}
 														},
-														"required": [
-															"current",
-															"best"
-														],
+														"required": ["current", "best"],
 														"additionalProperties": false
 													},
 													"week": {
@@ -4030,17 +3533,10 @@
 																"maximum": 9007199254740991
 															},
 															"rate": {
-																"type": [
-																	"number",
-																	"null"
-																]
+																"type": ["number", "null"]
 															}
 														},
-														"required": [
-															"done",
-															"expected",
-															"rate"
-														],
+														"required": ["done", "expected", "rate"],
 														"additionalProperties": false
 													},
 													"month": {
@@ -4057,27 +3553,14 @@
 																"maximum": 9007199254740991
 															},
 															"rate": {
-																"type": [
-																	"number",
-																	"null"
-																]
+																"type": ["number", "null"]
 															}
 														},
-														"required": [
-															"done",
-															"expected",
-															"rate"
-														],
+														"required": ["done", "expected", "rate"],
 														"additionalProperties": false
 													}
 												},
-												"required": [
-													"itemId",
-													"name",
-													"streak",
-													"week",
-													"month"
-												],
+												"required": ["itemId", "name", "streak", "week", "month"],
 												"additionalProperties": false
 											}
 										},
@@ -4101,21 +3584,12 @@
 														"maximum": 9007199254740991
 													}
 												},
-												"required": [
-													"date",
-													"done",
-													"expected"
-												],
+												"required": ["date", "done", "expected"],
 												"additionalProperties": false
 											}
 										}
 									},
-									"required": [
-										"from",
-										"to",
-										"habits",
-										"heatmap"
-									],
+									"required": ["from", "to", "habits", "heatmap"],
 									"additionalProperties": false
 								}
 							}
@@ -4127,12 +3601,7 @@
 							"application/problem+json": {
 								"schema": {
 									"type": "object",
-									"required": [
-										"type",
-										"title",
-										"status",
-										"code"
-									],
+									"required": ["type", "title", "status", "code"],
 									"properties": {
 										"type": {
 											"type": "string"
