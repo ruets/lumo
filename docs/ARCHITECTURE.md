@@ -1,264 +1,277 @@
-# Lumo — plan d'architecture
+# Lumo — architecture plan
 
-Version figée le 17 novembre 2026, toutes décisions tranchées. Source : le doc « Lumo — plan d'architecture ».
+Version frozen on November 17, 2026, all decisions settled. Source: the "Lumo — architecture plan" doc.
 
-## Contexte
+## Context
 
-Lumo reprend le principe de [HabitTrove](https://github.com/dohsimpson/HabitTrove) : on valide des habitudes et des tâches, on gagne des pièces, on les dépense dans une liste d'envies. On le reconstruit de zéro (aucun code repris) avec une API propre, une base SQLite et deux fronts (web et mobile), pour un foyer de 2 à 10 personnes hébergé dans un homelab.
+Lumo takes the idea of [HabitTrove](https://github.com/dohsimpson/HabitTrove): you complete habits and tasks, earn coins, and spend them on a wish list. It is rebuilt from scratch (no code reused) with a clean API, a SQLite database and two front ends (web and mobile), for a household of 2 to 10 people hosted in a homelab.
 
-Défauts de HabitTrove 0.2.31 qu'on corrige :
+HabitTrove 0.2.31 flaws we fix:
 
-| Problème dans HabitTrove                                                                   | Réponse dans Lumo                                                              |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| Fichiers JSON réécrits en entier à chaque sauvegarde (la dernière écriture efface l'autre) | SQLite, une ligne par complétion, transactions                                 |
-| Le client calcule les pièces et appelle deux actions séparées                              | Le serveur seul calcule les pièces, dans la même transaction que la complétion |
-| Pas d'API, seulement des server actions Next.js                                            | API HTTP documentée (OpenAPI), consommée par le web et le mobile               |
-| Erreurs d'écriture journalisées puis ignorées                                              | Erreurs typées renvoyées au client                                             |
+| Problem in HabitTrove                                                        | Answer in Lumo                                                            |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| JSON files rewritten in full on every save (the last write erases the other) | SQLite, one row per completion, transactions                              |
+| The client computes the coins and calls two separate actions                 | Only the server computes coins, in the same transaction as the completion |
+| No API, only Next.js server actions                                          | Documented HTTP API (OpenAPI) used by both web and mobile                 |
+| Write errors logged then ignored                                             | Typed errors returned to the client                                       |
 
-Licence : **AGPL-3.0** (fichier LICENSE + en-tête SPDX dans chaque paquet).
+License: **AGPL-3.0** (LICENSE file + SPDX header in every package).
 
-## Fonctionnalités du MVP
+## MVP features
 
-| Domaine       | Dans le MVP                                                                                                                                    | Plus tard                               |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| Habitudes     | Récurrence (quotidienne, X fois par semaine, jours fixes, mensuelle), objectif par jour (ex. 3 verres d'eau), récompense, archivage, épinglage | RRULE libres, habitudes à durée         |
-| Tâches        | Ponctuelles avec échéance, récompense, assignées à un ou plusieurs membres                                                                     | Sous-tâches, rappels récurrents         |
-| Complétions   | Valider, annuler, valider un jour passé (fenêtre configurable), accord d'un adulte si l'élément l'exige                                        | Notification des validations en attente |
-| Pièces        | Porte-monnaie perso par membre + cagnotte du foyer, historique, virements perso → cagnotte, ajustement manuel par un admin                     | Bonus de série                          |
-| Envies        | Prix, limite d'usage par période, lien, échange contre des pièces, envies financées par la cagnotte                                            |                                         |
-| Progrès       | Taux semaine et mois, série actuelle et record, heatmap                                                                                        | Export CSV                              |
-| Foyer         | Membres, rôles, invitations, partage d'une habitude entre membres                                                                              | Plusieurs foyers par instance           |
-| Notifications | Push mobile pour les rappels                                                                                                                   | Web Push, résumé par e-mail             |
+| Area          | In the MVP                                                                                                                | Later                             |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Habits        | Schedule (daily, X times a week, fixed days, monthly), per-day goal (e.g. 3 glasses of water), reward, archiving, pinning | Free-form RRULEs, timed habits    |
+| Tasks         | One-off with a due date, reward, assigned to one or more members                                                          | Subtasks, recurring reminders     |
+| Completions   | Complete, undo, complete a past day (configurable window), adult approval if the item requires it                         | Notification of pending approvals |
+| Coins         | Personal wallet per member + household pot, history, personal → pot transfers, manual adjustment by an admin              | Streak bonus                      |
+| Wishes        | Price, per-period usage limit, link, redemption for coins, wishes funded by the pot                                       |                                   |
+| Progress      | Week and month rates, current and best streak, heatmap                                                                    | CSV export                        |
+| Household     | Members, roles, invitations, sharing a habit between members                                                              | Several households per instance   |
+| Notifications | Mobile push for reminders                                                                                                 | Web Push, e-mail digest           |
 
-Hors périmètre : dessins à main levée, mode démo public. L'écran de la cagnotte peut arriver après le MVP, mais le schéma la prévoit dès le départ.
+Out of scope: freehand drawing, public demo mode. The pot screen may come after the MVP, but the schema plans for it from the start.
 
-Import HabitTrove : un script CLI à usage unique (`pnpm import:habittrove ./data`) qui chargera plus tard les données dans la base SQLite. **On n'en tient pas compte pendant le développement.**
+HabitTrove import: a one-off CLI script (`pnpm import:habittrove ./data`) that will later load the data into the SQLite database. **It is ignored during development.**
 
 ## Architecture
 
-Monorepo TypeScript. Une API unique détient toute la logique ; les deux clients n'envoient que des intentions (« valider », « échanger », « virer »), jamais des montants.
+TypeScript monorepo. A single API holds all the logic; both clients only send intents ("complete", "redeem", "transfer"), never amounts.
 
 ```
-Front web (React + Vite)     App mobile (Expo, Android)        Authentik (OIDC)
-        │ HTTPS + cookie            │ HTTPS + jeton                ▲
+Web front end (React + Vite)   Mobile app (Expo, Android)     Authentik (OIDC)
+        │ HTTPS + cookie            │ HTTPS + token                ▲
         └──────────────┬────────────┘                              │
                        ▼                                           │
-        API Fastify /api/v1 ───────────────── OIDC ────────────────┘
-        routes Zod → paquet domain → Drizzle
-        + tâches planifiées (croner) dans le même process
+        Fastify API /api/v1 ───────────────── OIDC ────────────────┘
+        Zod routes → domain package → Drizzle
+        + scheduled jobs (croner) in the same process
                        │
                        ▼
-        SQLite (WAL, /data/lumo.db) ──► Litestream (réplication)
-                                         Expo Push ◄── rappels
+        SQLite (WAL, /data/lumo.db) ──► Litestream (replication)
+                                         Expo Push ◄── reminders
 ```
 
-Arborescence (pnpm workspaces + Turborepo) :
+Layout (pnpm workspaces + Turborepo):
 
 ```
-apps/api            Fastify, Drizzle, tâches planifiées, sert le build web
+apps/api            Fastify, Drizzle, scheduled jobs, serves the web build
 apps/web            React 19 + Vite, TanStack Router + Query, Tailwind v4
-apps/mobile         Expo, Expo Router, TanStack Query persisté, NativeWind
-packages/domain     règles métier pures (récurrence, séries, pièces, droits)
-packages/api-client client généré depuis la spec OpenAPI
-packages/tokens     design tokens partagés (couleurs, typo, espacements)
-packages/i18n       clés de traduction partagées (fr d'abord, en ensuite)
-scripts/            outils ponctuels (import HabitTrove, plus tard)
+apps/mobile         Expo, Expo Router, persisted TanStack Query
+packages/domain     pure business rules (schedules, streaks, coins, rights)
+packages/api-client client generated from the OpenAPI spec
+packages/tokens     shared design tokens (colors, type, spacing)
+packages/i18n       translations (English source, French first translation), locale detection, Intl formats
+scripts/            one-off tools (HabitTrove import, later)
 ```
 
-## Modèle de données (SQLite)
+## Data model (SQLite)
 
-SQLite en mode WAL, un seul fichier, schéma géré par Drizzle ORM (driver better-sqlite3) et ses migrations. Tout porte un `household_id`. Aucun solde n'est stocké comme vérité : un solde = somme des écritures d'un porte-monnaie.
+SQLite in WAL mode, a single file, schema managed by Drizzle ORM (better-sqlite3 driver) and its migrations. Everything carries a `household_id`. No balance is stored as truth: a balance = the sum of a wallet's entries.
 
-| Table              | Colonnes clés                                                                                                                                                                                          | Rôle                                                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `households`       | id, name, timezone, week_start, backdate_days                                                                                                                                                          | Le foyer et ses réglages                                                                                                  |
-| `users`            | id, display_name, avatar_url, oidc_subject, username, email, password_hash (nullable)                                                                                                                  | Une personne, liée à Authentik ou à un compte local (`username` unique, en minuscules, pour la connexion locale)          |
-| `memberships`      | household_id, user_id, role (`owner`, `adult`, `child`), can_create_items                                                                                                                              | Appartenance et rôle ; `can_create_items` = « si autorisé » pour un enfant                                                |
-| `wallets`          | id, household_id, kind (`personal`, `shared`), user_id (null pour `shared`)                                                                                                                            | Un porte-monnaie par membre + une cagnotte par foyer                                                                      |
-| `items`            | id, household_id, kind (`habit`, `task`), name, description, schedule (JSON), target_per_period, reward, credits_to (`personal`, `shared`), due_at, pinned, requires_approval, archived_at, created_by | Habitudes et tâches                                                                                                       |
-| `item_assignees`   | item_id, user_id                                                                                                                                                                                       | Qui doit faire quoi                                                                                                       |
-| `completions`      | id, item_id, user_id, local_date, status (`pending`, `approved`, `rejected`), approved_by, completed_at, undone_at, ledger_entry_id                                                                    | Une ligne par validation ; annuler pose `undone_at`                                                                       |
-| `rewards`          | id, household_id, name, description, cost, funded_from (`personal`, `shared`), limit_count, limit_period, link, archived_at                                                                            | Les envies                                                                                                                |
-| `reward_assignees` | reward_id, user_id                                                                                                                                                                                     | Qui peut échanger cette envie                                                                                             |
-| `redemptions`      | id, reward_id, user_id, wallet_id, redeemed_at, ledger_entry_id                                                                                                                                        | Une ligne par échange                                                                                                     |
-| `ledger_entries`   | id, household_id, wallet_id, amount, reason (`completion`, `undo`, `redemption`, `transfer`, `adjustment`), ref_id, transfer_id, note, created_by, created_at                                          | Journal des pièces, en ajout seul                                                                                         |
-| `devices`          | id, user_id, push_token, platform, last_seen_at                                                                                                                                                        | Appareils pour le push                                                                                                    |
-| `sessions`         | id, user_id, kind (`web`, `mobile`), refresh_token_hash, previous_token_hash, expires_at, device_id, created_at, last_used_at                                                                          | Cookie web ou refresh token mobile (hash SHA-256 seulement) ; `previous_token_hash` détecte le rejeu d'un jeton déjà roté |
-| `idempotency_keys` | key, user_id, response, created_at                                                                                                                                                                     | Réponses déjà rendues pour les requêtes rejouées                                                                          |
-| `invites`          | id, household_id, token_hash, role, created_by, expires_at, used_at, used_by                                                                                                                           | Invitations : seul moyen de créer un compte (7 jours, usage unique)                                                       |
-| `oidc_states`      | state, nonce, code_verifier, invite_token, expires_at                                                                                                                                                  | État PKCE d'une connexion OIDC web en cours (usage unique, 10 min)                                                        |
+| Table              | Key columns                                                                                                                                                                                            | Role                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `households`       | id, name, timezone, week_start, backdate_days                                                                                                                                                          | The household and its settings                                                                                           |
+| `users`            | id, display_name, avatar_url, oidc_subject, username, email, password_hash (nullable)                                                                                                                  | A person, linked to Authentik or to a local account (`username` unique, lowercase, for local sign-in)                    |
+| `memberships`      | household_id, user_id, role (`owner`, `adult`, `child`), can_create_items                                                                                                                              | Membership and role; `can_create_items` = "if allowed" for a child                                                       |
+| `wallets`          | id, household_id, kind (`personal`, `shared`), user_id (null for `shared`)                                                                                                                             | One wallet per member + one pot per household                                                                            |
+| `items`            | id, household_id, kind (`habit`, `task`), name, description, schedule (JSON), target_per_period, reward, credits_to (`personal`, `shared`), due_at, pinned, requires_approval, archived_at, created_by | Habits and tasks                                                                                                         |
+| `item_assignees`   | item_id, user_id                                                                                                                                                                                       | Who must do what                                                                                                         |
+| `completions`      | id, item_id, user_id, local_date, status (`pending`, `approved`, `rejected`), approved_by, completed_at, undone_at, ledger_entry_id                                                                    | One row per completion; undoing sets `undone_at`                                                                         |
+| `rewards`          | id, household_id, name, description, cost, funded_from (`personal`, `shared`), limit_count, limit_period, link, archived_at                                                                            | The wishes                                                                                                               |
+| `reward_assignees` | reward_id, user_id                                                                                                                                                                                     | Who can redeem this wish                                                                                                 |
+| `redemptions`      | id, reward_id, user_id, wallet_id, redeemed_at, undone_at, ledger_entry_id                                                                                                                             | One row per redemption; undoing sets `undone_at`                                                                         |
+| `ledger_entries`   | id, household_id, wallet_id, amount, reason (`completion`, `undo`, `redemption`, `transfer`, `adjustment`), ref_id, transfer_id, note, created_by, created_at                                          | Coin ledger, append-only                                                                                                 |
+| `devices`          | id, user_id, push_token, platform, last_seen_at                                                                                                                                                        | Devices for push                                                                                                         |
+| `sessions`         | id, user_id, kind (`web`, `mobile`), refresh_token_hash, previous_token_hash, expires_at, device_id, created_at, last_used_at                                                                          | Web cookie or mobile refresh token (SHA-256 hash only); `previous_token_hash` detects replay of an already rotated token |
+| `idempotency_keys` | key, user_id, response, created_at                                                                                                                                                                     | Responses already returned for replayed requests                                                                         |
+| `invites`          | id, household_id, token_hash, role, created_by, expires_at, used_at, used_by                                                                                                                           | Invitations: the only way to create an account (7 days, single use)                                                      |
+| `oidc_states`      | state, nonce, code_verifier, invite_token, expires_at                                                                                                                                                  | PKCE state of an in-progress web OIDC sign-in (single use, 10 min)                                                       |
 
-Index : `completions (item_id, user_id, local_date)`, `ledger_entries (wallet_id, created_at)`.
+Indexes: `completions (item_id, user_id, local_date)`, `ledger_entries (wallet_id, created_at)`.
 
-Garde-fous en base (migrations `0000_init` et `0001_ledger_append_only`) : clés étrangères actives, `CHECK` sur chaque énumération, une seule cagnotte par foyer, `local_date` au format `YYYY-MM-DD`, et deux triggers qui interdisent tout `UPDATE` ou `DELETE` sur `ledger_entries` : une correction est toujours une nouvelle écriture.
+Database guard rails (migrations `0000_init` and `0001_ledger_append_only`): foreign keys on, a `CHECK` on every enumeration, a single pot per household, `local_date` in `YYYY-MM-DD` format, and two triggers that forbid any `UPDATE` or `DELETE` on `ledger_entries`: a correction is always a new entry. Migration `0002` adds `redemptions.undone_at`.
 
-## Règles métier (paquet `domain`)
+## Business rules (`domain` package)
 
-TypeScript pur, sans dépendance à la base ni au framework, testé unitairement. Le mobile l'utilise pour l'affichage optimiste ; le serveur reste seul juge.
+Pure TypeScript, no dependency on the database or the framework, unit-tested. Mobile uses it for optimistic display; the server remains the only judge.
 
-- **Jour local.** Chaque complétion porte une `local_date` calculée dans le fuseau du foyer. Stats et séries se basent dessus, jamais sur l'UTC.
-- **Récurrence.** `schedule` validé par Zod : `{type:"daily"}`, `{type:"weekly",days:[1,3,5]}`, `{type:"timesPerWeek",count:3}`, `{type:"monthly",day:1}`. `isDue(item, date)` dit si l'élément apparaît un jour donné.
-- **Objectif par jour.** `target_per_period = 3` → 3 validations possibles, chacune rapporte `reward`. Au-delà : 409 `target_reached`.
-- **Pièces atomiques.** Valider = une transaction qui insère la complétion et l'écriture `+reward` dans le porte-monnaie désigné par `credits_to` (perso du membre ou cagnotte). Annuler = `undone_at` + écriture `−reward`. Le client n'envoie jamais de montant.
-- **Accord d'un adulte.** Si `requires_approval` et que l'acteur est `child` : complétion en `pending`, aucune écriture. Un `owner` ou `adult` l'approuve (écriture créée) ou la rejette.
-- **Virements.** Perso → cagnotte : deux écritures (−n perso, +n cagnotte) dans la même transaction, liées par `transfer_id`. Solde insuffisant : 409 `insufficient_balance`.
-- **Échange d'envie.** Transaction `BEGIN IMMEDIATE` : vérifier solde et limite de période, insérer l'échange et l'écriture `−cost` dans le porte-monnaie `funded_from`. Une envie financée par la cagnotte est réservée aux rôles `owner` et `adult`.
-- **Idempotence.** Toute requête d'écriture porte un `Idempotency-Key` (UUID client) ; un doublon renvoie la réponse déjà enregistrée.
-- **Séries.** Périodes consécutives où l'objectif est atteint, en ne comptant que les jours où l'élément était dû.
-- **Jours passés.** Permis dans la limite de `backdate_days` (2 par défaut) ; au-delà, seulement un `owner`.
+- **Local day.** Each completion carries a `local_date` computed in the household's time zone. Stats and streaks rely on it, never on UTC.
+- **Schedule.** `schedule` validated by Zod: `{type:"daily"}`, `{type:"weekly",days:[1,3,5]}`, `{type:"timesPerWeek",count:3}`, `{type:"monthly",day:1}`. `isDue(item, date)` says whether the item shows up on a given day.
+- **Per-day goal.** `target_per_period = 3` → 3 completions possible, each earns `reward`. Beyond that: 409 `target_reached`.
+- **Atomic coins.** Completing = one transaction that inserts the completion and the `+reward` entry in the wallet designated by `credits_to` (the member's own or the pot). Undoing = `undone_at` + `−reward` entry. The client never sends an amount.
+- **Adult approval.** If `requires_approval` and the actor is `child`: completion in `pending`, no entry. An `owner` or `adult` approves it (entry created) or rejects it.
+- **Transfers.** Personal → pot: two entries (−n personal, +n pot) in the same transaction, linked by `transfer_id`. Insufficient balance: 409 `insufficient_balance`.
+- **Wish redemption.** `BEGIN IMMEDIATE` transaction: check balance and period limit, insert the redemption and the `−cost` entry in the `funded_from` wallet. A wish funded by the pot is reserved for the `owner` and `adult` roles.
+- **Idempotency.** Every write request carries an `Idempotency-Key` (client UUID); a duplicate returns the response already stored.
+- **Streaks.** Consecutive periods where the goal is met, counting only the days the item was due.
+- **Past days.** Allowed within `backdate_days` (2 by default); beyond that, only an `owner`.
 
 ## API
 
-REST JSON sous `/api/v1`, Fastify + schémas Zod qui génèrent validation, types partagés et spec OpenAPI.
+REST JSON under `/api/v1`, Fastify + Zod schemas that generate validation, shared types and the OpenAPI spec.
 
-| Méthode et chemin                                                 | Rôle                                                               |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `GET /me`                                                         | Profil, foyer, rôle, soldes (perso et cagnotte)                    |
-| `GET /today?date=`                                                | Éléments dus ce jour avec l'avancement ; écran Aujourd'hui         |
-| `GET/POST /items`, `PATCH/DELETE /items/:id`                      | Habitudes et tâches                                                |
-| `POST /items/:id/completions`                                     | Valider (`date` optionnelle) ; renvoie la complétion et les soldes |
-| `DELETE /completions/:id`                                         | Annuler                                                            |
-| `POST /completions/:id/approve`, `POST /completions/:id/reject`   | Accord d'un adulte                                                 |
-| `GET/POST /rewards`, `PATCH /rewards/:id`                         | Envies                                                             |
-| `POST /rewards/:id/redemptions`                                   | Échanger                                                           |
-| `POST /transfers`                                                 | Virement perso → cagnotte                                          |
-| `GET /ledger?wallet=&cursor=`                                     | Historique paginé                                                  |
-| `POST /ledger/adjustments`                                        | Ajustement manuel (owner)                                          |
-| `GET /stats?from=&to=`                                            | Taux, séries, heatmap                                              |
-| `GET /household`, `POST /household/invites`, `PATCH /members/:id` | Gestion du foyer                                                   |
-| `POST /devices`                                                   | Jeton push                                                         |
-| `GET /events`                                                     | Flux SSE des changements du foyer                                  |
+| Method and path                                                   | Role                                                                |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `GET /me`                                                         | Profile, household, role, balances (personal and pot)               |
+| `GET /today?date=`                                                | Items due that day with progress; Today screen                      |
+| `GET/POST /items`, `PATCH/DELETE /items/:id`                      | Habits and tasks                                                    |
+| `POST /items/:id/completions`                                     | Complete (optional `date`); returns the completion and the balances |
+| `DELETE /completions/:id`                                         | Undo                                                                |
+| `POST /completions/:id/approve`, `POST /completions/:id/reject`   | Adult approval                                                      |
+| `GET/POST /rewards`, `PATCH /rewards/:id`                         | Wishes                                                              |
+| `POST /rewards/:id/redemptions`                                   | Redeem                                                              |
+| `DELETE /redemptions/:id`                                         | Undo a redemption (refund)                                          |
+| `POST /transfers`                                                 | Personal → pot transfer                                             |
+| `GET /ledger?wallet=&cursor=`                                     | Paginated history                                                   |
+| `POST /ledger/adjustments`                                        | Manual adjustment (owner)                                           |
+| `GET /stats?from=&to=`                                            | Rates, streaks, heatmap                                             |
+| `GET /household`, `POST /household/invites`, `PATCH /members/:id` | Household management                                                |
+| `POST /devices`                                                   | Push token                                                          |
+| `GET /events`                                                     | SSE stream of household changes                                     |
 
-Erreurs RFC 9457 (`application/problem+json`) avec un `code` stable. Les breaking changes passent par `/api/v2`.
+RFC 9457 errors (`application/problem+json`) with a stable `code`. Breaking changes go through `/api/v2`.
 
-Implémentation (étape 2) :
+The API never sends text meant for the UI. It sends stable error `code`s that the clients translate; the English `message` is only a fallback and for logs.
 
-- Chaque route est déclarée une fois (`apps/api/src/routes`) avec ses schémas Zod : ils valident les entrées, typent le handler et produisent la spec `apps/api/openapi.json` (OpenAPI 3.1, aussi servie sur `GET /api/v1/openapi.json`). Un test échoue si le fichier n'est pas à jour (`pnpm --filter @lumo/api openapi:generate`). Le client `@lumo/api-client` en est généré (`pnpm --filter @lumo/api-client generate`). Les routes d'authentification sont hors spec pour l'instant.
-- Les corps sont stricts : un champ inconnu, dont tout `amount`, est refusé en 400.
-- Toute écriture exige `Idempotency-Key` (400 `idempotency_key_required` sinon). La recherche de la clé, l'action et la mémorisation de la réponse se font dans la même transaction `BEGIN IMMEDIATE` ; un rejeu renvoie la réponse enregistrée avec l'en-tête `Idempotent-Replayed: true`. Seules les réponses réussies sont mémorisées. Les clés sont propres à chaque utilisateur.
-- Codes d'erreur métier : 409 `target_reached`, `insufficient_balance`, `limit_reached`, `not_due`, `not_pending`, `already_undone` ; 403 `backdate_not_allowed`, `forbidden` ; 400 `future_date`, `invalid_amount`, `validation_error`.
-- `GET /completions?status=pending` (owner et adultes) liste les validations à approuver. `PATCH /rewards/:id` accepte `archived`. `GET /ledger` pagine par curseur, du plus récent au plus ancien.
+Implementation (step 2):
 
-Règles précisées à l'implémentation :
+- Each route is declared once (`apps/api/src/routes`) with its Zod schemas: they validate input, type the handler and produce the `apps/api/openapi.json` spec (OpenAPI 3.1, also served on `GET /api/v1/openapi.json`). A test fails if the file is out of date (`pnpm --filter @lumo/api openapi:generate`). The `@lumo/api-client` client is generated from it (`pnpm --filter @lumo/api-client generate`). The authentication routes are outside the spec for now.
+- Bodies are strict: an unknown field, including any `amount`, is rejected with 400.
+- Every write requires `Idempotency-Key` (400 `idempotency_key_required` otherwise). Looking up the key, the action and storing the response all happen in the same `BEGIN IMMEDIATE` transaction; a replay returns the stored response with the `Idempotent-Replayed: true` header. Only successful responses are stored. Keys are specific to each user.
+- Business error codes: 409 `target_reached`, `insufficient_balance`, `limit_reached`, `not_due`, `not_pending`, `already_undone`; 403 `backdate_not_allowed`, `forbidden`; 400 `future_date`, `invalid_amount`, `validation_error`.
+- `GET /completions?status=pending` (owner and adults) lists the completions to approve. `PATCH /rewards/:id` accepts `archived`. `GET /ledger` paginates by cursor, newest first.
 
-- Une validation en attente compte vers l'objectif du jour (pas de double envoi) mais pas vers les séries ni les taux, qui ne comptent que les validations approuvées et non annulées.
-- Une tâche se valide une seule fois, quelle que soit la date.
-- Annuler écrit une contre-écriture du montant exact payé à l'origine, même si la récompense a changé depuis. À l'approbation, la récompense va au porte-monnaie de celui qui a validé.
-- Stats : taux « semaine » = 7 derniers jours, « mois » = 30 derniers jours ; le jour en cours non terminé n'est pas un échec ; heatmap sur la plage demandée (366 jours max), sans les habitudes « X fois par semaine ».
-- Limite d'usage d'une envie : par membre et par période, comptée en jours locaux du foyer.
+Rules clarified during implementation:
 
-## Authentification et droits
+- A pending completion counts toward the day's goal (no double submission) but not toward streaks or rates, which only count approved, non-undone completions.
+- A task is completed only once, whatever the date.
+- Undoing writes a counter-entry of the exact amount paid originally, even if the reward has changed since. On approval, the reward goes to the wallet of the person who completed it.
+- Stats: "week" rate = last 7 days, "month" = last 30 days; the current unfinished day is not a failure; heatmap over the requested range (366 days max), without "X times a week" habits.
+- A wish's usage limit: per member and per period, counted in the household's local days.
 
-- **Authentik** en OIDC (Authorization Code + PKCE) ; l'API émet ensuite ses propres sessions.
-- **Web :** l'API sert de BFF, cookie `HttpOnly`, `Secure`, `SameSite=Lax`, aucun jeton dans le navigateur.
-- **Mobile :** `expo-auth-session` (PKCE) puis `/auth/mobile/exchange` → jeton d'accès 15 min + refresh rotatif dans `expo-secure-store`.
-- **Comptes locaux** en secours (Argon2id), désactivables via `LOCAL_AUTH_ENABLED`.
-- **Liaison :** par `sub`, ou par invitation. Pas de création de compte sans invitation. Groupe Authentik `lumo-admins` → `owner` (optionnel, `OIDC_ADMIN_GROUP`, promotion seulement, jamais de rétrogradation).
-- **Premier démarrage :** tant qu'aucun utilisateur n'existe, le premier à se connecter (OIDC) ou à appeler `POST /auth/setup` (compte local) crée le foyer et devient `owner`. Ensuite, plus aucun compte sans invitation.
-- **Sessions :** web = jeton opaque en cookie, 30 jours ; mobile = jeton d'accès JWT HS256 de 15 min (lié à une session, donc révocable) + refresh rotatif de 60 jours. Si un refresh déjà utilisé est rejoué, toute la session est révoquée.
-- **CSRF :** en plus de `SameSite=Lax`, toute requête qui modifie l'état avec un cookie doit porter un `Origin` égal à `PUBLIC_URL`.
-- **Mots de passe :** Argon2id (19 Mio, 2 passes), 10 caractères minimum, limitation de débit sur les routes d'auth.
+## Authentication and rights
 
-| Méthode et chemin                                     | Rôle                                                                                                                                        |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /auth/config`                                    | Public. `app: "lumo"` (identifie le serveur), méthodes actives, `oidcIssuer` et `oidcClientId` (publics, jamais le secret), `setupRequired` |
-| `GET /auth/login?invite=`                             | Redirige vers Authentik (PKCE S256, state, nonce)                                                                                           |
-| `GET /auth/callback`                                  | Retour d'Authentik ; ouvre la session web et redirige vers `PUBLIC_URL`                                                                     |
-| `POST /auth/mobile/exchange`                          | Code PKCE obtenu par `expo-auth-session` contre une paire de jetons                                                                         |
-| `POST /auth/refresh`                                  | Rotation du refresh token mobile                                                                                                            |
-| `POST /auth/setup`                                    | Premier compte local (instance vide)                                                                                                        |
-| `POST /auth/local/login`, `POST /auth/local/register` | Connexion locale ; création d'un compte local sur invitation                                                                                |
-| `POST /auth/logout`                                   | Révoque la session courante                                                                                                                 |
-| `POST /household/invites`                             | Crée une invitation (owner)                                                                                                                 |
+- **Authentik** over OIDC (Authorization Code + PKCE); the API then issues its own sessions.
+- **Web:** the API acts as a BFF, `HttpOnly`, `Secure`, `SameSite=Lax` cookie, no token in the browser.
+- **Mobile:** `expo-auth-session` (PKCE) then `/auth/mobile/exchange` → 15-minute access token + rotating refresh token in `expo-secure-store`.
+- **Local accounts** as a fallback (Argon2id), can be disabled with `LOCAL_AUTH_ENABLED`.
+- **Linking:** by `sub`, or by invitation. No account creation without an invitation. Authentik group `lumo-admins` → `owner` (optional, `OIDC_ADMIN_GROUP`, promotion only, never demotion).
+- **First start:** as long as no user exists, the first person to sign in (OIDC) or to call `POST /auth/setup` (local account) creates the household and becomes `owner`. After that, no account without an invitation.
+- **Sessions:** web = opaque token in a cookie, 30 days; mobile = 15-minute HS256 JWT access token (tied to a session, so revocable) + 60-day rotating refresh token. If an already used refresh token is replayed, the whole session is revoked.
+- **CSRF:** on top of `SameSite=Lax`, any request that changes state with a cookie must carry an `Origin` equal to `PUBLIC_URL`.
+- **Passwords:** Argon2id (19 MiB, 2 passes), 10 characters minimum, rate limiting on the auth routes.
 
-| Action                                                                 | owner | adult | child       |
-| ---------------------------------------------------------------------- | ----- | ----- | ----------- |
-| Valider ses éléments, échanger une envie perso                         | oui   | oui   | oui         |
-| Créer ou modifier ses habitudes et tâches                              | oui   | oui   | si autorisé |
-| Créer pour les autres, approuver un enfant, échanger une envie commune | oui   | oui   | non         |
-| Ajuster les pièces, valider hors fenêtre                               | oui   | non   | non         |
-| Gérer membres et réglages                                              | oui   | non   | non         |
+| Method and path                                       | Role                                                                                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /auth/config`                                    | Public. `app: "lumo"` (identifies the server), active methods, `oidcIssuer` and `oidcClientId` (public, never the secret), `setupRequired` |
+| `GET /auth/login?invite=`                             | Redirects to Authentik (PKCE S256, state, nonce)                                                                                           |
+| `GET /auth/callback`                                  | Return from Authentik; opens the web session and redirects to `PUBLIC_URL`                                                                 |
+| `POST /auth/mobile/exchange`                          | PKCE code obtained by `expo-auth-session` in exchange for a token pair                                                                     |
+| `POST /auth/refresh`                                  | Rotation of the mobile refresh token                                                                                                       |
+| `POST /auth/setup`                                    | First local account (empty instance)                                                                                                       |
+| `POST /auth/local/login`, `POST /auth/local/register` | Local sign-in; creation of a local account by invitation                                                                                   |
+| `POST /auth/logout`                                   | Revokes the current session                                                                                                                |
+| `POST /household/invites`                             | Creates an invitation (owner)                                                                                                              |
 
-Droits vérifiés côté API par `can(actor, action, resource)` du paquet `domain`.
+| Action                                                   | owner | adult | child      |
+| -------------------------------------------------------- | ----- | ----- | ---------- |
+| Complete own items, redeem a personal wish               | yes   | yes   | yes        |
+| Create or edit own habits and tasks                      | yes   | yes   | if allowed |
+| Create for others, approve a child, redeem a shared wish | yes   | yes   | no         |
+| Adjust coins, complete outside the window                | yes   | no    | no         |
+| Manage members and settings                              | yes   | no    | no         |
 
-## Fronts
+Rights are checked on the API side by `can(actor, action, resource)` from the `domain` package.
 
-Deux applis séparées (React pour le web, React Native/Expo pour le mobile). Elles partagent `domain`, `api-client`, `tokens` et `i18n`, pas les composants.
+## Front ends
 
-|              | Web                            | Mobile                                                     |
-| ------------ | ------------------------------ | ---------------------------------------------------------- |
-| Framework    | React 19 + Vite, SPA           | Expo, Expo Router                                          |
-| Navigation   | TanStack Router                | Onglets : Aujourd'hui, Habitudes, Progrès, Envies          |
-| Données      | TanStack Query + client généré | TanStack Query, cache persisté                             |
-| Styles       | Tailwind v4 + tokens           | `StyleSheet` + tokens (NativeWind écarté, voir ci-dessous) |
-| Hors ligne   | PWA en lecture (à faire)       | File des validations rejouée avec `Idempotency-Key`        |
-| Distribution | Servi par l'API                | APK Android construit par la CI (Gradle), iOS plus tard    |
+Two separate apps (React for web, React Native/Expo for mobile). They share `domain`, `api-client`, `tokens` and `i18n`, not the components.
 
-### Implémentation (étape 3)
+|              | Web                               | Mobile                                                  |
+| ------------ | --------------------------------- | ------------------------------------------------------- |
+| Framework    | React 19 + Vite, SPA              | Expo, Expo Router                                       |
+| Navigation   | TanStack Router                   | Tabs: Today, Habits, Progress, Wishes                   |
+| Data         | TanStack Query + generated client | TanStack Query, persisted cache                         |
+| Styles       | Tailwind v4 + tokens              | `StyleSheet` + tokens (NativeWind ruled out, see below) |
+| Offline      | Read-only PWA (to do)             | Completion queue replayed with `Idempotency-Key`        |
+| Distribution | Served by the API                 | Android APK built by CI (Gradle), iOS later             |
 
-Maquette de référence : le canvas « Lumo — maquette de l'appli » (thème sombre, polices Unbounded et Manrope, violet `#6B4BF2`, pièces en `#FFC857`). Les couleurs vivent dans `packages/tokens` ; le web les recopie dans le `@theme` Tailwind de `apps/web/src/styles.css` (à garder synchrone).
+### Internationalisation
 
-- **Écrans** (identiques sur web et mobile) : Aujourd'hui (anneau de la journée, reste à faire, accords en attente pour les adultes, prochaine envie), Habitudes (semaine, onglets Habitudes/Tâches, valider ou annuler, création), Progrès (taux semaine ou mois, barres, séries, dernières pièces), Envies (solde, échange, création). Le web ajoute, à partir de 768 px, une barre latérale et des grilles à deux colonnes ; en dessous, la même barre d'onglets que le mobile.
-- **Web** : routes TanStack Router en code (pas de génération de fichiers), TanStack Query, cookie de session, mises à jour optimistes avec retour arrière si le serveur refuse. Polices servies par `@fontsource` (pas de CDN : l'instance reste autonome).
-- **Mobile** : Expo Router (`Stack.Protected` pour la connexion, onglets), TanStack Query avec cache persisté dans AsyncStorage (24 h). **NativeWind n'est pas utilisé** : `StyleSheet` et les tokens suffisent, sans dépendance de plus sur la chaîne Metro/Tailwind.
-- **Logique partagée** : `domain/progress` (`summarizeProgress` : barres, taux, tendance), `i18n/format` (dates en français, libellés de récurrence, messages d'erreur par code).
+- **Source language: English.** French is the first translation. Dictionaries live in `packages/i18n`, one file per locale (`locales/en.ts`, `locales/fr.ts`). The French file is typed so it must have exactly the same keys as English, and a test checks that every key has the same `{placeholders}` in every locale. To add a language: create `locales/<code>.ts`, list it in `messages.ts`, give it a display name in `locale.ts`.
+- **Plurals.** A key with `_one` / `_other` suffixes is picked by the `count` parameter through `Intl.PluralRules`; a missing key in a locale falls back to English.
+- **Language choice.** Detected from the browser (`navigator.languages`) or the device (`expo-localization`), matching the first supported language and ignoring the region (`fr-CA` → `fr`). The user can override it in the app (Automatic, English, Français); the choice is stored locally (`localStorage` on web, AsyncStorage on mobile). Changing it remounts the UI so every string is re-evaluated. Storing the choice on the user profile (so it follows them across devices) is not done yet.
+- **Dates and numbers** go through `Intl` (long and short dates, weekday names), never hand-written arrays.
+- **Errors.** The API sends stable error `code`s, the clients translate them (`errors.<code>`); an unknown code shows the API's English message.
+- **Code and docs are in English** (code, comments, tests, documentation, commit messages).
 
-**File hors ligne (mobile).** Valider passe toujours par la file : l'entrée (`itemId`, jour local, clé d'idempotence) est écrite dans AsyncStorage, affichée tout de suite par-dessus les données du serveur, puis envoyée dans l'ordre.
+### Implementation (step 3)
 
-- La clé d'idempotence est fixée à la création : un rejeu après une réponse perdue ne crédite jamais deux fois.
-- Le jour local est fixé à la saisie : une validation rejouée le lendemain garde son jour.
-- Coupure réseau, 5xx ou 401 : l'entrée reste et on s'arrête (l'ordre est conservé). Refus du serveur (objectif atteint, jour trop ancien…) : l'entrée est abandonnée avec un message, les suivantes continuent.
-- Envoi au démarrage, au retour au premier plan, au retour du réseau, à chaque saisie et au tirer-pour-rafraîchir.
-- Annuler une validation encore en file la retire localement ; annuler une validation déjà envoyée exige le réseau.
-- Échanger une envie, approuver et créer exigent aussi le réseau (le serveur doit juger le solde).
+Reference mock-up: the "Lumo — app mock-up" canvas (dark theme, Unbounded and Manrope fonts, purple `#6B4BF2`, coins in `#FFC857`). Colors live in `packages/tokens`; the web copies them into the Tailwind `@theme` of `apps/web/src/styles.css` (keep them in sync).
 
-**Choix du serveur (mobile).** Le web est servi par l'API, son serveur est son origine. Le mobile n'a pas d'origine : au premier lancement, l'utilisateur saisit l'adresse de son serveur, un seul APK sert tous les foyers.
+- **Screens** (same on web and mobile): Today (day ring, still to do, pending approvals for adults, next wish), Habits (week, Habits/Tasks tabs, complete or undo, creation), Progress (week or month rate, bars, streaks, latest coins), Wishes (balance, redeem, creation). From 768 px up the web adds a sidebar and two-column grids; below that, the same tab bar as mobile.
+- **Web**: TanStack Router routes in code (no file generation), TanStack Query, session cookie, optimistic updates rolled back if the server refuses. Fonts served by `@fontsource` (no CDN: the instance stays self-contained). Routes: `/`, `/habits`, `/progress`, `/wishes`.
+- **Mobile**: Expo Router (`Stack.Protected` for sign-in, tabs), TanStack Query with a cache persisted in AsyncStorage (24 h). **NativeWind is not used**: `StyleSheet` and the tokens are enough, with no extra dependency on the Metro/Tailwind chain.
+- **Shared logic**: `domain/progress` (`summarizeProgress`: bars, rates, trend), `i18n/format` (localised dates, schedule labels, error messages by code).
 
-- L'adresse est normalisée (`lumo.exemple.fr` devient `https://lumo.exemple.fr`, slash final et requête retirés). HTTPS obligatoire ; le HTTP en clair n'est accepté que pour `localhost` et les réseaux privés (développement). Sur un APK de production, Android bloque de toute façon le HTTP en clair.
-- Elle est vérifiée avec `GET /auth/config` : la réponse doit porter `app: "lumo"`, sinon « ne répond pas comme un serveur Lumo ». Délai de 8 s, sinon « injoignable ».
-- L'issuer et le `client_id` Authentik viennent de ce même appel : plus de variables `EXPO_PUBLIC_OIDC_*` à compiler dans l'APK. La redirect URI `lumo://auth` reste à déclarer dans Authentik.
-- Le routeur a trois états : pas de serveur (écran de saisie), serveur sans session (connexion), session (onglets).
-- « Changer de serveur » (connexion et bas de l'écran Aujourd'hui) efface jetons, cache et file hors ligne avant d'oublier l'adresse : aucune donnée d'un foyer n'est envoyée à un autre.
+**Offline queue (mobile).** Completing always goes through the queue: the entry (`itemId`, local day, idempotency key) is written to AsyncStorage, shown immediately on top of the server data, then sent in order.
 
-**Ajouts à l'API pour les fronts** : `GET /today` renvoie `completionIds` (validations annulables du jour) ; `GET /rewards` renvoie `remaining` (échanges encore possibles dans la période de limite) ; `GET /ledger` renvoie `label` (nom de l'habitude, tâche ou envie à l'origine de l'écriture). Progrès : la semaine est la semaine calendaire (jours futurs vides), le mois est les 4 dernières semaines glissantes, chacun comparé à la période précédente (fenêtre de 56 jours demandée à `/stats`).
+- The idempotency key is fixed at creation: a replay after a lost response never credits twice.
+- The local day is fixed at entry: a completion replayed the next day keeps its day.
+- Network cut, 5xx or 401: the entry stays and we stop (order is preserved). Server refusal (goal reached, day too old…): the entry is dropped with a message, the next ones continue.
+- Sent at startup, when returning to the foreground, when the network comes back, on every entry and on pull-to-refresh.
+- Undoing a completion that is still queued removes it locally; undoing one already sent needs the network.
+- Redeeming a wish, approving and creating also need the network (the server must judge the balance).
 
-**Annuler un échange d'envie.** `DELETE /redemptions/{id}` : `redemptions.undone_at` (migration 0002) et une contre-écriture `undo` du montant exact payé, dans le porte-monnaie d'origine (perso ou cagnotte), dans la même transaction. Mêmes droits que pour annuler une validation (`redemption:undo` : soi-même, l'owner pour tous, un adulte pour un enfant). Un échange annulé ne compte plus dans la limite d'usage (`remaining` remonte) ; une seconde annulation renvoie 409 `already_undone`. Dans l'historique (Progrès, web et mobile), chaque échange non remboursé porte un bouton « Annuler l'échange » avec confirmation ; il exige le réseau.
+**Server choice (mobile).** The web app is served by the API, so its server is its origin. Mobile has no origin: at first launch, the user types their server address, so a single APK serves every household.
 
-**Pas encore fait** : PWA en lecture seule, Playwright et Maestro, gestion des membres et du foyer dans l'interface, avatars, notifications.
+- The address is normalised (`lumo.example.com` becomes `https://lumo.example.com`, trailing slash and query removed). HTTPS is required; plain HTTP is only accepted for `localhost` and private networks (development). On a production APK, Android blocks plain HTTP anyway.
+- It is checked with `GET /auth/config`: the response must carry `app: "lumo"`, otherwise "does not answer like a Lumo server". 8-second timeout, otherwise "unreachable".
+- The Authentik issuer and `client_id` come from that same call: no more `EXPO_PUBLIC_OIDC_*` variables to compile into the APK. The `lumo://auth` redirect URI still has to be declared in Authentik.
+- The router has three states: no server (entry screen), server without a session (sign-in), session (tabs).
+- "Change server" (sign-in and bottom of the Today screen) erases tokens, cache and offline queue before forgetting the address: no data from one household is ever sent to another.
 
-## Déploiement
+**API additions for the front ends**: `GET /today` returns `completionIds` (undoable completions of the day); `GET /rewards` returns `remaining` (redemptions still possible in the limit period); `GET /ledger` returns `label` (name of the habit, task or wish behind the entry). Progress: the week is the calendar week (future days empty), the month is the last 4 rolling weeks, each compared with the previous period (56-day window requested from `/stats`).
 
-`docker-compose.yml` dans un LXC Proxmox, derrière le reverse proxy existant :
+**Undoing a wish redemption.** `DELETE /redemptions/{id}`: `redemptions.undone_at` (migration 0002) and an `undo` counter-entry of the exact amount paid, in the original wallet (personal or pot), in the same transaction. Same rights as undoing a completion (`redemption:undo`: yourself, the owner for everyone, an adult for a child). An undone redemption no longer counts toward the usage limit (`remaining` goes back up); a second undo returns 409 `already_undone`. In the history (Progress, web and mobile), each redemption that has not been refunded has an "Undo redemption" button with confirmation; it needs the network.
 
-| Service  | Image                                    | Rôle                                                        |
-| -------- | ---------------------------------------- | ----------------------------------------------------------- |
-| `app`    | `ghcr.io/<toi>/lumo` (Node 22, non root) | API, front web statique, tâches planifiées                  |
-| `backup` | `litestream/litestream`                  | Réplication continue du fichier SQLite + snapshot quotidien |
+**Not done yet**: read-only PWA, Playwright and Maestro, member and household management in the UI, avatars, notifications, language stored on the user profile.
 
-- Variables validées par Zod au démarrage : `DATABASE_PATH`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` (les trois OIDC vont ensemble ; sans elles, `LOCAL_AUTH_ENABLED` doit rester actif), `SESSION_SECRET` (32 caractères minimum), `PUBLIC_URL`, `LOCAL_AUTH_ENABLED`. Optionnelles : `OIDC_ADMIN_GROUP`, `WEB_DIST_PATH`, `PORT`, `HOST`, `LOG_LEVEL`. Une variable vide vaut « non définie ».
-- `/data/lumo.db` sur un volume local, jamais NFS/SMB.
-- Migrations appliquées au démarrage de `app`, seul process qui écrit.
-- Logs JSON (pino), `/healthz`, `/readyz`, `/metrics` optionnel.
-- Images construites par la CI, scannées (Trivy), versionnées en SemVer.
-- **CI GitHub Actions** (`.github/workflows`) :
-  - `ci.yml` : lint, typecheck, tests (spec OpenAPI à jour et file hors ligne comprises), build ; puis l'image unique web + API, testée (le conteneur démarre, sert le web et répond à l'API) et scannée par Trivy ; puis publication sur `ghcr.io/<propriétaire>/<dépôt>` à chaque push sur `main` (`edge` et le SHA) et sur tag `vX.Y.Z` (SemVer et `latest`). Les pull requests ne publient jamais. Image `linux/amd64` seulement (le build ARM sous émulation est trop lent).
-  - `mobile.yml` : APK Android construit sur le runner (`expo prebuild` puis Gradle), sans compte Expo ni secret, signé avec la clé de debug d'Expo (suffisant pour l'installer sur ses propres téléphones). Disponible en artefact, et joint à la release GitHub sur tag. L'adresse du serveur étant choisie dans l'appli, un seul APK sert tous les foyers. `versionCode` = numéro d'exécution (`apps/mobile/app.config.ts`). EAS Build reste possible pour un jour publier sur un store.
+## Deployment
 
-## Qualité
+`docker-compose.yml` in a Proxmox LXC, behind the existing reverse proxy:
 
-- Vitest sur `domain` : récurrences, séries, fuseaux (changement d'heure inclus), droits.
-- Vitest sur l'API avec un fichier SQLite temporaire par test, dont un test de concurrence : 20 validations simultanées → solde exact.
-- Playwright (web) et Maestro (mobile) pour valider, annuler, échanger, hors ligne.
-- GitHub Actions : Biome, typecheck, tests, build, Trivy, spec OpenAPI à jour.
-- Conventional Commits, revue avant fusion sur `main`.
+| Service  | Image                                    | Role                                                       |
+| -------- | ---------------------------------------- | ---------------------------------------------------------- |
+| `app`    | `ghcr.io/<you>/lumo` (Node 22, non-root) | API, static web front end, scheduled jobs                  |
+| `backup` | `litestream/litestream`                  | Continuous replication of the SQLite file + daily snapshot |
 
-## Feuille de route
+- Variables validated by Zod at startup: `DATABASE_PATH`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` (the three OIDC ones go together; without them, `LOCAL_AUTH_ENABLED` must stay on), `SESSION_SECRET` (32 characters minimum), `PUBLIC_URL`, `LOCAL_AUTH_ENABLED`. Optional: `OIDC_ADMIN_GROUP`, `WEB_DIST_PATH`, `PORT`, `HOST`, `LOG_LEVEL`. An empty variable counts as unset.
+- `/data/lumo.db` on a local volume, never NFS/SMB.
+- Migrations applied at `app` startup, the only process that writes.
+- JSON logs (pino), `/healthz`, `/readyz`, optional `/metrics`.
+- Images built by CI, scanned (Trivy), versioned with SemVer.
+- **GitHub Actions CI** (`.github/workflows`):
+  - `ci.yml`: lint, typecheck, tests (OpenAPI freshness and the offline queue included), build; then the single web + API image, tested (the container starts, serves the web app and answers the API) and scanned by Trivy; then published to `ghcr.io/<owner>/<repo>` on every push to `main` (`edge` and the SHA) and on a `vX.Y.Z` tag (SemVer and `latest`). Pull requests never publish. `linux/amd64` image only (an ARM build under emulation is too slow).
+  - `mobile.yml`: Android APK built on the runner (`expo prebuild` then Gradle), no Expo account or secret, signed with Expo's debug key (enough to install it on your own phones). Available as an artifact, and attached to the GitHub release on a tag. Since the server address is chosen in the app, a single APK serves every household. `versionCode` = run number (`apps/mobile/app.config.ts`). EAS Build remains possible to publish to a store someday.
 
-On passe à l'étape suivante quand son critère est rempli. Durées estimées à temps partiel.
+## Quality
 
-| Étape                       | Contenu                                                                                   | Critère de passage                              |
-| --------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| 1. Fondations (sem. 1–2)    | Monorepo, CI, Docker, schéma SQLite et migrations, auth Authentik + locale                | Connexion OK sur web et mobile                  |
-| 2. Cœur métier (sem. 3–4)   | Paquet `domain` testé, API habitudes/tâches/complétions, pièces, virements, envies, stats | 20 validations simultanées donnent le bon solde |
-| 3. Fronts (sem. 5–7)        | Les 4 écrans sur web et mobile, file hors ligne                                           | 1 semaine d'usage perso sans bug bloquant       |
-| 4. Mise en service (sem. 8) | Restauration testée, push et rappels, foyer invité                                        | Tout le foyer l'utilise                         |
+- Vitest on `domain`: schedules, streaks, time zones (daylight-saving included), rights.
+- Vitest on the API with a temporary SQLite file per test, including a concurrency test: 20 simultaneous completions → exact balance.
+- Vitest on `i18n`: same keys and placeholders in every locale, plurals, locale negotiation, `Intl` formats.
+- Playwright (web) and Maestro (mobile) to complete, undo, redeem, go offline.
+- GitHub Actions: Biome, typecheck, tests, build, Trivy, OpenAPI spec up to date.
+- Conventional Commits, review before merging to `main`.
+
+## Roadmap
+
+We move to the next step when its criterion is met. Durations are estimated part-time.
+
+| Step                    | Content                                                                                | Exit criterion                                     |
+| ----------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| 1. Foundations (wk 1–2) | Monorepo, CI, Docker, SQLite schema and migrations, Authentik + local auth             | Sign-in works on web and mobile                    |
+| 2. Core (wk 3–4)        | Tested `domain` package, habits/tasks/completions API, coins, transfers, wishes, stats | 20 simultaneous completions give the right balance |
+| 3. Front ends (wk 5–7)  | The 4 screens on web and mobile, offline queue                                         | 1 week of personal use with no blocking bug        |
+| 4. Go live (wk 8)       | Tested restore, push and reminders, invited household                                  | The whole household uses it                        |

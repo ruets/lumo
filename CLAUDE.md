@@ -1,24 +1,25 @@
 # Lumo
 
-Appli de suivi d'habitudes gamifiée pour un foyer, self-hosted (inspirée de HabitTrove, réécrite de zéro). Le plan complet et toutes les décisions sont dans `docs/ARCHITECTURE.md` : lis-le avant toute tâche et respecte-le. Si une demande le contredit, signale-le avant de coder.
+Gamified habit tracker for a household, self-hosted (inspired by HabitTrove, rewritten from scratch). The full plan and all decisions are in `docs/ARCHITECTURE.md`: read it before any task and follow it. If a request contradicts it, say so before coding.
 
-## Règles non négociables
+## Non-negotiable rules
 
-- Toute la logique (pièces, droits, récurrence, séries) vit dans `packages/domain`, en TypeScript pur, et le serveur est seul juge. Les clients n'envoient jamais de montant.
-- Chaque écriture de pièces passe par `ledger_entries` dans la même transaction que l'action qui la cause. Aucun solde stocké comme vérité.
-- Base : SQLite (WAL) via Drizzle + better-sqlite3. Pas de PostgreSQL.
-- Toute logique qui touche aux pièces ou aux droits a ses tests avant d'être considérée terminée.
-- Ignorer l'import HabitTrove pendant le développement.
-- Licence AGPL-3.0 : en-tête `// SPDX-License-Identifier: AGPL-3.0-or-later` dans les fichiers source.
+- All logic (coins, rights, schedules, streaks) lives in `packages/domain`, in pure TypeScript, and the server is the only judge. Clients never send an amount.
+- Every coin write goes through `ledger_entries` in the same transaction as the action that causes it. No balance is stored as truth.
+- Database: SQLite (WAL) through Drizzle + better-sqlite3. No PostgreSQL.
+- Any logic that touches coins or rights has its tests before it is considered done.
+- Ignore the HabitTrove import during development.
+- AGPL-3.0 license: `// SPDX-License-Identifier: AGPL-3.0-or-later` header in source files.
 
 ## Conventions
 
-- pnpm workspaces + Turborepo, Node 22, TypeScript strict.
-- Biome pour lint et format.
+- pnpm workspaces + Turborepo, Node 22, strict TypeScript.
+- Biome for lint and format.
 - Conventional Commits.
-- Interface et textes en français d'abord, via `packages/i18n`.
-- Mobile : Android seulement pour l'instant.
+- **Everything technical is in English**: code, comments, tests, documentation, commit messages.
+- **The app is internationalised.** English is the source language, French the first translation. All UI text goes through `packages/i18n` (one dictionary per locale, same keys enforced by types and a test); never hard-code a user-facing string, a date format or a weekday name in an app. The API never sends UI text: it sends stable error `code`s that the clients translate. The UI language follows the browser or device and can be changed manually in the app.
+- Mobile: Android only for now.
 
-## Avancement
+## Progress
 
-Travailler étape par étape selon la feuille de route de `docs/ARCHITECTURE.md`. Étape 1 (Fondations) livrée, reste à valider la connexion réelle Authentik sur web et mobile. Étape 2 (Cœur métier) livrée : domain testé, API, pièces, virements, envies, stats, critère « 20 validations simultanées » vérifié. Étape 3 (Fronts) : les 4 écrans sont codés sur web et mobile (d'après la maquette), file hors ligne testée ; reste à les essayer sur un vrai téléphone Android et à tenir la semaine d'usage du critère de passage. Étape en cours : **3. Fronts**.
+Work step by step following the roadmap in `docs/ARCHITECTURE.md`. Step 1 (Foundations) delivered; the real Authentik sign-in on web and mobile still has to be validated. Step 2 (Core) delivered: tested domain, API, coins, transfers, wishes, stats, the "20 simultaneous completions" criterion verified. Step 3 (Front ends): the 4 screens are built on web and mobile (from the mock-up), with the offline queue tested, a server picker on mobile, undoing wish redemptions, and English/French translations; CI publishes the Docker image to GHCR and builds the Android APK with Gradle on the runner. Still to do: try the app on a real Android phone and complete the week of personal use that is the exit criterion. Current step: **3. Front ends**.
