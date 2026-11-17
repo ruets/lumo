@@ -4,6 +4,7 @@ import { createRootRoute, createRoute, createRouter } from "@tanstack/react-rout
 import { AppShell } from "./components/AppShell";
 import { useAuthConfig, useMe } from "./lib/hooks";
 import { HabitsPage } from "./routes/Habits";
+import { HouseholdPage } from "./routes/Household";
 import { Login } from "./routes/Login";
 import { ProgressPage } from "./routes/Progress";
 import { SettingsPage } from "./routes/Settings";
@@ -54,6 +55,7 @@ const routeTree = rootRoute.addChildren([
 	page("/progress", ProgressPage),
 	page("/wishes", WishesPage),
 	page("/settings", SettingsPage),
+	page("/household", HouseholdPage),
 ]);
 
 export const router = createRouter({ routeTree });

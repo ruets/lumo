@@ -8,15 +8,21 @@ import { api } from "../lib/api";
 import { describeError, keys } from "../lib/hooks";
 import { LanguageSelect } from "../lib/locale";
 
+const params = new URLSearchParams(window.location.search);
+
 export function Login({ config }: { config: AuthConfig }) {
 	const qc = useQueryClient();
-	const [error, setError] = useState<string | null>(new URLSearchParams(window.location.search).get("auth_error"));
+	const [error, setError] = useState<string | null>(params.get("auth_error"));
 	const [busy, setBusy] = useState(false);
+	// An invitation link (`/?invite=…`) opens the join form directly.
+	const [joining, setJoining] = useState(params.has("invite"));
+	const invite = params.get("invite") ?? "";
+	const joinMode = joining && !config.setupRequired;
 
 	async function submit(e: FormEvent<HTMLFormElement>) {
 		e.preventDefault();
 		const form = new FormData(e.currentTarget);
-		const v = (name: string) => String(form.get(name) ?? "");
+		const v = (name: string) => String(form.get(name) ?? "").trim();
 		setBusy(true);
 		setError(null);
 		try {
@@ -25,11 +31,19 @@ export function Login({ config }: { config: AuthConfig }) {
 					householdName: v("householdName"),
 					displayName: v("displayName"),
 					username: v("username"),
-					password: v("password"),
+					password: String(form.get("password") ?? ""),
+					client: "web",
+				});
+			} else if (joinMode) {
+				await api.registerLocal({
+					invite: v("invite"),
+					displayName: v("displayName"),
+					username: v("username"),
+					password: String(form.get("password") ?? ""),
 					client: "web",
 				});
 			} else {
-				await api.loginLocal({ username: v("username"), password: v("password"), client: "web" });
+				await api.loginLocal({ username: v("username"), password: String(form.get("password") ?? ""), client: "web" });
 			}
 			window.history.replaceState(null, "", "/");
 			await qc.invalidateQueries({ queryKey: keys.me });
@@ -39,6 +53,11 @@ export function Login({ config }: { config: AuthConfig }) {
 			setBusy(false);
 		}
 	}
+
+	const oidcHref =
+		joinMode && invite ? `/api/v1/auth/login?invite=${encodeURIComponent(invite)}` : "/api/v1/auth/login";
+	const linkButton =
+		"min-h-11 cursor-pointer border-0 bg-transparent font-body text-sm font-semibold text-link underline";
 
 	return (
 		<main className="grid min-h-screen place-items-center px-5">
@@ -51,7 +70,7 @@ export function Login({ config }: { config: AuthConfig }) {
 				)}
 				{config.oidc && !config.setupRequired && (
 					<a
-						href="/api/v1/auth/login"
+						href={oidcHref}
 						className="grid min-h-12 place-items-center rounded-full bg-primary font-bold text-white no-underline"
 					>
 						{t("auth.oidc")}
@@ -60,17 +79,30 @@ export function Login({ config }: { config: AuthConfig }) {
 				{config.local && (
 					<form onSubmit={submit} className="grid gap-3">
 						<h2 className="m-0 text-base font-bold text-muted">
-							{config.setupRequired ? t("auth.setup.title") : t("auth.local")}
+							{config.setupRequired ? t("auth.setup.title") : joinMode ? t("join.title") : t("auth.local")}
 						</h2>
+						{joinMode && <p className="m-0 text-sm text-muted">{t("join.hint")}</p>}
 						{config.setupRequired && (
-							<>
-								<Field label={t("auth.setup.householdName")}>
-									<input name="householdName" required className={fieldClass} />
-								</Field>
-								<Field label={t("auth.setup.displayName")}>
-									<input name="displayName" required className={fieldClass} />
-								</Field>
-							</>
+							<Field label={t("auth.setup.householdName")}>
+								<input name="householdName" required className={fieldClass} />
+							</Field>
+						)}
+						{joinMode && (
+							<Field label={t("join.code")}>
+								<input
+									name="invite"
+									defaultValue={invite}
+									required
+									minLength={10}
+									autoComplete="off"
+									className={fieldClass}
+								/>
+							</Field>
+						)}
+						{(config.setupRequired || joinMode) && (
+							<Field label={t("auth.setup.displayName")}>
+								<input name="displayName" required className={fieldClass} />
+							</Field>
 						)}
 						<Field label={t("auth.username")}>
 							<input name="username" autoComplete="username" required className={fieldClass} />
@@ -79,15 +111,20 @@ export function Login({ config }: { config: AuthConfig }) {
 							<input
 								name="password"
 								type="password"
-								autoComplete={config.setupRequired ? "new-password" : "current-password"}
-								minLength={10}
+								autoComplete={config.setupRequired || joinMode ? "new-password" : "current-password"}
+								minLength={config.setupRequired || joinMode ? 10 : undefined}
 								required
 								className={fieldClass}
 							/>
 						</Field>
 						<PrimaryButton type="submit" disabled={busy}>
-							{t("auth.submit")}
+							{joinMode ? t("join.submit") : t("auth.submit")}
 						</PrimaryButton>
+						{!config.setupRequired && (
+							<button type="button" onClick={() => setJoining(!joining)} className={linkButton}>
+								{joinMode ? t("join.back") : t("join.have")}
+							</button>
+						)}
 					</form>
 				)}
 				<LanguageSelect />

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { MeResponse } from "@lumo/api-client";
 import { t } from "@lumo/i18n";
+import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { PageTitle } from "../components/ui";
 import { useLogout } from "../lib/hooks";
@@ -33,6 +34,13 @@ export function SettingsPage({ me }: { me: MeResponse }) {
 					{t("auth.logout")}
 				</button>
 			</Section>
+			<Link
+				to="/household"
+				className="flex min-h-12 items-center justify-between rounded-[20px] bg-surface px-4 font-semibold text-ink no-underline hover:bg-raised"
+			>
+				{t("household.open")}
+				<span aria-hidden="true">›</span>
+			</Link>
 			<Section title={t("language.title")}>
 				<LanguageSelect />
 			</Section>

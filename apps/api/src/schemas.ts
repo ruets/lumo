@@ -119,7 +119,7 @@ export const completionView = z.object({
 
 export const completionResult = z.object({ completion: completionView, balances: balancesView });
 
-// ---- Envies -----------------------------------------------------------------------------
+// ---- Wishes -----------------------------------------------------------------------------
 
 const limitFields = {
 	limitCount: z.number().int().min(1).max(1000).nullish(),
