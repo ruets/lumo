@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type Database from "better-sqlite3";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import { buildApp } from "../app.js";
 import { SESSION_COOKIE } from "../auth/guard.js";
 import type { OidcClaims, OidcProvider } from "../auth/oidc.js";
@@ -46,6 +47,8 @@ export class FakeOidc implements OidcProvider {
 }
 
 export interface TestContext {
+	/** Horloge contrôlée : `ctx.clock.now = new Date(...)` avance le temps de l'application. */
+	clock: { now: Date };
 	app: FastifyInstance;
 	db: Db;
 	sqlite: Database.Database;
@@ -71,9 +74,12 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
 	});
 	const { db, sqlite } = openDatabase(dbPath);
 	const oidc = new FakeOidc();
-	const app = await buildApp({ config, db, oidc: config.oidcEnabled ? oidc : null });
+	// 17 nov. 2026, 11:00 à Paris (un mardi).
+	const clock = { now: new Date("2026-11-17T10:00:00Z") };
+	const app = await buildApp({ config, db, oidc: config.oidcEnabled ? oidc : null, clock: () => clock.now });
 	await app.ready();
 	return {
+		clock,
 		app,
 		db,
 		sqlite,
@@ -108,4 +114,91 @@ export async function setupOwner(ctx: TestContext): Promise<string> {
 	const res = await ctx.app.inject({ method: "POST", url: "/api/v1/auth/setup", payload: OWNER });
 	if (res.statusCode !== 201) throw new Error(`setup a échoué : ${res.body}`);
 	return sessionCookie(res) as string;
+}
+
+/** Client HTTP authentifié par cookie : origine et `Idempotency-Key` (un UUID neuf par appel) ajoutés. */
+export interface Api {
+	get(url: string): Promise<LightMyRequestResponse>;
+	post(url: string, payload?: unknown, extra?: Record<string, string>): Promise<LightMyRequestResponse>;
+	patch(url: string, payload?: unknown): Promise<LightMyRequestResponse>;
+	del(url: string): Promise<LightMyRequestResponse>;
+}
+
+export function api(ctx: { app: FastifyInstance }, cookie: string): Api {
+	const call = (
+		method: "GET" | "POST" | "PATCH" | "DELETE",
+		url: string,
+		payload?: unknown,
+		extra: Record<string, string> = {},
+	) =>
+		ctx.app.inject({
+			method,
+			url: `/api/v1${url}`,
+			...(payload === undefined ? {} : { payload: payload as object }),
+			headers: { ...cookieHeader(cookie), ...ORIGIN, "idempotency-key": randomUUID(), ...extra },
+		});
+	return {
+		get: (url: string) => call("GET", url),
+		post: (url: string, payload: unknown = {}, extra?: Record<string, string>) => call("POST", url, payload, extra),
+		patch: (url: string, payload: unknown = {}) => call("PATCH", url, payload),
+		del: (url: string) => call("DELETE", url),
+	};
+}
+
+/** Crée un membre (invitation + compte local) et renvoie son cookie et son id. */
+export interface Member {
+	cookie: string;
+	userId: string;
+	api: Api;
+}
+
+export async function addMember(
+	ctx: TestContext,
+	ownerCookie: string,
+	role: "adult" | "child",
+	username: string,
+): Promise<Member> {
+	const invite = await ctx.app.inject({
+		method: "POST",
+		url: "/api/v1/household/invites",
+		payload: { role },
+		headers: { ...cookieHeader(ownerCookie), ...ORIGIN },
+	});
+	const res = await ctx.app.inject({
+		method: "POST",
+		url: "/api/v1/auth/local/register",
+		payload: { invite: invite.json().token, displayName: username, username, password: "un-mot-de-passe-long" },
+	});
+	if (res.statusCode !== 201) throw new Error(`register a échoué : ${res.body}`);
+	const cookie = sessionCookie(res) as string;
+	const me = await ctx.app.inject({ url: "/api/v1/me", headers: cookieHeader(cookie) });
+	return { cookie, userId: me.json().user.id as string, api: api(ctx, cookie) };
+}
+
+/** Foyer de test : alice (owner), bob (adulte), kid (enfant). */
+export async function createHousehold(ctx: TestContext): Promise<{ owner: Member; adult: Member; kid: Member }> {
+	const ownerCookie = await setupOwner(ctx);
+	const meRes = await ctx.app.inject({ url: "/api/v1/me", headers: cookieHeader(ownerCookie) });
+	const owner: Member = { cookie: ownerCookie, userId: meRes.json().user.id as string, api: api(ctx, ownerCookie) };
+	const adult = await addMember(ctx, ownerCookie, "adult", "bob");
+	const kid = await addMember(ctx, ownerCookie, "child", "kid");
+	return { owner, adult, kid };
+}
+
+export async function balances(member: { api: Api }) {
+	const me = (await member.api.get("/me")).json();
+	return { personal: me.wallets.personal.balance as number, shared: me.wallets.shared.balance as number };
+}
+
+/** Habitude quotidienne par défaut, créée via l'API. */
+export async function makeHabit(by: { api: Api }, over: Record<string, unknown> = {}) {
+	const res = await by.api.post("/items", {
+		kind: "habit",
+		name: "Boire de l'eau",
+		schedule: { type: "daily" },
+		reward: 5,
+		...over,
+	});
+	if (res.statusCode !== 201) throw new Error(`création d'habitude refusée : ${res.body}`);
+	return res.json() as { id: string; assigneeIds: string[] };
 }

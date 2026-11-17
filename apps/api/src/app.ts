@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import cookie from "@fastify/cookie";
 import rateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
+import { DomainError } from "@lumo/domain";
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from "fastify";
 import { ZodError } from "zod";
 import { createRequireAuth } from "./auth/guard.js";
@@ -12,18 +13,39 @@ import { registerAuthRoutes } from "./auth/routes.js";
 import type { Config } from "./config.js";
 import type { Db } from "./db/client.js";
 import { AppError, errors, toProblem } from "./errors.js";
-import { registerMeRoutes } from "./routes/me.js";
+import { buildOpenApi } from "./openapi.js";
+import { registerRoutes } from "./routes/define.js";
+import { allRoutes } from "./routes/index.js";
 
 export interface AppDeps {
 	config: Config;
 	db: Db;
 	oidc: OidcProvider | null;
 	logger?: FastifyServerOptions["logger"];
+	/** Horloge ; injectable pour les tests (jours locaux, fenêtres de dates). */
+	clock?: () => Date;
 	/** Test de disponibilité de la base pour `/readyz`. */
 	ping?: () => void;
 }
 
-export async function buildApp({ config, db, oidc, logger = false, ping }: AppDeps): Promise<FastifyInstance> {
+const DOMAIN_STATUS: Record<DomainError["code"], number> = {
+	target_reached: 409,
+	insufficient_balance: 409,
+	limit_reached: 409,
+	not_due: 409,
+	invalid_amount: 400,
+	future_date: 400,
+	backdate_not_allowed: 403,
+};
+
+export async function buildApp({
+	config,
+	db,
+	oidc,
+	logger = false,
+	ping,
+	clock = () => new Date(),
+}: AppDeps): Promise<FastifyInstance> {
 	const app = Fastify({
 		logger,
 		// L'API tourne derrière le reverse proxy du homelab.
@@ -38,6 +60,7 @@ export async function buildApp({ config, db, oidc, logger = false, ping }: AppDe
 	app.setErrorHandler((err: Error & { statusCode?: number }, req, reply) => {
 		const send = (e: AppError) => reply.code(e.status).type("application/problem+json").send(toProblem(e, req.url));
 		if (err instanceof AppError) return send(err);
+		if (err instanceof DomainError) return send(new AppError(DOMAIN_STATUS[err.code], err.code, err.message));
 		if (err instanceof ZodError) return send(errors.validation(err.message));
 		const status = err.statusCode;
 		if (status === 429) return send(new AppError(429, "rate_limited", "Trop de requêtes, réessaie plus tard"));
@@ -62,7 +85,8 @@ export async function buildApp({ config, db, oidc, logger = false, ping }: AppDe
 	await app.register(
 		async (api) => {
 			registerAuthRoutes(api, { db, config, oidc, requireAuth });
-			registerMeRoutes(api, db, requireAuth);
+			registerRoutes(api, { db, config, clock, requireAuth }, allRoutes);
+			api.get("/openapi.json", async () => buildOpenApi(allRoutes));
 		},
 		{ prefix: "/api/v1" },
 	);
