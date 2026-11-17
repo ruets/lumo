@@ -4,34 +4,13 @@ import { t, weekdayShort } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pressable, Switch, View } from "react-native";
+import { Switch, View } from "react-native";
 import { describeError } from "./hooks";
 import { api } from "./session";
-import { Button, Field, font, Sheet, T } from "./ui";
+import { Button, Chip, Field, font, Sheet, T } from "./ui";
 
 type Freq = "daily" | "timesPerWeek" | "weekly" | "monthly";
 const FREQS: Freq[] = ["daily", "timesPerWeek", "weekly", "monthly"];
-
-function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
-	return (
-		<Pressable
-			accessibilityRole="button"
-			accessibilityState={{ selected: on }}
-			onPress={onPress}
-			style={{
-				minHeight: 44,
-				minWidth: 44,
-				paddingHorizontal: 12,
-				borderRadius: 12,
-				alignItems: "center",
-				justifyContent: "center",
-				backgroundColor: on ? colors.primary : colors.surfaceRaised,
-			}}
-		>
-			<T style={{ fontFamily: font.bold, fontSize: 14, color: on ? "#fff" : colors.textSoft }}>{label}</T>
-		</Pressable>
-	);
-}
 
 function useSubmit<I>(call: (i: I) => Promise<unknown>, onClose: () => void) {
 	const qc = useQueryClient();

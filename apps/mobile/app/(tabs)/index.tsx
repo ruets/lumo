@@ -133,13 +133,13 @@ export default function TodayScreen() {
 	return (
 		<Screen onRefresh={refresh.run} refreshing={refresh.busy}>
 			<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-				<View style={{ gap: 6 }}>
+				<View style={{ gap: 6, flex: 1 }}>
 					<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.muted }}>
 						{today.data ? longDate(today.data.date) : " "}
 					</T>
 					<Title>{t("today.title", { name: me.user.displayName })}</Title>
 				</View>
-				<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+				<View style={{ flexDirection: "row", alignItems: "center", gap: 10, flexShrink: 0 }}>
 					<BalanceChip balance={balance} onPress={() => router.navigate("/wishes")} />
 					<Avatar name={me.user.displayName} onPress={() => router.push("/settings")} />
 				</View>

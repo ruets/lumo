@@ -43,6 +43,7 @@ function Routes() {
 			<Stack.Protected guard={authed}>
 				<Stack.Screen name="(tabs)" />
 				<Stack.Screen name="settings" />
+				<Stack.Screen name="household" />
 			</Stack.Protected>
 			<Stack.Protected guard={hasServer && !authed}>
 				<Stack.Screen name="login" />
