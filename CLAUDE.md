@@ -21,4 +21,4 @@ Appli de suivi d'habitudes gamifiée pour un foyer, self-hosted (inspirée de Ha
 
 ## Avancement
 
-Travailler étape par étape selon la feuille de route de `docs/ARCHITECTURE.md`. Étape en cours : **1. Fondations** (code livré, reste à valider la connexion réelle Authentik sur web et mobile). Prochaine : **2. Cœur métier**.
+Travailler étape par étape selon la feuille de route de `docs/ARCHITECTURE.md`. Étape 1 (Fondations) livrée, reste à valider la connexion réelle Authentik sur web et mobile. Étape 2 (Cœur métier) livrée : domain testé, API, pièces, virements, envies, stats, critère « 20 validations simultanées » vérifié. Étape en cours : **3. Fronts**.

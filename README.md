@@ -20,6 +20,8 @@ pnpm typecheck
 pnpm test        # Vitest (domain, i18n, API sur SQLite temporaire)
 pnpm build
 pnpm db:generate # nouvelle migration Drizzle après modification de apps/api/src/db/schema.ts
+pnpm --filter @lumo/api openapi:generate     # spec OpenAPI après changement de route (testée par la CI)
+pnpm --filter @lumo/api-client generate      # client typé depuis la spec
 ```
 
 Mobile (Android) : `cd apps/mobile && pnpm dev`, avec `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_OIDC_ISSUER` et `EXPO_PUBLIC_OIDC_CLIENT_ID`.

@@ -131,6 +131,22 @@ REST JSON sous `/api/v1`, Fastify + schémas Zod qui génèrent validation, type
 
 Erreurs RFC 9457 (`application/problem+json`) avec un `code` stable. Les breaking changes passent par `/api/v2`.
 
+Implémentation (étape 2) :
+
+- Chaque route est déclarée une fois (`apps/api/src/routes`) avec ses schémas Zod : ils valident les entrées, typent le handler et produisent la spec `apps/api/openapi.json` (OpenAPI 3.1, aussi servie sur `GET /api/v1/openapi.json`). Un test échoue si le fichier n'est pas à jour (`pnpm --filter @lumo/api openapi:generate`). Le client `@lumo/api-client` en est généré (`pnpm --filter @lumo/api-client generate`). Les routes d'authentification sont hors spec pour l'instant.
+- Les corps sont stricts : un champ inconnu, dont tout `amount`, est refusé en 400.
+- Toute écriture exige `Idempotency-Key` (400 `idempotency_key_required` sinon). La recherche de la clé, l'action et la mémorisation de la réponse se font dans la même transaction `BEGIN IMMEDIATE` ; un rejeu renvoie la réponse enregistrée avec l'en-tête `Idempotent-Replayed: true`. Seules les réponses réussies sont mémorisées. Les clés sont propres à chaque utilisateur.
+- Codes d'erreur métier : 409 `target_reached`, `insufficient_balance`, `limit_reached`, `not_due`, `not_pending`, `already_undone` ; 403 `backdate_not_allowed`, `forbidden` ; 400 `future_date`, `invalid_amount`, `validation_error`.
+- `GET /completions?status=pending` (owner et adultes) liste les validations à approuver. `PATCH /rewards/:id` accepte `archived`. `GET /ledger` pagine par curseur, du plus récent au plus ancien.
+
+Règles précisées à l'implémentation :
+
+- Une validation en attente compte vers l'objectif du jour (pas de double envoi) mais pas vers les séries ni les taux, qui ne comptent que les validations approuvées et non annulées.
+- Une tâche se valide une seule fois, quelle que soit la date.
+- Annuler écrit une contre-écriture du montant exact payé à l'origine, même si la récompense a changé depuis. À l'approbation, la récompense va au porte-monnaie de celui qui a validé.
+- Stats : taux « semaine » = 7 derniers jours, « mois » = 30 derniers jours ; le jour en cours non terminé n'est pas un échec ; heatmap sur la plage demandée (366 jours max), sans les habitudes « X fois par semaine ».
+- Limite d'usage d'une envie : par membre et par période, comptée en jours locaux du foyer.
+
 ## Authentification et droits
 
 - **Authentik** en OIDC (Authorization Code + PKCE) ; l'API émet ensuite ses propres sessions.
