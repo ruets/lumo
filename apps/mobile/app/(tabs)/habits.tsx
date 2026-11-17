@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { TodayItem } from "@lumo/api-client";
 import { addDays, startOfWeek } from "@lumo/domain";
-import { dayNumber, shortDate, t, weekdayShort } from "@lumo/i18n";
+import { dayNumber, longDate, shortDate, t, weekdayShort } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -29,8 +29,8 @@ function Row({
 	const label = e.done
 		? t("items.undo", { name: e.item.name })
 		: multi
-			? t("items.validateCount", { name: e.item.name, count: e.approved, target: e.target, reward: e.item.reward })
-			: t("items.validate", { name: e.item.name, reward: e.item.reward });
+			? t("items.validateCount", { name: e.item.name, current: e.approved, target: e.target, count: e.item.reward })
+			: t("items.validate", { name: e.item.name, count: e.item.reward });
 	const waiting = !e.done && e.approved + e.pending >= e.target;
 	return (
 		<View
@@ -115,7 +115,7 @@ export default function HabitsScreen() {
 	const doneCount = entries.filter((e) => e.done).length;
 
 	async function onUndo(e: TodayItem) {
-		if (await dequeueLast(e.item.id, day as string)) return; // jamais envoyée : on la retire de la file
+		if (await dequeueLast(e.item.id, day as string)) return; // never sent: remove it from the queue
 		const id = e.completionIds[0];
 		if (id) undo.mutate(id, { onError: () => showToast(t("common.offline")) });
 	}
@@ -159,9 +159,7 @@ export default function HabitsScreen() {
 							accessibilityRole="button"
 							accessibilityState={{ selected: on }}
 							accessibilityLabel={t("items.dayLabel", {
-								weekday: weekdayShort(i + 1),
-								day: dayNumber(d),
-								month: shortDate(d).split(" ")[1] ?? "",
+								date: longDate(d),
 								done: h?.done ?? 0,
 								total: h?.expected ?? 0,
 							})}

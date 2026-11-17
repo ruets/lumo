@@ -3,7 +3,7 @@ import { type AuthConfig, createClient } from "@lumo/api-client";
 import { useSyncExternalStore } from "react";
 import { createStore, readJson, writeJson } from "./store";
 
-/** Le serveur choisi par l'utilisateur : l'appli est la même pour tous les foyers. */
+/** The server chosen by the user: the app is the same for every household. */
 const KEY = "lumo.server.v1";
 const store = createStore<{ loaded: boolean; url: string | null }>({ loaded: false, url: null });
 let loading: Promise<void> | null = null;
@@ -14,7 +14,7 @@ export function loadServer(): Promise<void> {
 }
 
 export const useServer = () => useSyncExternalStore(store.subscribe, store.get);
-/** URL courante, sans slash final ; vide tant qu'aucun serveur n'est choisi. */
+/** Current URL, without trailing slash; empty until a server is chosen. */
 export const currentServerUrl = (): string => store.get().url ?? "";
 
 export async function saveServer(url: string): Promise<void> {
@@ -35,7 +35,7 @@ export class ServerError extends Error {
 
 const TIMEOUT_MS = 8000;
 
-/** Vérifie qu'une adresse est bien un serveur Lumo (`GET /auth/config`) et renvoie sa config. */
+/** Checks that an address really is a Lumo server (`GET /auth/config`) and returns its config. */
 export async function verifyServer(url: string, timeoutMs = TIMEOUT_MS): Promise<AuthConfig> {
 	const client = createClient({ baseUrl: url });
 	let timer: ReturnType<typeof setTimeout> | undefined;
@@ -48,7 +48,7 @@ export async function verifyServer(url: string, timeoutMs = TIMEOUT_MS): Promise
 		return config;
 	} catch (err) {
 		if (err instanceof ServerError) throw err;
-		// Pas de réponse : injoignable. Une réponse qui n'est pas du JSON Lumo : autre chose qu'un serveur Lumo.
+		// No response: unreachable. A response that is not Lumo JSON: something other than a Lumo server.
 		throw new ServerError(err instanceof TypeError ? "unreachable" : "not_lumo");
 	} finally {
 		clearTimeout(timer);

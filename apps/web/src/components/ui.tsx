@@ -66,7 +66,7 @@ export const PageTitle = ({ children }: { children: ReactNode }) => (
 	<h1 className="m-0 font-display text-[26px] font-bold tracking-tight">{children}</h1>
 );
 
-/** Segment de choix exclusif (Habitudes/Tâches, Semaine/Mois). */
+/** Exclusive choice segment (Habits/Tasks, Week/Month). */
 export function Segmented<T extends string>({
 	label,
 	value,
@@ -122,7 +122,7 @@ export const fieldClass =
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
 	return (
-		// biome-ignore lint/a11y/noLabelWithoutControl: le champ est passé en `children`
+		// biome-ignore lint/a11y/noLabelWithoutControl: the field is passed as `children`
 		<label className="grid gap-1.5 text-sm font-semibold text-muted">
 			{label}
 			{children}

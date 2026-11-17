@@ -11,13 +11,14 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from "react-n
 import { SafeAreaView } from "react-native-safe-area-context";
 import { changeServer } from "../src/account";
 import { describeError, keys, useAuthConfig } from "../src/hooks";
+import { LanguagePicker } from "../src/locale";
 import { currentServerUrl } from "../src/server";
 import { api, saveTokens } from "../src/session";
 import { Button, Field, font, T } from "../src/ui";
 
 WebBrowser.maybeCompleteAuthSession();
 
-/** Bouton Authentik. Composant à part : les hooks OIDC exigent un issuer valide, on ne le monte que s'il est configuré. */
+/** Authentik button. A separate component: the OIDC hooks need a valid issuer, so it is only mounted when configured. */
 function OidcButton({
 	issuer,
 	clientId,
@@ -28,7 +29,7 @@ function OidcButton({
 	onError: (message: string) => void;
 }) {
 	const qc = useQueryClient();
-	// Authorization Code + PKCE conduit par expo-auth-session ; l'API échange ensuite le code.
+	// Authorization Code + PKCE driven by expo-auth-session; the API then exchanges the code.
 	const discovery = useAutoDiscovery(issuer);
 	const nonce = useMemo(() => randomUUID(), []);
 	const redirectUri = makeRedirectUri({ scheme: "lumo", path: "auth" });
@@ -105,8 +106,8 @@ export default function Login() {
 						<>
 							{config.data.setupRequired && (
 								<>
-									<Field label="Nom du foyer" value={householdName} onChangeText={setHouseholdName} />
-									<Field label="Ton prénom" value={displayName} onChangeText={setDisplayName} />
+									<Field label={t("auth.setup.householdName")} value={householdName} onChangeText={setHouseholdName} />
+									<Field label={t("auth.setup.displayName")} value={displayName} onChangeText={setDisplayName} />
 								</>
 							)}
 							<Field
@@ -128,6 +129,7 @@ export default function Login() {
 					)}
 					<T style={{ fontSize: 13, color: colors.muted }}>{t("server.current", { url: currentServerUrl() })}</T>
 					<Button label={t("server.change")} variant="ghost" onPress={() => void changeServer()} />
+					<LanguagePicker />
 				</View>
 			</KeyboardAvoidingView>
 		</SafeAreaView>

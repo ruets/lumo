@@ -6,6 +6,7 @@ import { type FormEvent, useState } from "react";
 import { Field, fieldClass, PrimaryButton } from "../components/ui";
 import { api } from "../lib/api";
 import { describeError, keys } from "../lib/hooks";
+import { LanguageSelect } from "../lib/locale";
 
 export function Login({ config }: { config: AuthConfig }) {
 	const qc = useQueryClient();
@@ -59,14 +60,14 @@ export function Login({ config }: { config: AuthConfig }) {
 				{config.local && (
 					<form onSubmit={submit} className="grid gap-3">
 						<h2 className="m-0 text-base font-bold text-muted">
-							{config.setupRequired ? "Créer le foyer" : t("auth.local")}
+							{config.setupRequired ? t("auth.setup.title") : t("auth.local")}
 						</h2>
 						{config.setupRequired && (
 							<>
-								<Field label="Nom du foyer">
+								<Field label={t("auth.setup.householdName")}>
 									<input name="householdName" required className={fieldClass} />
 								</Field>
-								<Field label="Ton prénom">
+								<Field label={t("auth.setup.displayName")}>
 									<input name="displayName" required className={fieldClass} />
 								</Field>
 							</>
@@ -89,6 +90,7 @@ export function Login({ config }: { config: AuthConfig }) {
 						</PrimaryButton>
 					</form>
 				)}
+				<LanguageSelect />
 			</section>
 		</main>
 	);

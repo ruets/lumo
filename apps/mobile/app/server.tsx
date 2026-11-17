@@ -21,7 +21,7 @@ export default function ServerScreen() {
 		setBusy(true);
 		try {
 			await verifyServer(url.url);
-			await saveServer(url.url); // le routeur bascule seul vers la connexion
+			await saveServer(url.url); // the router switches to sign-in on its own
 		} catch (err) {
 			setError(t(`server.error.${err instanceof ServerError ? err.code : "unreachable"}` as const));
 		} finally {

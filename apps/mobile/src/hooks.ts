@@ -25,7 +25,7 @@ export function describeError(err: unknown): string {
 
 export const useAuthConfig = () => useQuery({ queryKey: keys.authConfig, queryFn: () => api.getAuthConfig() });
 
-/** `null` = non connecté (401). */
+/** `null` = not signed in (401). */
 export const useMe = (enabled = true) =>
 	useQuery({
 		enabled,
@@ -41,7 +41,7 @@ export const useMe = (enabled = true) =>
 		staleTime: 30_000,
 	});
 
-/** Jour du serveur + validations en file hors ligne (appliquées par-dessus, pour un retour immédiat). */
+/** The server's day + completions in the offline queue (applied on top, for instant feedback). */
 export function useToday(date?: string) {
 	const q = useQuery({ queryKey: keys.today(date), queryFn: () => api.getToday(date) });
 	const queue = useQueue();
@@ -70,7 +70,7 @@ export function overlayQueue(today: TodayResponse, queue: QueuedCompletion[]): T
 	};
 }
 
-/** Solde affiché : serveur + récompenses des validations encore en file. */
+/** Displayed balance: server + rewards of the completions still queued. */
 export function useBalance(serverBalance: number): number {
 	const queue = useQueue();
 	const today = useQuery({ queryKey: keys.today(), queryFn: () => api.getToday() });
@@ -94,7 +94,7 @@ export const useLedger = () => useQuery({ queryKey: keys.ledger, queryFn: () => 
 export const usePending = (enabled: boolean) =>
 	useQuery({ queryKey: keys.pending, queryFn: () => api.listPendingCompletions(), enabled });
 
-/** Fenêtre de 56 jours pour l'écran Progrès (période courante et précédente). */
+/** 56-day window for the Progress screen (current and previous period). */
 export const statsWindow = (today: string) => ({ from: addDays(today, -55), to: today });
 
 function useWrite<V, R>(fn: (v: V) => Promise<R>) {
@@ -106,7 +106,7 @@ function useWrite<V, R>(fn: (v: V) => Promise<R>) {
 	});
 }
 
-/** Annuler une validation envoyée (nécessite le réseau). */
+/** Undo a completion that was sent (needs the network). */
 export const useUndo = () => useWrite((completionId: string) => api.undoCompletion(completionId));
 export const useUndoRedemption = () => useWrite((redemptionId: string) => api.undoRedemption(redemptionId));
 export const useRedeem = () => useWrite((rewardId: string) => api.redeemReward(rewardId));

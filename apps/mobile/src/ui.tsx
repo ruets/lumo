@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { t } from "@lumo/i18n";
 import { colors, radii, spacing } from "@lumo/tokens";
 import type { ReactNode } from "react";
 import {
@@ -54,7 +55,7 @@ export function BalanceChip({ balance, onPress }: { balance: number; onPress?: (
 		<Pressable
 			onPress={onPress}
 			accessibilityRole="button"
-			accessibilityLabel={`Solde : ${balance} pièces`}
+			accessibilityLabel={t("progress.balance", { amount: balance })}
 			style={s.chip}
 		>
 			<CoinIcon />
@@ -100,7 +101,7 @@ export function Title({ children }: { children: ReactNode }) {
 	return <T style={{ fontFamily: font.displayBold, fontSize: 26, letterSpacing: -0.26 }}>{children}</T>;
 }
 
-/** Écran défilant avec marge pour la barre d'onglets et tirer pour rafraîchir. */
+/** Scrolling screen with room for the tab bar and pull-to-refresh. */
 export function Screen({
 	children,
 	onRefresh,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { MeResponse, TodayItem } from "@lumo/api-client";
 import { addDays, startOfWeek } from "@lumo/domain";
-import { dayNumber, shortDate, t, weekdayShort } from "@lumo/i18n";
+import { dayNumber, longDate, shortDate, t, weekdayShort } from "@lumo/i18n";
 import { useState } from "react";
 import { BalanceChip } from "../components/AppShell";
 import { ItemDialog } from "../components/forms";
@@ -24,8 +24,8 @@ function Row({
 	const label = e.done
 		? t("items.undo", { name: e.item.name })
 		: multi
-			? t("items.validateCount", { name: e.item.name, count: e.approved, target: e.target, reward: e.item.reward })
-			: t("items.validate", { name: e.item.name, reward: e.item.reward });
+			? t("items.validateCount", { name: e.item.name, current: e.approved, target: e.target, count: e.item.reward })
+			: t("items.validate", { name: e.item.name, count: e.item.reward });
 	return (
 		<div
 			className={`flex min-h-[66px] items-center gap-3 rounded-[18px] py-2.5 pl-2.5 pr-4 ${e.done ? "bg-surface-done" : "bg-surface"}`}
@@ -105,7 +105,7 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 			</header>
 
 			<Segmented
-				label="Type"
+				label={t("items.type")}
 				value={tab}
 				onChange={setTab}
 				options={[
@@ -115,7 +115,7 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 			/>
 
 			<fieldset className="m-0 grid min-w-0 grid-cols-7 gap-1.5 border-0 p-0">
-				<legend className="sr-only">Jours de la semaine</legend>
+				<legend className="sr-only">{t("items.weekDays")}</legend>
 				{days.map((d, i) => {
 					const h = heat.get(d);
 					const on = d === day;
@@ -132,13 +132,7 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 							key={d}
 							type="button"
 							aria-pressed={on}
-							aria-label={t("items.dayLabel", {
-								weekday: weekdayShort(i + 1),
-								day: dayNumber(d),
-								month: shortDate(d).split(" ")[1] ?? "",
-								done: h?.done ?? 0,
-								total: h?.expected ?? 0,
-							})}
+							aria-label={t("items.dayLabel", { date: longDate(d), done: h?.done ?? 0, total: h?.expected ?? 0 })}
 							onClick={() => setPicked(d === today ? null : d)}
 							className={`flex h-[70px] cursor-pointer flex-col items-center justify-center gap-[3px] rounded-2xl border-0 font-body ${on ? "bg-primary text-white" : "bg-surface text-soft hover:bg-raised"}`}
 						>

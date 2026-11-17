@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/** Design tokens partagés web et mobile, tirés de la maquette (thème sombre). */
+/** Design tokens shared by web and mobile, taken from the mock-up (dark theme). */
 export const colors = {
 	background: "#0E1220",
 	surface: "#1B2032",

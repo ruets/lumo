@@ -46,8 +46,8 @@ export default function WishesScreen() {
 				</View>
 				<T accessibilityLiveRegion="polite" style={{ color: "#fff", fontFamily: font.semi, fontSize: 14 }}>
 					{last
-						? t("wishes.redeemed", { name: last.name.toLowerCase(), cost: last.cost })
-						: t("today.earned", { amount: earnedToday })}
+						? t("wishes.redeemed", { name: last.name, cost: last.cost })
+						: t("today.earned", { count: earnedToday })}
 				</T>
 				<T style={{ color: "#fff", fontFamily: font.semi, fontSize: 13 }}>
 					{t("wishes.sharedBalance", { amount: me.wallets.shared.balance })}
@@ -80,7 +80,7 @@ export default function WishesScreen() {
 									<Button
 										variant="coin"
 										label={`◎ ${r.cost}`}
-										accessibilityLabel={t("wishes.redeem", { name: r.name, cost: r.cost })}
+										accessibilityLabel={t("wishes.redeem", { name: r.name, count: r.cost })}
 										disabled={redeem.isPending}
 										onPress={() => redeem.mutate(r.id, { onSuccess: () => setLast(r) })}
 									/>
@@ -95,7 +95,7 @@ export default function WishesScreen() {
 								<View style={{ gap: 6 }}>
 									<Bar pct={exhausted ? 100 : (100 * wallet) / r.cost} color={colors.primarySoft} />
 									<T style={{ fontSize: 13, color: colors.muted }}>
-										{exhausted ? "Revient bientôt" : t("today.missing", { amount: r.cost - wallet })}
+										{exhausted ? t("wishes.comesBack") : t("today.missing", { count: r.cost - wallet })}
 									</T>
 								</View>
 							)}

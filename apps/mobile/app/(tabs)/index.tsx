@@ -17,6 +17,7 @@ import {
 	useToday,
 } from "../../src/hooks";
 import { awaitingReview, itemMeta } from "../../src/itemMeta";
+import { LanguagePicker } from "../../src/locale";
 import { enqueueCompletion, useQueue } from "../../src/queue";
 import { useRefresh } from "../../src/refresh";
 import { currentServerUrl } from "../../src/server";
@@ -26,8 +27,8 @@ function RemainingRow({ e, onTap }: { e: TodayItem; onTap: () => void }) {
 	const waiting = awaitingReview(e);
 	const multi = e.target > 1;
 	const label = multi
-		? t("items.validateCount", { name: e.item.name, count: e.approved, target: e.target, reward: e.item.reward })
-		: t("items.validate", { name: e.item.name, reward: e.item.reward });
+		? t("items.validateCount", { name: e.item.name, current: e.approved, target: e.target, count: e.item.reward })
+		: t("items.validate", { name: e.item.name, count: e.item.reward });
 	return (
 		<Pressable
 			accessibilityRole="button"
@@ -78,7 +79,7 @@ function Approvals() {
 	if (list.length === 0) return null;
 	return (
 		<View style={{ gap: 10 }}>
-			<T style={{ fontFamily: font.bold, fontSize: 15, color: colors.muted }}>À approuver</T>
+			<T style={{ fontFamily: font.bold, fontSize: 15, color: colors.muted }}>{t("today.approvals")}</T>
 			{list.map((c) => (
 				<View
 					key={c.id}
@@ -95,8 +96,16 @@ function Approvals() {
 					<T style={{ flex: 1, fontFamily: font.bold, fontSize: 15 }}>
 						{items.data?.items.find((i) => i.id === c.itemId)?.name ?? "…"}
 					</T>
-					<Button label="Refuser" variant="ghost" onPress={() => review.mutate({ id: c.id, approve: false })} />
-					<Button label="OK" variant="coin" onPress={() => review.mutate({ id: c.id, approve: true })} />
+					<Button
+						label={t("today.reject")}
+						variant="ghost"
+						onPress={() => review.mutate({ id: c.id, approve: false })}
+					/>
+					<Button
+						label={t("today.approve")}
+						variant="coin"
+						onPress={() => review.mutate({ id: c.id, approve: true })}
+					/>
 				</View>
 			))}
 		</View>
@@ -152,7 +161,7 @@ export default function TodayScreen() {
 					gap: 20,
 				}}
 			>
-				<Ring pct={pct} label={`${pct} % de la journée accomplie`} />
+				<Ring pct={pct} label={t("today.ringLabel", { pct })} />
 				<View style={{ flex: 1, gap: 6 }}>
 					<T
 						style={{ color: "#fff", fontFamily: font.bold, fontSize: 13, letterSpacing: 1, textTransform: "uppercase" }}
@@ -163,8 +172,8 @@ export default function TodayScreen() {
 						{t("today.doneOf", { done, total: entries.length })}
 					</T>
 					<T style={{ color: "#fff", fontFamily: font.semi, fontSize: 14 }}>
-						{t("today.earned", { amount: earned })}
-						{streak > 1 ? ` · ${t("today.streak", { days: streak })}` : ""}
+						{t("today.earned", { count: earned })}
+						{streak > 1 ? ` · ${t("today.streak", { count: streak })}` : ""}
 					</T>
 				</View>
 			</View>
@@ -214,12 +223,13 @@ export default function TodayScreen() {
 					<T style={{ fontFamily: font.bold, fontSize: 16 }}>{wish.name}</T>
 					<Bar pct={(100 * balance) / wish.cost} />
 					<T style={{ fontSize: 13, color: colors.muted }}>
-						{balance >= wish.cost ? t("today.canAfford") : t("today.missing", { amount: wish.cost - balance })}
+						{balance >= wish.cost ? t("today.canAfford") : t("today.missing", { count: wish.cost - balance })}
 					</T>
 				</Pressable>
 			)}
 
 			<View style={{ gap: 8, marginTop: 8 }}>
+				<LanguagePicker />
 				<T style={{ fontSize: 12, color: colors.muted }}>{t("server.current", { url: currentServerUrl() })}</T>
 				<View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
 					<Button label={t("auth.logout")} variant="ghost" onPress={() => void logout()} />

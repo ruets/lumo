@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { AppState } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useMe } from "../src/hooks";
+import { LocaleBoundary, loadLocale, useLocaleState } from "../src/locale";
 import { persister, queryClient } from "../src/query";
 import { flushQueue, loadQueue } from "../src/queue";
 import { loadServer, useServer } from "../src/server";
@@ -24,7 +25,7 @@ function Routes() {
 		void loadServer();
 	}, []);
 
-	// File hors ligne : on l'envoie au démarrage, au retour au premier plan et au retour du réseau.
+	// Offline queue: sent at startup, when the app returns to the foreground and when the network comes back.
 	useEffect(() => {
 		if (!authed) return;
 		void loadQueue().then(flushQueue);
@@ -60,12 +61,18 @@ export default function RootLayout() {
 		Unbounded_500Medium,
 		Unbounded_700Bold,
 	});
-	if (!fontsLoaded) return null;
+	const locale = useLocaleState();
+	useEffect(() => {
+		void loadLocale();
+	}, []);
+	if (!fontsLoaded || !locale.loaded) return null;
 	return (
 		<SafeAreaProvider>
 			<PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: 24 * 3_600_000 }}>
 				<StatusBar style="light" />
-				<Routes />
+				<LocaleBoundary>
+					<Routes />
+				</LocaleBoundary>
 			</PersistQueryClientProvider>
 		</SafeAreaProvider>
 	);

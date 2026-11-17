@@ -14,7 +14,7 @@ import { font, Screen, Segmented, T, Title } from "../../src/ui";
 function entryLabel(e: LedgerEntry): string {
 	if (e.label) {
 		if (e.reason !== "undo") return e.label;
-		// Le remboursement d'un échange est positif ; l'annulation d'une validation est négative.
+		// A redemption refund is positive; an undone completion is negative.
 		return `${e.amount > 0 ? t("ledger.undoRedemption") : t("ledger.undo")} · ${e.label}`;
 	}
 	if (e.note) return e.note;
@@ -43,19 +43,19 @@ export default function ProgressScreen() {
 	const maxExpected = Math.max(1, ...s.bars.map((b) => b.expected));
 	const streak = Math.max(0, ...stats.data.habits.map((h) => h.streak.current));
 	const entries = ledger.data?.entries ?? [];
-	// Un échange est annulable tant qu'aucun remboursement ne le référence (le remboursement est plus récent, donc listé).
+	// A redemption can be undone until a refund references it (the refund is newer, so it is listed).
 	const refunded = new Set(entries.filter((e) => e.reason === "undo" && e.amount > 0).map((e) => e.refId));
 	const cancel = (e: LedgerEntry) => {
 		const id = e.refId;
 		if (!id) return;
 		const amount = Math.abs(e.amount);
-		Alert.alert(t("ledger.undoAction"), t("ledger.undoConfirm", { amount }), [
+		Alert.alert(t("ledger.undoAction"), t("ledger.undoConfirm", { count: amount }), [
 			{ text: t("common.cancel"), style: "cancel" },
 			{
 				text: t("ledger.undoAction"),
 				onPress: () =>
 					undoRedemption.mutate(id, {
-						onSuccess: () => showToast(t("ledger.undone", { amount })),
+						onSuccess: () => showToast(t("ledger.undone", { count: amount })),
 						onError: () => showToast(t("common.offline")),
 					}),
 			},
@@ -109,7 +109,7 @@ export default function ProgressScreen() {
 				</View>
 				<View
 					accessibilityRole="image"
-					accessibilityLabel={`${s.done} sur ${s.expected} validées, ${s.rate ?? 0} %`}
+					accessibilityLabel={t("progress.chartLabel", { done: s.done, expected: s.expected, rate: s.rate ?? 0 })}
 					style={{ height: 140, flexDirection: "row", alignItems: "flex-end", gap: 10 }}
 				>
 					{s.bars.map((b) => (

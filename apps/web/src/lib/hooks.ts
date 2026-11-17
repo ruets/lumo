@@ -23,7 +23,7 @@ export function describeError(err: unknown): string {
 
 export const useAuthConfig = () => useQuery({ queryKey: keys.authConfig, queryFn: () => api.getAuthConfig() });
 
-/** `null` = non connecté (401). */
+/** `null` = not signed in (401). */
 export const useMe = () =>
 	useQuery({
 		queryKey: keys.me,
@@ -56,7 +56,7 @@ export const useLedger = () => useQuery({ queryKey: keys.ledger, queryFn: () => 
 export const usePending = (enabled: boolean) =>
 	useQuery({ queryKey: keys.pending, queryFn: () => api.listPendingCompletions(), enabled });
 
-/** Fenêtre de 56 jours pour l'écran Progrès (période courante et précédente). */
+/** 56-day window for the Progress screen (current and previous period). */
 export const statsWindow = (today: string) => ({ from: addDays(today, -55), to: today });
 
 function patchToday(qc: QueryClient, date: string | undefined, fn: (t: TodayResponse) => TodayResponse) {
@@ -82,7 +82,7 @@ function invalidateAfterWrite(qc: QueryClient) {
 		void qc.invalidateQueries({ queryKey: [k] });
 }
 
-/** Valider : mise à jour optimiste, annulée si le serveur refuse. `date` absent = aujourd'hui. */
+/** Complete: optimistic update, rolled back if the server refuses. No `date` = today. */
 export function useComplete(date?: string) {
 	const qc = useQueryClient();
 	return useMutation({
@@ -112,7 +112,7 @@ export function useComplete(date?: string) {
 	});
 }
 
-/** Annuler la validation la plus récente de l'élément ce jour-là. */
+/** Undo the item's most recent completion that day. */
 export function useUndo() {
 	const qc = useQueryClient();
 	return useMutation({

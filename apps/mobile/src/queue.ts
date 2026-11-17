@@ -8,15 +8,15 @@ import { api } from "./session";
 import { createStore, readJson, showToast, writeJson } from "./store";
 
 /**
- * File des validations hors ligne. Chaque entrée porte sa propre clé d'idempotence (`id`) :
- * un rejeu après une réponse perdue ne crédite jamais deux fois. Le serveur reste seul juge —
- * une validation refusée au rejeu (objectif atteint, jour trop ancien…) est abandonnée avec un message.
+ * Offline completion queue. Each entry carries its own idempotency key (`id`):
+ * a replay after a lost response never credits twice. The server stays the only judge —
+ * a completion refused on replay (goal reached, day too old…) is dropped with a message.
  */
 export interface QueuedCompletion {
-	/** Clé d'idempotence, fixée à la création. */
+	/** Idempotency key, fixed at creation. */
 	id: string;
 	itemId: string;
-	/** Jour local de la validation, fixé à la création (un rejeu le lendemain garde le bon jour). */
+	/** Local day of the completion, fixed at creation (a replay the next day keeps the right day). */
 	date: string;
 	createdAt: string;
 }
@@ -49,14 +49,14 @@ export async function enqueueCompletion(itemId: string, date: string): Promise<v
 	void flushQueue();
 }
 
-/** Vide la file (changement de serveur ou de compte : ces validations ne sont plus les nôtres). */
+/** Empties the queue (server or account change: these completions are no longer ours). */
 export async function clearQueue(): Promise<void> {
 	await loadQueue();
 	store.set([]);
 	await persist();
 }
 
-/** Annule localement la dernière validation en file de cet élément ce jour-là (rien n'a été envoyé). */
+/** Locally cancels the last queued completion of this item that day (nothing was sent). */
 export async function dequeueLast(itemId: string, date: string): Promise<boolean> {
 	await loadQueue();
 	const mine = queuedFor(itemId, date);
@@ -67,10 +67,10 @@ export async function dequeueLast(itemId: string, date: string): Promise<boolean
 	return true;
 }
 
-/** Erreur de transport (pas de réponse du serveur) : on garde l'entrée et on réessaiera. */
+/** Transport error (no response from the server): we keep the entry and retry. */
 const isRetryable = (err: unknown) => !(err instanceof ApiError) || err.status >= 500 || err.status === 401;
 
-/** Envoie la file dans l'ordre ; s'arrête au premier échec réseau. Un seul envoi à la fois. */
+/** Sends the queue in order; stops at the first network failure. One send at a time. */
 export function flushQueue(): Promise<void> {
 	flushing ??= (async () => {
 		await loadQueue();

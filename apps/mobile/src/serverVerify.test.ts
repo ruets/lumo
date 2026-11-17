@@ -24,7 +24,7 @@ describe("verifyServer", () => {
 		expect(fetchMock.mock.calls[0]?.[0]).toBe("https://lumo.example.org/api/v1/auth/config");
 	});
 
-	it("refuse une réponse qui n'est pas Lumo (JSON étranger ou page HTML)", async () => {
+	it("rejects a response that is not Lumo (foreign JSON or an HTML page)", async () => {
 		fetchMock.mockResolvedValue(json({ hello: "world" }));
 		await expect(verifyServer("https://x.test")).rejects.toMatchObject({ code: "not_lumo" });
 		fetchMock.mockResolvedValue(new Response("<html></html>", { status: 200 }));
@@ -33,7 +33,7 @@ describe("verifyServer", () => {
 		await expect(verifyServer("https://x.test")).rejects.toBeInstanceOf(ServerError);
 	});
 
-	it("serveur injoignable : erreur réseau ou délai dépassé", async () => {
+	it("server unreachable: network error or timeout", async () => {
 		fetchMock.mockRejectedValue(new TypeError("Network request failed"));
 		await expect(verifyServer("https://x.test")).rejects.toMatchObject({ code: "unreachable" });
 		fetchMock.mockReturnValue(new Promise(() => undefined));

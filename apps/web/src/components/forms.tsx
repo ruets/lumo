@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { ApiError, type CreateItemInput, type CreateRewardInput } from "@lumo/api-client";
-import { t } from "@lumo/i18n";
+import { t, weekdayShort } from "@lumo/i18n";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { api } from "../lib/api";
 import { describeError } from "../lib/hooks";
 import { Dialog, Field, fieldClass, PrimaryButton } from "./ui";
-
-const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 function useCreate<I>(call: (input: I) => Promise<unknown>, onDone: () => void) {
 	const qc = useQueryClient();
@@ -86,8 +84,8 @@ export function ItemDialog({ kind, onClose }: { kind: "habit" | "task"; onClose:
 						{freq === "weekly" && (
 							<fieldset className="m-0 flex min-w-0 flex-wrap gap-1.5 border-0 p-0">
 								<legend className="sr-only">{t("form.frequency.weekly")}</legend>
-								{WEEKDAYS.map((d, i) => {
-									const iso = i + 1;
+								{[1, 2, 3, 4, 5, 6, 7].map((iso) => {
+									const d = weekdayShort(iso);
 									const on = days.includes(iso);
 									return (
 										<button
@@ -179,10 +177,11 @@ export function RewardDialog({ onClose }: { onClose: () => void }) {
 						</Field>
 						<Field label={t("form.limitPeriod")}>
 							<select name="limitPeriod" defaultValue="week" className={fieldClass}>
-								<option value="day">jour</option>
-								<option value="week">semaine</option>
-								<option value="month">mois</option>
-								<option value="year">an</option>
+								{(["day", "week", "month", "year"] as const).map((unit) => (
+									<option key={unit} value={unit}>
+										{t(`form.limitUnit.${unit}` as const)}
+									</option>
+								))}
 							</select>
 						</Field>
 					</div>

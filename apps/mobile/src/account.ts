@@ -5,15 +5,15 @@ import { clearQueue } from "./queue";
 import { forgetServer } from "./server";
 import { api, clearTokens } from "./session";
 
-/** Se déconnecter : révoque la session côté serveur (si joignable), efface jetons et données locales. */
+/** Sign out: revokes the session on the server (if reachable), clears tokens and local data. */
 export async function logout(): Promise<void> {
 	await api.logout().catch(() => undefined);
 	await wipeLocalData();
 }
 
 /**
- * Changer de serveur : tout ce qui vient de l'ancien (jetons, cache, validations en attente) est effacé,
- * pour ne jamais mélanger deux foyers ni envoyer une validation au mauvais serveur.
+ * Change server: everything that comes from the old one (tokens, cache, pending completions) is erased,
+ * so two households are never mixed and a completion is never sent to the wrong server.
  */
 export async function changeServer(): Promise<void> {
 	await api.logout().catch(() => undefined);

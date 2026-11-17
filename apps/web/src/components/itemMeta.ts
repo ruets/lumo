@@ -10,5 +10,5 @@ export function itemMeta(e: TodayItem): string {
 	return t("items.kind.task");
 }
 
-/** Validé et en attente d'un adulte : rien à faire de plus pour le membre. */
+/** Completed and waiting for an adult: nothing more for the member to do. */
 export const awaitingReview = (e: TodayItem) => !e.done && e.approved + e.pending >= e.target;
