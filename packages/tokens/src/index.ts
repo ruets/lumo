@@ -1,18 +1,35 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/** Design tokens partagés web et mobile. Valeurs provisoires, à affiner à l'étape 3. */
+/** Design tokens partagés web et mobile, tirés de la maquette (thème sombre). */
 export const colors = {
-	background: "#fafaf7",
-	surface: "#ffffff",
-	text: "#1f2430",
-	muted: "#6b7280",
-	primary: "#f59e0b",
-	primaryText: "#1f2430",
-	danger: "#dc2626",
+	background: "#0E1220",
+	surface: "#1B2032",
+	surfaceDone: "#151A29",
+	surfaceRaised: "#252B40",
+	nav: "#141929",
+	border: "#252B40",
+	borderDashed: "#3A4160",
+	text: "#F2F1FA",
+	textSoft: "#C9C8DC",
+	muted: "#A9A8C0",
+	mutedNav: "#9A99B3",
+	primary: "#6B4BF2",
+	primarySoft: "#7C5CFF",
+	primaryLink: "#B9A8FF",
+	onPrimary: "#FFFFFF",
+	coin: "#FFC857",
+	success: "#3DDC97",
+	danger: "#FF7A8A",
+	onCoin: "#0E1220",
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 
-export const radii = { sm: 6, md: 12, lg: 20 } as const;
+export const radii = { sm: 10, md: 18, lg: 26, pill: 999 } as const;
 
-export const fontSizes = { sm: 14, md: 16, lg: 20, xl: 28 } as const;
+export const fontSizes = { xs: 12, sm: 13, md: 15, lg: 19, xl: 26, xxl: 34 } as const;
+
+export const fonts = {
+	display: "Unbounded",
+	body: "Manrope",
+} as const;
