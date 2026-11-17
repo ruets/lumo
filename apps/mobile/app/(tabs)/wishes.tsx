@@ -49,15 +49,17 @@ export default function WishesScreen() {
 						? t("wishes.redeemed", { name: last.name, cost: last.cost })
 						: t("today.earned", { count: earnedToday })}
 				</T>
-				<T style={{ color: "#fff", fontFamily: font.semi, fontSize: 13 }}>
-					{t("wishes.sharedBalance", { amount: me.wallets.shared.balance })}
-				</T>
+				{me.wallets.shared && (
+					<T style={{ color: "#fff", fontFamily: font.semi, fontSize: 13 }}>
+						{t("wishes.sharedBalance", { amount: me.wallets.shared.balance })}
+					</T>
+				)}
 			</View>
 
 			{rewards.data?.rewards.length === 0 && <T style={{ color: colors.muted }}>{t("wishes.empty")}</T>}
 			<View style={{ gap: 10 }}>
 				{rewards.data?.rewards.map((r) => {
-					const wallet = r.fundedFrom === "shared" ? me.wallets.shared.balance : balance;
+					const wallet = r.fundedFrom === "shared" ? (me.wallets.shared?.balance ?? 0) : balance;
 					const exhausted = r.limitCount !== null && (r.remaining ?? 0) <= 0;
 					const canBuy = wallet >= r.cost && !exhausted;
 					return (

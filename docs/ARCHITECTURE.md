@@ -120,6 +120,12 @@ Guards: never delete or demote the last super admin, never delete yourself, neve
 - **Disabling and deleting.** A disabled account cannot sign in and keeps all its data. Deleting erases its credentials, personal items, wishes, wallet and history; its past completions in shared items stay, anonymised, and what it gave to a pot stays.
 - **Feature toggles.** A household can hide or disable its pot, wishes, habits or tasks. A disabled feature is hidden in the UI and refused by the API (`feature_disabled`). The personal space has no toggles.
 
+### Implemented so far
+
+- Super admins, the Admin panel, accounts without a household (slice A).
+- Personal ownership (slice B1): items and wishes belong to a household or to an account (`owner_id`), the personal wallet belongs to the account and follows it between households (`wallets.household_id` is null), `ledger_entries.household_id` is nullable, and the app works fully for an account in no household (personal habits, tasks, wishes, coins, stats). Personal items are visible to their owner only, credit the personal wallet only and never need approval. A person still belongs to one household at most, and time zone and first weekday come from the household when there is one, otherwise from the account (`users.timezone`, `users.week_start`, no screen to edit them yet).
+- Still to do: several households per account, guardianships, pot withdrawal policy, feature toggles, claim codes, `OIDC_AUTO_CREATE_USERS`.
+
 ### Still open
 
 - The exact lifetime and format of claim codes and of guardianship requests (proposed: 7 days, single use, like household invitations).

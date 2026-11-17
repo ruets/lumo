@@ -181,7 +181,8 @@ export function useLogout() {
 	};
 }
 
-export const useHousehold = () => useQuery({ queryKey: keys.household, queryFn: () => api.getHousehold() });
+export const useHousehold = (enabled = true) =>
+	useQuery({ queryKey: keys.household, queryFn: () => api.getHousehold(), enabled });
 
 function useHouseholdWrite<V, R>(fn: (v: V) => Promise<R>) {
 	const qc = useQueryClient();

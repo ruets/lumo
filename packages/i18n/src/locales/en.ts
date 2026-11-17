@@ -275,5 +275,12 @@ export const en = {
 	"errors.cannot_target_self": "You cannot do that to your own account.",
 	"errors.last_super_admin": "The instance needs at least one super admin.",
 	"errors.household_not_empty": "Remove the members before deleting the household.",
+	"form.scope": "Who is it for",
+	"form.scope.household": "The household",
+	"form.scope.personal": "Just me",
+	"settings.noHousehold": "No household",
+	"settings.accessTitle": "Household",
+	"noHousehold.settingsHint": "You are not in a household. Your habits, wishes and coins are yours alone.",
+	"items.personalBadge": "Personal",
 	"errors.unknown": "Something went wrong.",
 } as const satisfies Record<string, string>;

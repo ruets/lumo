@@ -1,6 +1,6 @@
 {
-  "id": "9ecbf812-37ea-4a8d-9db7-d087d6e99ba2",
-  "prevId": "d3de26e4-c5bd-461a-9d4c-0de79a6adeb4",
+  "id": "ae49753b-bdaa-4718-90f2-1a3868618abf",
+  "prevId": "c7374425-e143-45b5-96cd-253d05246fc1",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -270,6 +270,14 @@
           "autoincrement": false,
           "default": 2
         },
+        "backdate_unlimited": {
+          "name": "backdate_unlimited",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -360,6 +368,30 @@
           "name": "idempotency_keys_user_id_key_pk"
         }
       },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "instance_settings": {
+      "name": "instance_settings",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -571,7 +603,14 @@
           "name": "household_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "kind": {
@@ -680,6 +719,14 @@
             "archived_at"
           ],
           "isUnique": false
+        },
+        "items_owner_idx": {
+          "name": "items_owner_idx",
+          "columns": [
+            "owner_id",
+            "archived_at"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -690,6 +737,19 @@
             "household_id"
           ],
           "tableTo": "households",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "items_owner_id_users_id_fk": {
+          "name": "items_owner_id_users_id_fk",
+          "tableFrom": "items",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
@@ -713,6 +773,10 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
+        "items_scope_check": {
+          "name": "items_scope_check",
+          "value": "(\"items\".\"household_id\" IS NULL) <> (\"items\".\"owner_id\" IS NULL)"
+        },
         "items_kind_check": {
           "name": "items_kind_check",
           "value": "kind IN ('habit', 'task')"
@@ -745,7 +809,7 @@
           "name": "household_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "wallet_id": {
@@ -1063,6 +1127,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "undone_at": {
+          "name": "undone_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "ledger_entry_id": {
           "name": "ledger_entry_id",
           "type": "text",
@@ -1213,7 +1284,14 @@
           "name": "household_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "name": {
@@ -1290,6 +1368,14 @@
             "archived_at"
           ],
           "isUnique": false
+        },
+        "rewards_owner_idx": {
+          "name": "rewards_owner_idx",
+          "columns": [
+            "owner_id",
+            "archived_at"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -1305,11 +1391,28 @@
           ],
           "onUpdate": "no action",
           "onDelete": "cascade"
+        },
+        "rewards_owner_id_users_id_fk": {
+          "name": "rewards_owner_id_users_id_fk",
+          "tableFrom": "rewards",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
+        "rewards_scope_check": {
+          "name": "rewards_scope_check",
+          "value": "(\"rewards\".\"household_id\" IS NULL) <> (\"rewards\".\"owner_id\" IS NULL)"
+        },
         "rewards_cost_check": {
           "name": "rewards_cost_check",
           "value": "\"rewards\".\"cost\" >= 0"
@@ -1504,6 +1607,44 @@
           "notNull": false,
           "autoincrement": false
         },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'UTC'"
+        },
+        "week_start": {
+          "name": "week_start",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "is_super_admin": {
+          "name": "is_super_admin",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "disabled_at": {
+          "name": "disabled_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -1555,7 +1696,7 @@
           "name": "household_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "kind": {
@@ -1585,9 +1726,9 @@
         "wallets_personal_uq": {
           "name": "wallets_personal_uq",
           "columns": [
-            "household_id",
             "user_id"
           ],
+          "where": "\"wallets\".\"kind\" = 'personal'",
           "isUnique": true
         },
         "wallets_shared_uq": {
@@ -1636,7 +1777,7 @@
         },
         "wallets_user_check": {
           "name": "wallets_user_check",
-          "value": "(\"wallets\".\"kind\" = 'personal' AND \"wallets\".\"user_id\" IS NOT NULL) OR (\"wallets\".\"kind\" = 'shared' AND \"wallets\".\"user_id\" IS NULL)"
+          "value": "(\"wallets\".\"kind\" = 'personal' AND \"wallets\".\"user_id\" IS NOT NULL AND \"wallets\".\"household_id\" IS NULL) OR (\"wallets\".\"kind\" = 'shared' AND \"wallets\".\"user_id\" IS NULL AND \"wallets\".\"household_id\" IS NOT NULL)"
         }
       }
     }

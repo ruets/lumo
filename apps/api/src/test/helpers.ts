@@ -188,7 +188,7 @@ export async function createHousehold(ctx: TestContext): Promise<{ owner: Member
 
 export async function balances(member: { api: Api }) {
 	const me = (await member.api.get("/me")).json();
-	return { personal: me.wallets.personal.balance as number, shared: me.wallets.shared.balance as number };
+	return { personal: me.wallets.personal.balance as number, shared: me.wallets.shared?.balance as number };
 }
 
 /** Default daily habit, created through the API. */

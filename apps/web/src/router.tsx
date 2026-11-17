@@ -7,7 +7,6 @@ import { AdminPage } from "./routes/Admin";
 import { HabitsPage } from "./routes/Habits";
 import { HouseholdPage } from "./routes/Household";
 import { Login } from "./routes/Login";
-import { NoHousehold } from "./routes/NoHousehold";
 import { ProgressPage } from "./routes/Progress";
 import { SettingsPage } from "./routes/Settings";
 import { TodayPage } from "./routes/Today";
@@ -17,8 +16,7 @@ import { WishesPage } from "./routes/Wishes";
 function Root() {
 	const account = useAccount();
 	const config = useAuthConfig();
-	const inHousehold = Boolean(account.data?.household);
-	const me = useMe(inHousehold);
+	const me = useMe(Boolean(account.data));
 	const loading = <p className="p-8 text-center text-muted">{t("common.loading")}</p>;
 	if (account.isPending) return loading;
 	if (account.isError || me.isError)
@@ -28,7 +26,6 @@ function Root() {
 			</p>
 		);
 	if (account.data === null) return config.data ? <Login config={config.data} /> : loading;
-	if (!account.data.household) return <NoHousehold account={account.data} />;
 	return me.data ? <AppShell me={me.data} /> : loading;
 }
 

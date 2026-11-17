@@ -45,24 +45,38 @@
 											"additionalProperties": false
 										},
 										"household": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string"
+											"anyOf": [
+												{
+													"type": "object",
+													"properties": {
+														"id": {
+															"type": "string"
+														},
+														"name": {
+															"type": "string"
+														},
+														"timezone": {
+															"type": "string"
+														}
+													},
+													"required": ["id", "name", "timezone"],
+													"additionalProperties": false
 												},
-												"name": {
-													"type": "string"
-												},
-												"timezone": {
-													"type": "string"
+												{
+													"type": "null"
 												}
-											},
-											"required": ["id", "name", "timezone"],
-											"additionalProperties": false
+											]
 										},
 										"role": {
-											"type": "string",
-											"enum": ["owner", "adult", "child"]
+											"anyOf": [
+												{
+													"type": "string",
+													"enum": ["owner", "adult", "child"]
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"wallets": {
 											"type": "object",
@@ -83,19 +97,26 @@
 													"additionalProperties": false
 												},
 												"shared": {
-													"type": "object",
-													"properties": {
-														"id": {
-															"type": "string"
+													"anyOf": [
+														{
+															"type": "object",
+															"properties": {
+																"id": {
+																	"type": "string"
+																},
+																"balance": {
+																	"type": "integer",
+																	"minimum": -9007199254740991,
+																	"maximum": 9007199254740991
+																}
+															},
+															"required": ["id", "balance"],
+															"additionalProperties": false
 														},
-														"balance": {
-															"type": "integer",
-															"minimum": -9007199254740991,
-															"maximum": 9007199254740991
+														{
+															"type": "null"
 														}
-													},
-													"required": ["id", "balance"],
-													"additionalProperties": false
+													]
 												}
 											},
 											"required": ["personal", "shared"],
@@ -2698,6 +2719,10 @@
 													"minLength": 1,
 													"maxLength": 100
 												}
+											},
+											"scope": {
+												"type": "string",
+												"enum": ["personal", "household"]
 											}
 										},
 										"required": ["kind", "schedule", "name"],
@@ -2771,6 +2796,10 @@
 													"minLength": 1,
 													"maxLength": 100
 												}
+											},
+											"scope": {
+												"type": "string",
+												"enum": ["personal", "household"]
 											}
 										},
 										"required": ["kind", "name"],
@@ -2910,6 +2939,10 @@
 											"items": {
 												"type": "string"
 											}
+										},
+										"scope": {
+											"type": "string",
+											"enum": ["personal", "household"]
 										}
 									},
 									"required": [
@@ -2926,7 +2959,8 @@
 										"requiresApproval",
 										"archivedAt",
 										"createdBy",
-										"assigneeIds"
+										"assigneeIds",
+										"scope"
 									],
 									"additionalProperties": false
 								}
@@ -3124,6 +3158,10 @@
 														"items": {
 															"type": "string"
 														}
+													},
+													"scope": {
+														"type": "string",
+														"enum": ["personal", "household"]
 													}
 												},
 												"required": [
@@ -3140,7 +3178,8 @@
 													"requiresApproval",
 													"archivedAt",
 													"createdBy",
-													"assigneeIds"
+													"assigneeIds",
+													"scope"
 												],
 												"additionalProperties": false
 											}
@@ -3484,6 +3523,10 @@
 											"items": {
 												"type": "string"
 											}
+										},
+										"scope": {
+											"type": "string",
+											"enum": ["personal", "household"]
 										}
 									},
 									"required": [
@@ -3500,7 +3543,8 @@
 										"requiresApproval",
 										"archivedAt",
 										"createdBy",
-										"assigneeIds"
+										"assigneeIds",
+										"scope"
 									],
 									"additionalProperties": false
 								}
@@ -3777,6 +3821,10 @@
 																"items": {
 																	"type": "string"
 																}
+															},
+															"scope": {
+																"type": "string",
+																"enum": ["personal", "household"]
 															}
 														},
 														"required": [
@@ -3793,7 +3841,8 @@
 															"requiresApproval",
 															"archivedAt",
 															"createdBy",
-															"assigneeIds"
+															"assigneeIds",
+															"scope"
 														],
 														"additionalProperties": false
 													},
@@ -3978,9 +4027,16 @@
 													"maximum": 9007199254740991
 												},
 												"shared": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
 												}
 											},
 											"required": ["personal", "shared"],
@@ -4239,9 +4295,16 @@
 													"maximum": 9007199254740991
 												},
 												"shared": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
 												}
 											},
 											"required": ["personal", "shared"],
@@ -4382,9 +4445,16 @@
 													"maximum": 9007199254740991
 												},
 												"shared": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
 												}
 											},
 											"required": ["personal", "shared"],
@@ -4525,9 +4595,16 @@
 													"maximum": 9007199254740991
 												},
 												"shared": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
 												}
 											},
 											"required": ["personal", "shared"],
@@ -4653,6 +4730,10 @@
 															"type": "string"
 														}
 													},
+													"scope": {
+														"type": "string",
+														"enum": ["personal", "household"]
+													},
 													"remaining": {
 														"anyOf": [
 															{
@@ -4677,6 +4758,7 @@
 													"link",
 													"archivedAt",
 													"assigneeIds",
+													"scope",
 													"remaining"
 												],
 												"additionalProperties": false
@@ -4778,6 +4860,10 @@
 										"default": "personal",
 										"type": "string",
 										"enum": ["personal", "shared"]
+									},
+									"scope": {
+										"type": "string",
+										"enum": ["personal", "household"]
 									},
 									"link": {
 										"anyOf": [
@@ -4892,6 +4978,10 @@
 												"type": "string"
 											}
 										},
+										"scope": {
+											"type": "string",
+											"enum": ["personal", "household"]
+										},
 										"remaining": {
 											"anyOf": [
 												{
@@ -4916,6 +5006,7 @@
 										"link",
 										"archivedAt",
 										"assigneeIds",
+										"scope",
 										"remaining"
 									],
 									"additionalProperties": false
@@ -5138,6 +5229,10 @@
 												"type": "string"
 											}
 										},
+										"scope": {
+											"type": "string",
+											"enum": ["personal", "household"]
+										},
 										"remaining": {
 											"anyOf": [
 												{
@@ -5162,6 +5257,7 @@
 										"link",
 										"archivedAt",
 										"assigneeIds",
+										"scope",
 										"remaining"
 									],
 									"additionalProperties": false
@@ -5280,9 +5376,16 @@
 													"maximum": 9007199254740991
 												},
 												"shared": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
 												}
 											},
 											"required": ["personal", "shared"],
@@ -5406,9 +5509,16 @@
 													"maximum": 9007199254740991
 												},
 												"shared": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
 												}
 											},
 											"required": ["personal", "shared"],
@@ -5517,9 +5627,16 @@
 													"maximum": 9007199254740991
 												},
 												"shared": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
 												}
 											},
 											"required": ["personal", "shared"],

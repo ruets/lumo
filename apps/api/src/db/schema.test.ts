@@ -19,7 +19,7 @@ function seed() {
 	const wid = randomUUID();
 	exec("INSERT INTO households (id, name) VALUES (?, ?)", hid, "Household");
 	exec("INSERT INTO users (id, display_name) VALUES (?, ?)", uid, "Alice");
-	exec("INSERT INTO wallets (id, household_id, kind, user_id) VALUES (?, ?, 'personal', ?)", wid, hid, uid);
+	exec("INSERT INTO wallets (id, household_id, kind, user_id) VALUES (?, NULL, 'personal', ?)", wid, uid);
 	return { hid, uid, wid };
 }
 
@@ -83,9 +83,18 @@ describe("contraintes", () => {
 	});
 
 	it("requires a user_id for personal wallets and not for pots", () => {
-		const { hid } = seed();
+		const { hid, uid } = seed();
 		expect(() =>
-			exec("INSERT INTO wallets (id, household_id, kind, user_id) VALUES (?, ?, 'personal', NULL)", randomUUID(), hid),
+			exec("INSERT INTO wallets (id, household_id, kind, user_id) VALUES (?, NULL, 'personal', NULL)", randomUUID()),
+		).toThrow(/CHECK/);
+		// A personal wallet belongs to the account, never to a household.
+		expect(() =>
+			exec(
+				"INSERT INTO wallets (id, household_id, kind, user_id) VALUES (?, ?, 'personal', ?)",
+				randomUUID(),
+				hid,
+				uid,
+			),
 		).toThrow(/CHECK/);
 		exec("INSERT INTO wallets (id, household_id, kind, user_id) VALUES (?, ?, 'shared', NULL)", randomUUID(), hid);
 	});

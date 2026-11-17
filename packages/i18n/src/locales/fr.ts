@@ -276,5 +276,12 @@ export const fr: Record<MessageId, string> = {
 	"errors.cannot_target_self": "Vous ne pouvez pas faire cela sur votre propre compte.",
 	"errors.last_super_admin": "L'instance doit garder au moins un super admin.",
 	"errors.household_not_empty": "Retirez les membres avant de supprimer le foyer.",
+	"form.scope": "Pour qui",
+	"form.scope.household": "Le foyer",
+	"form.scope.personal": "Moi seul",
+	"settings.noHousehold": "Sans foyer",
+	"settings.accessTitle": "Foyer",
+	"noHousehold.settingsHint": "Vous n'êtes dans aucun foyer. Vos habitudes, envies et pièces ne sont qu'à vous.",
+	"items.personalBadge": "Perso",
 	"errors.unknown": "Une erreur est survenue.",
 };

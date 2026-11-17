@@ -287,7 +287,7 @@ export default function HouseholdScreen() {
 					headerShadowVisible: false,
 				}}
 			/>
-			<Section title={`${t("household.members")} · ${household.data?.household.name ?? me?.household.name ?? ""}`}>
+			<Section title={`${t("household.members")} · ${household.data?.household.name ?? me?.household?.name ?? ""}`}>
 				{household.data?.members.map((m, i) => (
 					<MemberRow key={m.userId} member={m} isYou={m.userId === me?.user.id} canManage={canManage} first={i === 0} />
 				))}

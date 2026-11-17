@@ -290,12 +290,12 @@ function InviteSection() {
 }
 
 export function HouseholdPage({ me }: { me: MeResponse }) {
-	const household = useHousehold();
+	const household = useHousehold(Boolean(me.household));
 	const canManage = me.role === "owner";
 	return (
 		<div className="grid max-w-2xl gap-5">
 			<PageTitle>{t("household.title")}</PageTitle>
-			<p className="m-0 -mt-3 text-sm text-muted">{household.data?.household.name ?? me.household.name}</p>
+			<p className="m-0 -mt-3 text-sm text-muted">{household.data?.household.name ?? me.household?.name}</p>
 			<section className="grid gap-2.5">
 				<h2 className="m-0 text-[15px] font-bold text-muted">{t("household.members")}</h2>
 				<ul className="m-0 list-none rounded-[20px] bg-surface px-4 py-0">

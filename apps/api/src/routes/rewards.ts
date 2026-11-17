@@ -21,6 +21,7 @@ import { route } from "./define.js";
 
 export const rewardRoutes = [
 	route({
+		scope: "account",
 		method: "get",
 		url: "/rewards",
 		summary: "List the wishes",
@@ -29,6 +30,7 @@ export const rewardRoutes = [
 		handler: ({ db, actor, now }) => ({ rewards: listRewards(db, actor, now) }),
 	}),
 	route({
+		scope: "account",
 		method: "post",
 		url: "/rewards",
 		summary: "Create a wish (owner and adults)",
@@ -39,6 +41,7 @@ export const rewardRoutes = [
 		handler: ({ db, actor, body, now }) => createReward(db, actor, body, now),
 	}),
 	route({
+		scope: "account",
 		method: "patch",
 		url: "/rewards/:id",
 		summary: "Update or archive a wish",
@@ -49,6 +52,7 @@ export const rewardRoutes = [
 		handler: ({ db, actor, params, body, now }) => updateReward(db, actor, params.id, body, now),
 	}),
 	route({
+		scope: "account",
 		method: "post",
 		url: "/rewards/:id/redemptions",
 		summary: "Redeem a wish for coins",
@@ -59,6 +63,7 @@ export const rewardRoutes = [
 		handler: ({ db, actor, params, now }) => redeemReward(db, actor, params.id, now),
 	}),
 	route({
+		scope: "account",
 		method: "delete",
 		url: "/redemptions/:id",
 		summary: "Undo a wish redemption (refund by counter-entry)",
@@ -81,6 +86,7 @@ export const walletRoutes = [
 		handler: ({ db, actor, body, now }) => transferToShared(db, actor, body.amount, now),
 	}),
 	route({
+		scope: "account",
 		method: "get",
 		url: "/ledger",
 		summary: "A wallet's history, cursor-paginated",
@@ -106,6 +112,7 @@ export const walletRoutes = [
 		handler: ({ db, actor, body, now }) => adjust(db, actor, body, now),
 	}),
 	route({
+		scope: "account",
 		method: "get",
 		url: "/stats",
 		summary: "Streaks, success rates and heatmap",

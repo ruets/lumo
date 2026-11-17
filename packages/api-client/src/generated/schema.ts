@@ -596,9 +596,8 @@ export interface operations {
                             id: string;
                             name: string;
                             timezone: string;
-                        };
-                        /** @enum {string} */
-                        role: "owner" | "adult" | "child";
+                        } | null;
+                        role: ("owner" | "adult" | "child") | null;
                         wallets: {
                             personal: {
                                 id: string;
@@ -607,7 +606,7 @@ export interface operations {
                             shared: {
                                 id: string;
                                 balance: number;
-                            };
+                            } | null;
                         };
                     };
                 };
@@ -1798,6 +1797,8 @@ export interface operations {
                             archivedAt: string | null;
                             createdBy: string;
                             assigneeIds: string[];
+                            /** @enum {string} */
+                            scope: "personal" | "household";
                         }[];
                     };
                 };
@@ -1867,6 +1868,8 @@ export interface operations {
                     /** @default false */
                     requiresApproval?: boolean;
                     assigneeIds?: string[];
+                    /** @enum {string} */
+                    scope?: "personal" | "household";
                 } | {
                     /** @constant */
                     kind: "task";
@@ -1886,6 +1889,8 @@ export interface operations {
                     /** @default false */
                     requiresApproval?: boolean;
                     assigneeIds?: string[];
+                    /** @enum {string} */
+                    scope?: "personal" | "household";
                 };
             };
         };
@@ -1928,6 +1933,8 @@ export interface operations {
                         archivedAt: string | null;
                         createdBy: string;
                         assigneeIds: string[];
+                        /** @enum {string} */
+                        scope: "personal" | "household";
                     };
                 };
             };
@@ -2071,6 +2078,8 @@ export interface operations {
                         archivedAt: string | null;
                         createdBy: string;
                         assigneeIds: string[];
+                        /** @enum {string} */
+                        scope: "personal" | "household";
                     };
                 };
             };
@@ -2144,6 +2153,8 @@ export interface operations {
                                 archivedAt: string | null;
                                 createdBy: string;
                                 assigneeIds: string[];
+                                /** @enum {string} */
+                                scope: "personal" | "household";
                             };
                             approved: number;
                             pending: number;
@@ -2212,7 +2223,7 @@ export interface operations {
                         };
                         balances: {
                             personal: number;
-                            shared: number;
+                            shared: number | null;
                         };
                     };
                 };
@@ -2319,7 +2330,7 @@ export interface operations {
                         };
                         balances: {
                             personal: number;
-                            shared: number;
+                            shared: number | null;
                         };
                     };
                 };
@@ -2376,7 +2387,7 @@ export interface operations {
                         };
                         balances: {
                             personal: number;
-                            shared: number;
+                            shared: number | null;
                         };
                     };
                 };
@@ -2433,7 +2444,7 @@ export interface operations {
                         };
                         balances: {
                             personal: number;
-                            shared: number;
+                            shared: number | null;
                         };
                     };
                 };
@@ -2484,6 +2495,8 @@ export interface operations {
                             link: string | null;
                             archivedAt: string | null;
                             assigneeIds: string[];
+                            /** @enum {string} */
+                            scope: "personal" | "household";
                             remaining: number | null;
                         }[];
                     };
@@ -2528,6 +2541,8 @@ export interface operations {
                      * @enum {string}
                      */
                     fundedFrom?: "personal" | "shared";
+                    /** @enum {string} */
+                    scope?: "personal" | "household";
                     link?: string | null;
                     /** @default [] */
                     assigneeIds?: string[];
@@ -2555,6 +2570,8 @@ export interface operations {
                         link: string | null;
                         archivedAt: string | null;
                         assigneeIds: string[];
+                        /** @enum {string} */
+                        scope: "personal" | "household";
                         remaining: number | null;
                     };
                 };
@@ -2624,6 +2641,8 @@ export interface operations {
                         link: string | null;
                         archivedAt: string | null;
                         assigneeIds: string[];
+                        /** @enum {string} */
+                        scope: "personal" | "household";
                         remaining: number | null;
                     };
                 };
@@ -2677,7 +2696,7 @@ export interface operations {
                         };
                         balances: {
                             personal: number;
-                            shared: number;
+                            shared: number | null;
                         };
                     };
                 };
@@ -2731,7 +2750,7 @@ export interface operations {
                         };
                         balances: {
                             personal: number;
-                            shared: number;
+                            shared: number | null;
                         };
                     };
                 };
@@ -2782,7 +2801,7 @@ export interface operations {
                         transferId: string;
                         balances: {
                             personal: number;
-                            shared: number;
+                            shared: number | null;
                         };
                     };
                 };

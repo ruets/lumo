@@ -8,20 +8,20 @@ import type { Config } from "../config.js";
 import type { Db } from "../db/client.js";
 import { idempotencyKeys } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
-import { type AccountCtx, type ActorCtx, loadAccount, loadActor } from "../services/context.js";
+import { type AccountCtx, type ActorCtx, type HouseholdActorCtx, loadAccount, loadActor } from "../services/context.js";
 import { type Tx, writeTx } from "../services/members.js";
 
 /**
- * `household` routes need a household (403 `no_household` otherwise) and receive an `actor`;
- * `account` routes work for any signed-in account, with or without a household, and receive an `account`.
+ * `household` routes need a household (403 `no_household` otherwise) and receive an actor that has one;
+ * `account` routes work for any signed-in account, with or without a household.
  */
 export type RouteScope = "household" | "account";
 
-export interface RouteContext<B, Q, P, A = ActorCtx, X = undefined> {
+export interface RouteContext<B, Q, P, A = HouseholdActorCtx, X = undefined> {
 	/** Write: the request's `BEGIN IMMEDIATE` transaction. Read: the database (same queries, no writes). */
 	db: Tx;
 	config: Config;
-	/** The caller inside their household (household routes), or `null` on account routes when they have none. */
+	/** The caller, with their household on household routes (`householdId` may be null on account routes). */
 	actor: A;
 	/** The caller's account (always set on account routes). */
 	account: AccountCtx;
@@ -82,7 +82,7 @@ export function route<
 	status?: number;
 	idempotent?: boolean;
 	handler: (
-		ctx: RouteContext<Out<TB>, Out<TQ>, Out<TP>, S extends "account" ? ActorCtx | null : ActorCtx, X>,
+		ctx: RouteContext<Out<TB>, Out<TQ>, Out<TP>, S extends "account" ? ActorCtx : HouseholdActorCtx, X>,
 	) => // biome-ignore lint/suspicious/noConfusingVoidType: handlers without a body (204) return void
 	TR extends z.ZodType ? z.input<TR> : undefined | void;
 }): RouteDef {
@@ -149,7 +149,8 @@ export function registerRoutes(
 					if (!account) throw errors.unauthenticated();
 					if (def.superAdmin && !account.isSuperAdmin) throw errors.forbidden("Super admins only");
 					const actor = loadActor(dbx, userId);
-					if (!actor && def.scope === "household") throw errors.noHousehold();
+					if (!actor) throw errors.unauthenticated();
+					if (def.scope === "household" && !actor.householdId) throw errors.noHousehold();
 					return def.handler({ db: dbx, config, actor, account, body, query, params, prepared, now });
 				};
 				const reply_ = (r: Stored) => (r.status === 204 ? reply.code(204).send() : reply.code(r.status).send(r.body));
