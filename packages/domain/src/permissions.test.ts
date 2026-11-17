@@ -46,6 +46,14 @@ describe("can — compléter et approuver", () => {
 		expect(can(owner, "completion:undo", { userId: "a", userRole: "adult" })).toBe(true);
 	});
 
+	it("annuler un échange d'envie : mêmes droits que pour annuler une validation", () => {
+		expect(can(child, "redemption:undo", { userId: "c", userRole: "child" })).toBe(true);
+		expect(can(child, "redemption:undo", { userId: "a", userRole: "adult" })).toBe(false);
+		expect(can(adult, "redemption:undo", { userId: "c", userRole: "child" })).toBe(true);
+		expect(can(adult, "redemption:undo", { userId: "o", userRole: "owner" })).toBe(false);
+		expect(can(owner, "redemption:undo", { userId: "a", userRole: "adult" })).toBe(true);
+	});
+
 	it("approuver : owner et adulte, jamais un enfant, jamais sa propre complétion", () => {
 		expect(can(owner, "completion:approve", { userId: "c" })).toBe(true);
 		expect(can(adult, "completion:approve", { userId: "c" })).toBe(true);

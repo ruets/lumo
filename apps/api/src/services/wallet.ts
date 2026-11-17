@@ -44,7 +44,7 @@ function labelsFor(db: DbOrTx, rows: EntryRow[]): Map<string, string> {
 			.all();
 		for (const f of found) labels.set(f.id, f.name);
 	}
-	const byRedemption = rows.filter((r) => r.reason === "redemption" && r.refId);
+	const byRedemption = rows.filter((r) => (r.reason === "redemption" || r.reason === "undo") && r.refId);
 	if (byRedemption.length > 0) {
 		const found = db
 			.select({ id: redemptions.id, name: rewards.name })

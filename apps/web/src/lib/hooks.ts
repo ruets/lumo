@@ -131,6 +131,15 @@ export function useRedeem() {
 	});
 }
 
+export function useUndoRedemption() {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (redemptionId: string) => api.undoRedemption(redemptionId),
+		onError: (err) => showToast(describeError(err)),
+		onSettled: () => invalidateAfterWrite(qc),
+	});
+}
+
 export function useReview() {
 	const qc = useQueryClient();
 	return useMutation({

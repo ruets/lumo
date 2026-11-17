@@ -18,6 +18,7 @@ export interface Abilities {
 	"completion:review": undefined;
 	"completion:backdate": { daysAgo: number; windowDays: number };
 	"reward:manage": undefined;
+	"redemption:undo": { userId: string; userRole: Role };
 	"reward:redeem": { fundedFrom: "personal" | "shared"; assigneeIds: readonly string[] };
 	"transfer:create": undefined;
 	"ledger:adjust": undefined;
@@ -46,8 +47,9 @@ export function can<A extends Action>(
 			return actor.canCreateItems && (r as Abilities["item:update"]).createdBy === actor.userId;
 		case "completion:create":
 			return (r as Abilities["completion:create"]).userId === actor.userId;
-		case "completion:undo": {
-			const { userId, userRole } = r as Abilities["completion:undo"];
+		case "completion:undo":
+		case "redemption:undo": {
+			const { userId, userRole } = r as Abilities["completion:undo"] | Abilities["redemption:undo"];
 			if (userId === actor.userId) return true;
 			if (actor.role === "owner") return true;
 			return actor.role === "adult" && userRole === "child";

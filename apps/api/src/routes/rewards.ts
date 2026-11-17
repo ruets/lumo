@@ -15,7 +15,7 @@ import {
 	updateRewardBody,
 } from "../schemas.js";
 import { getStats } from "../services/progress.js";
-import { createReward, listRewards, redeemReward, updateReward } from "../services/rewards.js";
+import { createReward, listRewards, redeemReward, undoRedemption, updateReward } from "../services/rewards.js";
 import { adjust, listLedger, transferToShared } from "../services/wallet.js";
 import { route } from "./define.js";
 
@@ -57,6 +57,15 @@ export const rewardRoutes = [
 		response: redemptionResult,
 		status: 201,
 		handler: ({ db, actor, params, now }) => redeemReward(db, actor, params.id, now),
+	}),
+	route({
+		method: "delete",
+		url: "/redemptions/:id",
+		summary: "Annuler un échange d'envie (remboursement par contre-écriture)",
+		tag: "Envies",
+		params: idParams,
+		response: redemptionResult,
+		handler: ({ db, actor, params, now }) => undoRedemption(db, actor, params.id, now),
 	}),
 ];
 

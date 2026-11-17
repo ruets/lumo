@@ -267,6 +267,8 @@ export const redemptions = sqliteTable(
 			.notNull()
 			.references(() => wallets.id),
 		redeemedAt: ts("redeemed_at").notNull(),
+		/** Annuler pose `undone_at` ; la ligne n'est jamais supprimée et le remboursement est une contre-écriture. */
+		undoneAt: ts("undone_at"),
 		ledgerEntryId: text("ledger_entry_id")
 			.notNull()
 			.references(() => ledgerEntries.id),

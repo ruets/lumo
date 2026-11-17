@@ -425,6 +425,98 @@ describe("envies et échanges", () => {
 	});
 });
 
+describe("annuler un échange d'envie", () => {
+	const makeReward = (over: object = {}) =>
+		h.adult.api.post("/rewards", { name: "Cinéma", cost: 4, fundedFrom: "personal", ...over });
+	const redeem = async (by: { api: Api }, rewardId: string) =>
+		(await by.api.post(`/rewards/${rewardId}/redemptions`)).json().redemption.id as string;
+
+	beforeEach(async () => {
+		const item = await makeHabit(h.adult, { reward: 10, assigneeIds: [h.kid.userId] });
+		await complete(h.kid, item.id);
+	});
+
+	it("rembourse le montant exact par une contre-écriture, sans toucher au journal existant", async () => {
+		const reward = (await makeReward()).json();
+		const id = await redeem(h.kid, reward.id);
+		expect(await balances(h.kid)).toEqual({ personal: 6, shared: 0 });
+		const before = ctx.db.select().from(ledgerEntries).all();
+
+		const res = await h.kid.api.del(`/redemptions/${id}`);
+		expect(res.statusCode).toBe(200);
+		expect(res.json().balances).toEqual({ personal: 10, shared: 0 });
+		expect(res.json().redemption.undoneAt).not.toBeNull();
+
+		const after = ctx.db.select().from(ledgerEntries).all();
+		expect(after).toHaveLength(before.length + 1);
+		expect(after.find((e) => e.reason === "undo")).toMatchObject({ amount: 4, refId: id, createdBy: h.kid.userId });
+	});
+
+	it("deux annulations simultanées : un seul remboursement", async () => {
+		const reward = (await makeReward()).json();
+		const id = await redeem(h.kid, reward.id);
+		const [a, b] = await Promise.all([h.kid.api.del(`/redemptions/${id}`), h.kid.api.del(`/redemptions/${id}`)]);
+		expect([a.statusCode, b.statusCode].sort()).toEqual([200, 409]);
+		expect(await balances(h.kid)).toEqual({ personal: 10, shared: 0 });
+	});
+
+	it("rembourse ce qui a été payé, même si le prix a changé depuis", async () => {
+		const reward = (await makeReward()).json();
+		const id = await redeem(h.kid, reward.id);
+		await h.adult.api.patch(`/rewards/${reward.id}`, { cost: 9 });
+		expect((await h.kid.api.del(`/redemptions/${id}`)).json().balances.personal).toBe(10);
+	});
+
+	it("une seconde annulation est refusée (409), pas de double remboursement", async () => {
+		const reward = (await makeReward()).json();
+		const id = await redeem(h.kid, reward.id);
+		await h.kid.api.del(`/redemptions/${id}`);
+		const again = await h.kid.api.del(`/redemptions/${id}`);
+		expect(again.statusCode).toBe(409);
+		expect(again.json().code).toBe("already_undone");
+		expect(await balances(h.kid)).toEqual({ personal: 10, shared: 0 });
+	});
+
+	it("libère la limite d'usage : on peut de nouveau échanger", async () => {
+		const reward = (await makeReward({ cost: 1, limitCount: 1, limitPeriod: "week" })).json();
+		const id = await redeem(h.kid, reward.id);
+		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).json().code).toBe("limit_reached");
+		await h.kid.api.del(`/redemptions/${id}`);
+		const listed = (await h.kid.api.get("/rewards")).json().rewards.find((r: { id: string }) => r.id === reward.id);
+		expect(listed.remaining).toBe(1);
+		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).statusCode).toBe(201);
+	});
+
+	it("envie financée par la cagnotte : rembourse la cagnotte", async () => {
+		await h.kid.api.post("/transfers", { amount: 6 });
+		const reward = (await makeReward({ cost: 5, fundedFrom: "shared" })).json();
+		const id = await redeem(h.adult, reward.id);
+		expect((await balances(h.adult)).shared).toBe(1);
+		expect((await h.adult.api.del(`/redemptions/${id}`)).json().balances.shared).toBe(6);
+	});
+
+	it("droits : un enfant n'annule pas l'échange d'un adulte ; un adulte annule celui d'un enfant", async () => {
+		await h.owner.api.post("/ledger/adjustments", { userId: h.adult.userId, amount: 20, note: "test" });
+		const cheap = (await makeReward({ cost: 1 })).json();
+		const adults = await redeem(h.adult, cheap.id);
+		expect((await h.kid.api.del(`/redemptions/${adults}`)).statusCode).toBe(403);
+		const kids = await redeem(h.kid, cheap.id);
+		expect((await h.adult.api.del(`/redemptions/${kids}`)).statusCode).toBe(200);
+	});
+
+	it("introuvable : 404", async () => {
+		expect((await h.kid.api.del("/redemptions/inconnu")).statusCode).toBe(404);
+	});
+
+	it("l'historique nomme l'envie sur la ligne de remboursement", async () => {
+		const reward = (await makeReward({ name: "Glace" })).json();
+		const id = await redeem(h.kid, reward.id);
+		await h.kid.api.del(`/redemptions/${id}`);
+		const entries = (await h.kid.api.get("/ledger")).json().entries;
+		expect(entries.find((e: { reason: string }) => e.reason === "undo")).toMatchObject({ label: "Glace", amount: 4 });
+	});
+});
+
 describe("journal et ajustements", () => {
 	it("ajustement manuel : owner seulement, note obligatoire, positif ou négatif", async () => {
 		const ok = await h.owner.api.post("/ledger/adjustments", {

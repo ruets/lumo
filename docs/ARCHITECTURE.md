@@ -222,6 +222,8 @@ Maquette de référence : le canvas « Lumo — maquette de l'appli » (thème s
 
 **Ajouts à l'API pour les fronts** : `GET /today` renvoie `completionIds` (validations annulables du jour) ; `GET /rewards` renvoie `remaining` (échanges encore possibles dans la période de limite) ; `GET /ledger` renvoie `label` (nom de l'habitude, tâche ou envie à l'origine de l'écriture). Progrès : la semaine est la semaine calendaire (jours futurs vides), le mois est les 4 dernières semaines glissantes, chacun comparé à la période précédente (fenêtre de 56 jours demandée à `/stats`).
 
+**Annuler un échange d'envie.** `DELETE /redemptions/{id}` : `redemptions.undone_at` (migration 0002) et une contre-écriture `undo` du montant exact payé, dans le porte-monnaie d'origine (perso ou cagnotte), dans la même transaction. Mêmes droits que pour annuler une validation (`redemption:undo` : soi-même, l'owner pour tous, un adulte pour un enfant). Un échange annulé ne compte plus dans la limite d'usage (`remaining` remonte) ; une seconde annulation renvoie 409 `already_undone`. Dans l'historique (Progrès, web et mobile), chaque échange non remboursé porte un bouton « Annuler l'échange » avec confirmation ; il exige le réseau.
+
 **Pas encore fait** : PWA en lecture seule, Playwright et Maestro, gestion des membres et du foyer dans l'interface, avatars, notifications.
 
 ## Déploiement

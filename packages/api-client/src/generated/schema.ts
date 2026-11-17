@@ -228,6 +228,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/redemptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Annuler un échange d'envie (remboursement par contre-écriture) */
+        delete: operations["deleteApiV1RedemptionsId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transfers": {
         parameters: {
             query?: never;
@@ -1338,6 +1355,61 @@ export interface operations {
                             userId: string;
                             walletId: string;
                             redeemedAt: string;
+                            undoneAt: string | null;
+                        };
+                        balances: {
+                            personal: number;
+                            shared: number;
+                        };
+                    };
+                };
+            };
+            /** @description Erreur (RFC 9457), avec un `code` stable */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1RedemptionsId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Succès */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        redemption: {
+                            id: string;
+                            rewardId: string;
+                            userId: string;
+                            walletId: string;
+                            redeemedAt: string;
+                            undoneAt: string | null;
                         };
                         balances: {
                             personal: number;

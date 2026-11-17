@@ -156,6 +156,8 @@ export function createClient(options: ClientOptions) {
 				undefined,
 				opts,
 			),
+		undoRedemption: (id: string, opts?: RequestOptions) =>
+			request<Response<"/api/v1/redemptions/{id}", "delete", 200>>("DELETE", `/redemptions/${id}`, undefined, opts),
 		transferToShared: (amount: number) =>
 			request<Response<"/api/v1/transfers", "post", 201>>("POST", "/transfers", { amount }),
 		getLedger: (query: QueryOf<"/api/v1/ledger", "get"> = {}) => request<LedgerPage>("GET", `/ledger${qs(query)}`),
