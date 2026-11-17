@@ -24,7 +24,7 @@ function seed() {
 }
 
 describe("migrations", () => {
-	it("crée les 16 tables du schéma", () => {
+	it("creates the schema's 16 tables", () => {
 		const names = ctx.sqlite
 			.prepare(
 				"SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '\\_\\_%' ESCAPE '\\' AND name NOT LIKE 'sqlite_%'",
@@ -53,12 +53,12 @@ describe("migrations", () => {
 		);
 	});
 
-	it("ouvre la base en WAL avec les clés étrangères actives", () => {
+	it("opens the database in WAL mode with foreign keys on", () => {
 		expect(ctx.sqlite.pragma("journal_mode", { simple: true })).toBe("wal");
 		expect(ctx.sqlite.pragma("foreign_keys", { simple: true })).toBe(1);
 	});
 
-	it("crée les index prévus", () => {
+	it("creates the planned indexes", () => {
 		const idx = (
 			ctx.sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'index'").all() as { name: string }[]
 		).map((r) => r.name);
@@ -68,20 +68,20 @@ describe("migrations", () => {
 });
 
 describe("contraintes", () => {
-	it("refuse une clé étrangère inconnue", () => {
+	it("rejects an unknown foreign key", () => {
 		expect(() => exec("INSERT INTO memberships (household_id, user_id, role) VALUES ('x', 'y', 'owner')")).toThrow(
 			/FOREIGN KEY/,
 		);
 	});
 
-	it("refuse un rôle inconnu", () => {
+	it("rejects an unknown role", () => {
 		const { hid, uid } = seed();
 		expect(() =>
 			exec("INSERT INTO memberships (household_id, user_id, role) VALUES (?, ?, 'admin')", hid, uid),
 		).toThrow(/CHECK/);
 	});
 
-	it("impose un user_id aux porte-monnaie personnels et pas aux cagnottes", () => {
+	it("requires a user_id for personal wallets and not for pots", () => {
 		const { hid } = seed();
 		expect(() =>
 			exec("INSERT INTO wallets (id, household_id, kind, user_id) VALUES (?, ?, 'personal', NULL)", randomUUID(), hid),
@@ -89,7 +89,7 @@ describe("contraintes", () => {
 		exec("INSERT INTO wallets (id, household_id, kind, user_id) VALUES (?, ?, 'shared', NULL)", randomUUID(), hid);
 	});
 
-	it("n'autorise qu'une cagnotte par foyer", () => {
+	it("allows only one pot per household", () => {
 		const { hid } = seed();
 		exec("INSERT INTO wallets (id, household_id, kind, user_id) VALUES (?, ?, 'shared', NULL)", randomUUID(), hid);
 		expect(() =>
@@ -107,7 +107,7 @@ describe("contraintes", () => {
 		).toThrow(/UNIQUE/);
 	});
 
-	it("refuse une local_date mal formée", () => {
+	it("rejects a malformed local_date", () => {
 		const { hid, uid } = seed();
 		const itemId = randomUUID();
 		exec(
@@ -127,7 +127,7 @@ describe("contraintes", () => {
 	});
 });
 
-describe("ledger_entries (ajout seul)", () => {
+describe("ledger_entries (append-only)", () => {
 	const insertEntry = (hid: string, wid: string, uid: string, amount = 5) => {
 		const id = randomUUID();
 		exec(
@@ -141,7 +141,7 @@ describe("ledger_entries (ajout seul)", () => {
 		return id;
 	};
 
-	it("accepte l'ajout, avec un horodatage par défaut", () => {
+	it("accepts appending, with a default timestamp", () => {
 		const { hid, wid, uid } = seed();
 		const id = insertEntry(hid, wid, uid);
 		const row = ctx.sqlite.prepare("SELECT created_at FROM ledger_entries WHERE id = ?").get(id) as {
@@ -153,16 +153,16 @@ describe("ledger_entries (ajout seul)", () => {
 	it("refuse toute modification", () => {
 		const { hid, wid, uid } = seed();
 		const id = insertEntry(hid, wid, uid);
-		expect(() => exec("UPDATE ledger_entries SET amount = 999 WHERE id = ?", id)).toThrow(/ajout seul/);
+		expect(() => exec("UPDATE ledger_entries SET amount = 999 WHERE id = ?", id)).toThrow(/append-only/);
 	});
 
 	it("refuse toute suppression", () => {
 		const { hid, wid, uid } = seed();
 		const id = insertEntry(hid, wid, uid);
-		expect(() => exec("DELETE FROM ledger_entries WHERE id = ?", id)).toThrow(/ajout seul/);
+		expect(() => exec("DELETE FROM ledger_entries WHERE id = ?", id)).toThrow(/append-only/);
 	});
 
-	it("refuse une écriture à zéro", () => {
+	it("rejects a zero entry", () => {
 		const { hid, wid, uid } = seed();
 		expect(() => insertEntry(hid, wid, uid, 0)).toThrow(/CHECK/);
 	});

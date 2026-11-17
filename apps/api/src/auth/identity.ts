@@ -12,11 +12,11 @@ import type { OidcClaims } from "./oidc.js";
 const adminGroup = (config: Config) => config.OIDC_ADMIN_GROUP.trim() || null;
 
 /**
- * Rattache une identité OIDC à un utilisateur Lumo.
- *  1. `sub` déjà connu → connexion (rôle promu `owner` si groupe admin).
- *  2. Invitation fournie → création du compte avec le rôle de l'invitation.
- *  3. Aucun utilisateur dans l'instance → premier compte, `owner`, nouveau foyer.
- *  4. Sinon → refus : pas de compte sans invitation.
+ * Links an OIDC identity to a Lumo user.
+ *  1. Known `sub` → sign-in (role promoted to `owner` if in the admin group).
+ *  2. Invitation provided → account created with the invitation's role.
+ *  3. No user in the instance → first account, `owner`, new household.
+ *  4. Otherwise → refused: no account without an invitation.
  */
 export function resolveOidcLogin(
 	db: Db,
@@ -58,7 +58,7 @@ export function resolveOidcLogin(
 		}
 
 		if (userCount(tx) === 0) {
-			const householdId = createHousehold(tx, { name: "Mon foyer" });
+			const householdId = createHousehold(tx, { name: "My household" });
 			return { userId: createMember(tx, { householdId, role: "owner", user: newUser }) };
 		}
 
@@ -72,7 +72,7 @@ export interface LocalAccountInput {
 	passwordHash: string;
 }
 
-/** Premier compte de l'instance (compte local) : crée le foyer et son `owner`. */
+/** First account of the instance (local account): creates the household and its `owner`. */
 export function setupInstance(db: Db, input: LocalAccountInput & { householdName: string }): { userId: string } {
 	return writeTx(db, (tx) => {
 		if (userCount(tx) > 0) throw errors.setupDone();
@@ -86,11 +86,11 @@ export function setupInstance(db: Db, input: LocalAccountInput & { householdName
 	});
 }
 
-/** Création d'un compte local à partir d'une invitation. */
+/** Creation of a local account from an invitation. */
 export function registerLocal(db: Db, input: LocalAccountInput & { inviteToken: string }): { userId: string } {
 	return writeTx(db, (tx) => {
 		const invite = findValidInvite(tx, input.inviteToken);
-		if (usernameTaken(tx, input.username)) throw errors.conflict("username_taken", "Cet identifiant est déjà pris");
+		if (usernameTaken(tx, input.username)) throw errors.conflict("username_taken", "This username is already taken");
 		const userId = createMember(tx, {
 			householdId: invite.householdId,
 			role: invite.role as Role,

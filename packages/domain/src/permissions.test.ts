@@ -7,22 +7,22 @@ const adult: Actor = { userId: "a", role: "adult", canCreateItems: false };
 const child: Actor = { userId: "c", role: "child", canCreateItems: false };
 const trustedChild: Actor = { userId: "c", role: "child", canCreateItems: true };
 
-describe("can — créer et modifier des éléments", () => {
-	it("owner et adulte créent pour eux et pour les autres", () => {
+describe("can — create and update items", () => {
+	it("owner and adult create for themselves and for others", () => {
 		for (const actor of [owner, adult]) {
 			expect(can(actor, "item:create", { assigneeIds: [actor.userId] })).toBe(true);
 			expect(can(actor, "item:create", { assigneeIds: ["c", "x"] })).toBe(true);
 		}
 	});
 
-	it("un enfant ne crée que pour lui, et seulement si c'est autorisé", () => {
+	it("a child only creates for themselves, and only if allowed", () => {
 		expect(can(child, "item:create", { assigneeIds: ["c"] })).toBe(false);
 		expect(can(trustedChild, "item:create", { assigneeIds: ["c"] })).toBe(true);
 		expect(can(trustedChild, "item:create", { assigneeIds: ["c", "a"] })).toBe(false);
 		expect(can(trustedChild, "item:create", { assigneeIds: ["a"] })).toBe(false);
 	});
 
-	it("un enfant autorisé ne modifie que ce qu'il a créé", () => {
+	it("an allowed child only updates what they created", () => {
 		expect(can(trustedChild, "item:update", { createdBy: "c" })).toBe(true);
 		expect(can(trustedChild, "item:update", { createdBy: "a" })).toBe(false);
 		expect(can(child, "item:update", { createdBy: "c" })).toBe(false);
@@ -30,15 +30,15 @@ describe("can — créer et modifier des éléments", () => {
 	});
 });
 
-describe("can — compléter et approuver", () => {
-	it("chacun valide ses propres éléments, jamais ceux d'un autre", () => {
+describe("can — complete and approve", () => {
+	it("everyone completes their own items, never someone else's", () => {
 		for (const actor of [owner, adult, child]) {
 			expect(can(actor, "completion:create", { userId: actor.userId })).toBe(true);
 			expect(can(actor, "completion:create", { userId: "autre" })).toBe(false);
 		}
 	});
 
-	it("annuler : sa propre complétion, ou un owner/adulte pour un enfant (l'owner pour tous)", () => {
+	it("undo: your own completion, or an owner/adult for a child (the owner for everyone)", () => {
 		expect(can(child, "completion:undo", { userId: "c", userRole: "child" })).toBe(true);
 		expect(can(child, "completion:undo", { userId: "a", userRole: "adult" })).toBe(false);
 		expect(can(adult, "completion:undo", { userId: "c", userRole: "child" })).toBe(true);
@@ -46,7 +46,7 @@ describe("can — compléter et approuver", () => {
 		expect(can(owner, "completion:undo", { userId: "a", userRole: "adult" })).toBe(true);
 	});
 
-	it("annuler un échange d'envie : mêmes droits que pour annuler une validation", () => {
+	it("undo a wish redemption: same rights as undoing a completion", () => {
 		expect(can(child, "redemption:undo", { userId: "c", userRole: "child" })).toBe(true);
 		expect(can(child, "redemption:undo", { userId: "a", userRole: "adult" })).toBe(false);
 		expect(can(adult, "redemption:undo", { userId: "c", userRole: "child" })).toBe(true);
@@ -54,49 +54,49 @@ describe("can — compléter et approuver", () => {
 		expect(can(owner, "redemption:undo", { userId: "a", userRole: "adult" })).toBe(true);
 	});
 
-	it("approuver : owner et adulte, jamais un enfant, jamais sa propre complétion", () => {
+	it("approve: owner and adult, never a child, never their own completion", () => {
 		expect(can(owner, "completion:approve", { userId: "c" })).toBe(true);
 		expect(can(adult, "completion:approve", { userId: "c" })).toBe(true);
 		expect(can(child, "completion:approve", { userId: "c2" })).toBe(false);
 		expect(can(adult, "completion:approve", { userId: "a" })).toBe(false);
 	});
 
-	it("lister les validations à approuver : owner et adulte", () => {
+	it("list completions to approve: owner and adult", () => {
 		expect(can(owner, "completion:review")).toBe(true);
 		expect(can(adult, "completion:review")).toBe(true);
 		expect(can(child, "completion:review")).toBe(false);
 	});
 
-	it("jour passé : dans la fenêtre pour tous, au-delà seulement l'owner", () => {
+	it("past day: within the window for everyone, beyond it only the owner", () => {
 		expect(can(child, "completion:backdate", { daysAgo: 2, windowDays: 2 })).toBe(true);
 		expect(can(adult, "completion:backdate", { daysAgo: 3, windowDays: 2 })).toBe(false);
 		expect(can(owner, "completion:backdate", { daysAgo: 30, windowDays: 2 })).toBe(true);
 	});
 });
 
-describe("can — pièces et envies", () => {
-	it("envie perso : si on en fait partie (liste vide = tout le monde)", () => {
+describe("can — coins and wishes", () => {
+	it("personal wish: if you are part of it (empty list = everyone)", () => {
 		expect(can(child, "reward:redeem", { fundedFrom: "personal", assigneeIds: [] })).toBe(true);
 		expect(can(child, "reward:redeem", { fundedFrom: "personal", assigneeIds: ["c"] })).toBe(true);
 		expect(can(child, "reward:redeem", { fundedFrom: "personal", assigneeIds: ["a"] })).toBe(false);
 	});
 
-	it("envie financée par la cagnotte : owner et adulte seulement", () => {
+	it("wish funded by the pot: owner and adult only", () => {
 		expect(can(owner, "reward:redeem", { fundedFrom: "shared", assigneeIds: [] })).toBe(true);
 		expect(can(adult, "reward:redeem", { fundedFrom: "shared", assigneeIds: [] })).toBe(true);
 		expect(can(child, "reward:redeem", { fundedFrom: "shared", assigneeIds: [] })).toBe(false);
 	});
 
-	it("gérer les envies : owner et adulte", () => {
+	it("manage wishes: owner and adult", () => {
 		expect(can(adult, "reward:manage")).toBe(true);
 		expect(can(child, "reward:manage")).toBe(false);
 	});
 
-	it("virement vers la cagnotte : tout membre", () => {
+	it("transfer to the pot: any member", () => {
 		for (const actor of [owner, adult, child]) expect(can(actor, "transfer:create")).toBe(true);
 	});
 
-	it("ajustement manuel et gestion du foyer : owner seul", () => {
+	it("manual adjustment and household management: owner only", () => {
 		expect(can(owner, "ledger:adjust")).toBe(true);
 		expect(can(adult, "ledger:adjust")).toBe(false);
 		expect(can(child, "ledger:adjust")).toBe(false);

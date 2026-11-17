@@ -30,14 +30,14 @@ async function ownerId() {
 	return ctx.db.select().from(users).where(eq(users.username, "alice")).get()?.id as string;
 }
 
-describe("instance neuve", () => {
-	it("annonce qu'un setup est nécessaire, puis plus", async () => {
+describe("fresh instance", () => {
+	it("announces that setup is required, then no longer", async () => {
 		expect((await get("/auth/config")).json()).toMatchObject({ oidc: true, local: true, setupRequired: true });
 		await setupOwner(ctx);
 		expect((await get("/auth/config")).json().setupRequired).toBe(false);
 	});
 
-	it("crée le foyer, l'owner, son porte-monnaie et la cagnotte", async () => {
+	it("creates the household, the owner, their wallet and the shared pot", async () => {
 		const cookie = await setupOwner(ctx);
 		const me = (await get("/me", cookieHeader(cookie))).json();
 		expect(me.user.displayName).toBe("Alice");
@@ -62,7 +62,7 @@ describe("instance neuve", () => {
 		expect(res.json().code).toBe("validation_error");
 	});
 
-	it("ne stocke jamais le mot de passe en clair", async () => {
+	it("never stores the password in plain text", async () => {
 		await setupOwner(ctx);
 		const row = ctx.db.select().from(users).where(eq(users.username, "alice")).get();
 		expect(row?.passwordHash).toMatch(/^\$argon2id\$/);
@@ -75,7 +75,7 @@ describe("connexion locale", () => {
 		await setupOwner(ctx);
 	});
 
-	it("refuse un mauvais mot de passe et un identifiant inconnu avec la même erreur", async () => {
+	it("rejects a wrong password and an unknown username with the same error", async () => {
 		const bad = await post("/auth/local/login", { username: "alice", password: "mauvais-mot-de-passe" });
 		const unknown = await post("/auth/local/login", { username: "zoe", password: OWNER.password });
 		expect(bad.statusCode).toBe(401);
@@ -92,7 +92,7 @@ describe("connexion locale", () => {
 		expect(res.body).not.toContain(cookie?.value as string);
 	});
 
-	it("mobile : renvoie jeton d'accès et refresh, utilisables en Bearer", async () => {
+	it("mobile: returns access and refresh tokens, usable as Bearer", async () => {
 		const res = await post("/auth/local/login", { username: "alice", password: OWNER.password, client: "mobile" });
 		const tokens = res.json();
 		expect(tokens.expiresIn).toBe(900);
@@ -101,7 +101,7 @@ describe("connexion locale", () => {
 		expect(me.json().user.displayName).toBe("Alice");
 	});
 
-	it("bloque la force brute (429 au-delà de 10 essais par minute)", async () => {
+	it("blocks brute force (429 beyond 10 attempts per minute)", async () => {
 		let last = 0;
 		for (let i = 0; i < 12; i++) {
 			last = (await post("/auth/local/login", { username: "alice", password: "faux-faux-faux" })).statusCode;
@@ -110,8 +110,8 @@ describe("connexion locale", () => {
 	});
 });
 
-describe("comptes locaux désactivés", () => {
-	it("répond 404 sur les routes locales", async () => {
+describe("local accounts disabled", () => {
+	it("answers 404 on the local routes", async () => {
 		await ctx.close();
 		ctx = await createTestContext({ LOCAL_AUTH_ENABLED: "false" });
 		const res = await post("/auth/local/login", { username: "alice", password: OWNER.password });
@@ -121,14 +121,14 @@ describe("comptes locaux désactivés", () => {
 	});
 });
 
-describe("sessions et accès protégés", () => {
-	it("refuse /me sans authentification, ou avec un jeton bidon", async () => {
+describe("sessions and protected access", () => {
+	it("rejects /me without authentication, or with a bogus token", async () => {
 		expect((await get("/me")).statusCode).toBe(401);
 		expect((await get("/me", { authorization: "Bearer n-importe-quoi" })).statusCode).toBe(401);
 		expect((await get("/me", cookieHeader("inconnu"))).statusCode).toBe(401);
 	});
 
-	it("refuse un jeton signé avec un autre secret", async () => {
+	it("rejects a token signed with another secret", async () => {
 		const { signAccessToken } = await import("./tokens.js");
 		const forged = await signAccessToken("y".repeat(40), { userId: await ownerIdAfterSetup(), sessionId: "s" });
 		expect((await get("/me", { authorization: `Bearer ${forged}` })).statusCode).toBe(401);
@@ -139,7 +139,7 @@ describe("sessions et accès protégés", () => {
 		return ownerId();
 	}
 
-	it("déconnexion : exige l'origine du site avec un cookie (CSRF), puis révoque la session", async () => {
+	it("sign-out: requires the site origin with a cookie (CSRF), then revokes the session", async () => {
 		const cookie = await setupOwner(ctx);
 		const noOrigin = await post("/auth/logout", {}, cookieHeader(cookie));
 		expect(noOrigin.statusCode).toBe(403);
@@ -151,7 +151,7 @@ describe("sessions et accès protégés", () => {
 		expect((await get("/me", cookieHeader(cookie))).statusCode).toBe(401);
 	});
 
-	it("déconnexion mobile : le jeton d'accès cesse de fonctionner", async () => {
+	it("mobile sign-out: the access token stops working", async () => {
 		await setupOwner(ctx);
 		const tokens = (
 			await post("/auth/local/login", { username: "alice", password: OWNER.password, client: "mobile" })
@@ -161,7 +161,7 @@ describe("sessions et accès protégés", () => {
 		expect((await get("/me", auth)).statusCode).toBe(401);
 	});
 
-	it("session expirée : refusée", async () => {
+	it("expired session: rejected", async () => {
 		const cookie = await setupOwner(ctx);
 		ctx.db
 			.update(sessions)
@@ -182,7 +182,7 @@ describe("refresh token rotatif", () => {
 		};
 	}
 
-	it("émet de nouveaux jetons et invalide l'ancien refresh", async () => {
+	it("issues new tokens and invalidates the old refresh token", async () => {
 		const first = await mobileLogin();
 		const res = await post("/auth/refresh", { refreshToken: first.refreshToken });
 		expect(res.statusCode).toBe(200);
@@ -192,21 +192,21 @@ describe("refresh token rotatif", () => {
 		expect((await post("/auth/refresh", { refreshToken: second.refreshToken })).statusCode).toBe(200);
 	});
 
-	it("révoque toute la session si un ancien refresh est rejoué", async () => {
+	it("revokes the whole session if an old refresh token is replayed", async () => {
 		const first = await mobileLogin();
 		const second = (await post("/auth/refresh", { refreshToken: first.refreshToken })).json();
-		// Rejeu du jeton déjà utilisé (vol probable) : refusé, et la session entière est révoquée.
+		// Replay of the already used token (likely theft): rejected, and the whole session is revoked.
 		expect((await post("/auth/refresh", { refreshToken: first.refreshToken })).statusCode).toBe(401);
 		expect((await post("/auth/refresh", { refreshToken: second.refreshToken })).statusCode).toBe(401);
 		expect((await get("/me", { authorization: `Bearer ${second.accessToken}` })).statusCode).toBe(401);
 	});
 
-	it("refuse un cookie web utilisé comme refresh token", async () => {
+	it("rejects a web cookie used as a refresh token", async () => {
 		const cookie = await setupOwner(ctx);
 		expect((await post("/auth/refresh", { refreshToken: cookie })).statusCode).toBe(401);
 	});
 
-	it("ne stocke que des hashs", async () => {
+	it("stores only hashes", async () => {
 		const first = await mobileLogin();
 		const rows = ctx.db.select().from(sessions).all();
 		expect(JSON.stringify(rows)).not.toContain(first.refreshToken);
@@ -220,7 +220,7 @@ describe("invitations et comptes locaux", () => {
 		return res.json().token as string;
 	}
 
-	it("refuse la création de compte sans invitation valide", async () => {
+	it("rejects account creation without a valid invitation", async () => {
 		await setupOwner(ctx);
 		const res = await post("/auth/local/register", {
 			invite: "jeton-inexistant-123",
@@ -232,7 +232,7 @@ describe("invitations et comptes locaux", () => {
 		expect(res.json().code).toBe("invalid_invite");
 	});
 
-	it("crée un membre avec le rôle de l'invitation, son porte-monnaie, et brûle l'invitation", async () => {
+	it("creates a member with the invitation's role and their wallet, and burns the invitation", async () => {
 		const owner = await setupOwner(ctx);
 		const token = await invite("child", owner);
 		const res = await post("/auth/local/register", {
@@ -256,7 +256,7 @@ describe("invitations et comptes locaux", () => {
 		expect(again.json().code).toBe("invalid_invite");
 	});
 
-	it("refuse une invitation expirée", async () => {
+	it("rejects an expired invitation", async () => {
 		await setupOwner(ctx);
 		const household = ctx.db.select().from(memberships).get();
 		const { token } = createInvite(ctx.db, {
@@ -274,7 +274,7 @@ describe("invitations et comptes locaux", () => {
 		expect(res.json().code).toBe("invalid_invite");
 	});
 
-	it("refuse un identifiant déjà pris, sans consommer l'invitation", async () => {
+	it("rejects a username already taken, without consuming the invitation", async () => {
 		const owner = await setupOwner(ctx);
 		const token = await invite("adult", owner);
 		const clash = await post("/auth/local/register", {
@@ -293,7 +293,7 @@ describe("invitations et comptes locaux", () => {
 		expect(ok.statusCode).toBe(201);
 	});
 
-	it("seul un owner peut inviter", async () => {
+	it("only an owner can invite", async () => {
 		const owner = await setupOwner(ctx);
 		const token = await invite("adult", owner);
 		const adult = await post("/auth/local/register", {
@@ -323,7 +323,7 @@ describe("OIDC web (Authentik)", () => {
 	}
 	const callback = (state: string, code: string) => get(`/auth/callback?code=${code}&state=${state}`);
 
-	it("redirige vers Authentik avec state, nonce et PKCE S256", async () => {
+	it("redirects to Authentik with state, nonce and PKCE S256", async () => {
 		const { url } = await startLogin();
 		expect(url.origin).toBe("https://idp.test");
 		expect(url.searchParams.get("redirect_uri")).toBe("https://lumo.test/api/v1/auth/callback");
@@ -332,7 +332,7 @@ describe("OIDC web (Authentik)", () => {
 		expect(url.searchParams.get("code_challenge")).toBeTruthy();
 	});
 
-	it("premier utilisateur de l'instance : devient owner d'un nouveau foyer", async () => {
+	it("first user of the instance: becomes owner of a new household", async () => {
 		ctx.oidc.grant("c1", { sub: "sub-1", name: "Alice Authentik" });
 		const { state } = await startLogin();
 		const res = await callback(state, "c1");
@@ -342,7 +342,7 @@ describe("OIDC web (Authentik)", () => {
 		expect(me).toMatchObject({ role: "owner", user: { displayName: "Alice Authentik" } });
 	});
 
-	it("reconnaît un utilisateur connu par son sub, sans doublon", async () => {
+	it("recognises a known user by their sub, without duplicates", async () => {
 		ctx.oidc.grant("c1", { sub: "sub-1" });
 		ctx.oidc.grant("c2", { sub: "sub-1" });
 		await callback((await startLogin()).state, "c1");
@@ -350,7 +350,7 @@ describe("OIDC web (Authentik)", () => {
 		expect(ctx.db.select().from(users).all()).toHaveLength(1);
 	});
 
-	it("refuse un inconnu sans invitation une fois l'instance initialisée", async () => {
+	it("rejects a stranger without an invitation once the instance is set up", async () => {
 		await setupOwner(ctx);
 		ctx.oidc.grant("c1", { sub: "intrus" });
 		const res = await callback((await startLogin()).state, "c1");
@@ -359,7 +359,7 @@ describe("OIDC web (Authentik)", () => {
 		expect(ctx.db.select().from(users).all()).toHaveLength(1);
 	});
 
-	it("crée le compte d'un invité et lie son sub", async () => {
+	it("creates a guest's account and links their sub", async () => {
 		const owner = await setupOwner(ctx);
 		const token = (await post("/household/invites", { role: "adult" }, { ...cookieHeader(owner), ...ORIGIN })).json()
 			.token;
@@ -367,13 +367,13 @@ describe("OIDC web (Authentik)", () => {
 		const res = await callback((await startLogin(token)).state, "c1");
 		const me = (await get("/me", cookieHeader(sessionCookie(res) as string))).json();
 		expect(me).toMatchObject({ role: "adult", household: { name: "Les Dupont" } });
-		// Le sub est maintenant lié : la même invitation ne sert plus, mais Bob se reconnecte sans.
+		// The sub is now linked: the same invitation no longer works, but Bob signs back in without it.
 		ctx.oidc.grant("c2", { sub: "sub-bob" });
 		const again = await callback((await startLogin()).state, "c2");
 		expect(sessionCookie(again)).toBeTruthy();
 	});
 
-	it("groupe lumo-admins : promeut en owner, sans jamais rétrograder", async () => {
+	it("lumo-admins group: promotes to owner, never demotes", async () => {
 		const owner = await setupOwner(ctx);
 		const token = (await post("/household/invites", { role: "adult" }, { ...cookieHeader(owner), ...ORIGIN })).json()
 			.token;
@@ -391,7 +391,7 @@ describe("OIDC web (Authentik)", () => {
 		expect(role()).toBe(2);
 	});
 
-	it("le state est à usage unique et obligatoire", async () => {
+	it("the state is single-use and mandatory", async () => {
 		ctx.oidc.grant("c1", { sub: "sub-1" });
 		const { state } = await startLogin();
 		expect((await callback(state, "c1")).headers.location).toBe("https://lumo.test/");
@@ -400,14 +400,14 @@ describe("OIDC web (Authentik)", () => {
 		expect((await get("/auth/callback?code=c1")).headers.location).toBe("https://lumo.test/?auth_error=oidc_failed");
 	});
 
-	it("un code invalide échoue proprement, sans session", async () => {
+	it("an invalid code fails cleanly, without a session", async () => {
 		const { state } = await startLogin();
 		const res = await callback(state, "code-inconnu");
 		expect(res.headers.location).toBe("https://lumo.test/?auth_error=oidc_failed");
 		expect(sessionCookie(res)).toBeNull();
 	});
 
-	it("GET /auth/config s'identifie comme Lumo et donne issuer et client_id, jamais le secret", async () => {
+	it("GET /auth/config identifies as Lumo and gives issuer and client_id, never the secret", async () => {
 		const res = await get("/auth/config");
 		expect(res.json()).toMatchObject({
 			app: "lumo",
@@ -421,7 +421,7 @@ describe("OIDC web (Authentik)", () => {
 		expect((await get("/auth/config")).json()).toMatchObject({ oidc: false, oidcIssuer: null, oidcClientId: null });
 	});
 
-	it("est indisponible si OIDC n'est pas configuré", async () => {
+	it("is unavailable if OIDC is not configured", async () => {
 		await ctx.close();
 		ctx = await createTestContext({ OIDC_ISSUER: "", OIDC_CLIENT_ID: "", OIDC_CLIENT_SECRET: "" });
 		expect((await get("/auth/login")).statusCode).toBe(404);
@@ -438,7 +438,7 @@ describe("OIDC mobile (expo-auth-session)", () => {
 		...over,
 	});
 
-	it("échange le code contre une paire de jetons, en transmettant PKCE et nonce", async () => {
+	it("exchanges the code for a token pair, passing PKCE and nonce", async () => {
 		ctx.oidc.grant("m1", { sub: "sub-m", name: "Mobile" });
 		const res = await post("/auth/mobile/exchange", body());
 		expect(res.statusCode).toBe(200);
@@ -447,7 +447,7 @@ describe("OIDC mobile (expo-auth-session)", () => {
 		expect((await get("/me", { authorization: `Bearer ${accessToken}` })).json().role).toBe("owner");
 	});
 
-	it("refuse un inconnu sans invitation", async () => {
+	it("rejects a stranger without an invitation", async () => {
 		await setupOwner(ctx);
 		ctx.oidc.grant("m1", { sub: "intrus" });
 		const res = await post("/auth/mobile/exchange", body());
@@ -455,7 +455,7 @@ describe("OIDC mobile (expo-auth-session)", () => {
 		expect(res.json().code).toBe("invitation_required");
 	});
 
-	it("accepte une invitation", async () => {
+	it("accepts an invitation", async () => {
 		const owner = await setupOwner(ctx);
 		const token = (await post("/household/invites", { role: "child" }, { ...cookieHeader(owner), ...ORIGIN })).json()
 			.token;
@@ -464,7 +464,7 @@ describe("OIDC mobile (expo-auth-session)", () => {
 		expect((await get("/me", { authorization: `Bearer ${res.json().accessToken}` })).json().role).toBe("child");
 	});
 
-	it("renvoie oidc_failed si Authentik refuse le code", async () => {
+	it("returns oidc_failed if Authentik rejects the code", async () => {
 		const res = await post("/auth/mobile/exchange", body({ code: "faux" }));
 		expect(res.statusCode).toBe(400);
 		expect(res.json().code).toBe("oidc_failed");
@@ -477,7 +477,7 @@ describe("divers", () => {
 		expect((await ctx.app.inject({ url: "/readyz" })).statusCode).toBe(200);
 	});
 
-	it("renvoie les 404 en problem+json", async () => {
+	it("returns 404s as problem+json", async () => {
 		const res = await get("/inexistant");
 		expect(res.statusCode).toBe(404);
 		expect(res.headers["content-type"]).toContain("application/problem+json");

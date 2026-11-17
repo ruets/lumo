@@ -25,8 +25,8 @@ const tally = (codes: number[]) => {
 };
 const ledgerRows = () => ctx.db.select({ n: count() }).from(ledgerEntries).get()?.n;
 
-describe("critère de l'étape 2 : 20 validations simultanées donnent le bon solde", () => {
-	it("objectif de 20 : les 20 passent, le solde est exactement 20 × la récompense", async () => {
+describe("step 2 criterion: 20 simultaneous completions give the right balance", () => {
+	it("goal of 20: all 20 pass, the balance is exactly 20 × the reward", async () => {
 		const item = await makeHabit(h.owner, { reward: 3, targetPerPeriod: 20 });
 		const responses = await Promise.all(
 			Array.from({ length: 20 }, () => h.owner.api.post(`/items/${item.id}/completions`)),
@@ -37,7 +37,7 @@ describe("critère de l'étape 2 : 20 validations simultanées donnent le bon so
 		expect(ctx.db.select({ n: count() }).from(completions).get()?.n).toBe(20);
 	});
 
-	it("objectif de 5 : exactement 5 réussissent, 15 reçoivent 409, solde = 5 × récompense", async () => {
+	it("goal of 5: exactly 5 succeed, 15 get 409, balance = 5 × reward", async () => {
 		const item = await makeHabit(h.owner, { reward: 3, targetPerPeriod: 5 });
 		const responses = await Promise.all(
 			Array.from({ length: 20 }, () => h.owner.api.post(`/items/${item.id}/completions`)),
@@ -48,7 +48,7 @@ describe("critère de l'étape 2 : 20 validations simultanées donnent le bon so
 		expect(ledgerRows()).toBe(5);
 	});
 
-	it("deux instances de l'API sur le même fichier SQLite (deux connexions) : même résultat", async () => {
+	it("two API instances on the same SQLite file (two connections): same result", async () => {
 		const { db, sqlite } = openDatabase(ctx.dbPath);
 		const second = await buildApp({ config: ctx.config, db, oidc: null, clock: () => ctx.clock.now });
 		await second.ready();
@@ -66,7 +66,7 @@ describe("critère de l'étape 2 : 20 validations simultanées donnent le bon so
 		}
 	});
 
-	it("20 validations rejouées avec la même Idempotency-Key : une seule écriture", async () => {
+	it("20 completions replayed with the same Idempotency-Key: a single entry", async () => {
 		const item = await makeHabit(h.owner, { reward: 5, targetPerPeriod: 50 });
 		const key = { "idempotency-key": "44444444-4444-4444-8444-444444444444" };
 		const responses = await Promise.all(
@@ -79,7 +79,7 @@ describe("critère de l'étape 2 : 20 validations simultanées donnent le bon so
 	});
 });
 
-/** Lance `threads` threads, chacun avec sa connexion SQLite, qui tirent leurs requêtes en même temps. */
+/** Starts `threads` threads, each with its own SQLite connection, firing their requests at the same time. */
 async function race(opts: { threads: number; perThread: number; cookie: string; url: string; payload?: object }) {
 	const workers = Array.from(
 		{ length: opts.threads },
@@ -104,15 +104,15 @@ async function race(opts: { threads: number; perThread: number; cookie: string; 
 				w.once("error", reject);
 			}),
 	);
-	await new Promise((r) => setTimeout(r, 1500)); // laisse chaque thread ouvrir sa connexion et migrer
+	await new Promise((r) => setTimeout(r, 1500)); // let each thread open its connection and migrate
 	for (const w of workers) w.postMessage("go");
 	const codes = (await Promise.all(results)).flat();
 	await Promise.all(workers.map((w) => w.terminate()));
 	return codes;
 }
 
-describe("vraie concurrence : plusieurs connexions SQLite en parallèle (threads)", () => {
-	it("4 threads × 5 validations sur un objectif de 7 : exactement 7 réussites, solde exact", async () => {
+describe("real concurrency: several SQLite connections in parallel (threads)", () => {
+	it("4 threads × 5 completions on a goal of 7: exactly 7 successes, exact balance", async () => {
 		const item = await makeHabit(h.owner, { reward: 3, targetPerPeriod: 7 });
 		const codes = await race({
 			threads: 4,
@@ -125,8 +125,8 @@ describe("vraie concurrence : plusieurs connexions SQLite en parallèle (threads
 		expect(ledgerRows()).toBe(7);
 	}, 30_000);
 
-	it("5 threads qui virent 4 pièces chacun avec 10 en poche : 2 virements, jamais de solde négatif", async () => {
-		await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 10, note: "départ" });
+	it("5 threads transferring 4 coins each with 10 in hand: 2 transfers, never a negative balance", async () => {
+		await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 10, note: "start" });
 		const codes = await race({
 			threads: 5,
 			perThread: 1,
@@ -139,13 +139,13 @@ describe("vraie concurrence : plusieurs connexions SQLite en parallèle (threads
 	}, 30_000);
 });
 
-describe("autres écritures de pièces sous concurrence", () => {
+describe("other coin writes under concurrency", () => {
 	beforeEach(async () => {
-		await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 10, note: "départ" });
+		await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 10, note: "start" });
 	});
 
-	it("échanges : jamais de solde négatif (10 pièces, prix 4, 5 tentatives → 2 réussites)", async () => {
-		const reward = (await h.adult.api.post("/rewards", { name: "Glace", cost: 4, fundedFrom: "personal" })).json();
+	it("redemptions: never a negative balance (10 coins, price 4, 5 attempts → 2 successes)", async () => {
+		const reward = (await h.adult.api.post("/rewards", { name: "Ice cream", cost: 4, fundedFrom: "personal" })).json();
 		const responses = await Promise.all(
 			Array.from({ length: 5 }, () => h.kid.api.post(`/rewards/${reward.id}/redemptions`)),
 		);
@@ -154,7 +154,7 @@ describe("autres écritures de pièces sous concurrence", () => {
 		expect(ctx.db.select({ n: count() }).from(redemptions).get()?.n).toBe(2);
 	});
 
-	it("limite d'usage : 1 par semaine tient sous 5 tentatives simultanées", async () => {
+	it("usage limit: 1 per week holds under 5 simultaneous attempts", async () => {
 		const reward = (
 			await h.adult.api.post("/rewards", {
 				name: "Jeu",
@@ -171,13 +171,13 @@ describe("autres écritures de pièces sous concurrence", () => {
 		expect((await balances(h.kid)).personal).toBe(9);
 	});
 
-	it("virements : jamais plus que le solde, et la somme des deux porte-monnaie est conservée", async () => {
+	it("transfers: never more than the balance, and the sum of both wallets is preserved", async () => {
 		const responses = await Promise.all(Array.from({ length: 5 }, () => h.kid.api.post("/transfers", { amount: 4 })));
 		expect(tally(statuses(responses))).toEqual({ 201: 2, 409: 3 });
 		expect(await balances(h.kid)).toEqual({ personal: 2, shared: 8 });
 	});
 
-	it("approbation simultanée d'une même complétion : un seul crédit", async () => {
+	it("simultaneous approval of the same completion: a single credit", async () => {
 		const item = await makeHabit(h.adult, { reward: 5, requiresApproval: true, assigneeIds: [h.kid.userId] });
 		const pending = (await h.kid.api.post(`/items/${item.id}/completions`)).json().completion;
 		const responses = await Promise.all([
@@ -185,10 +185,10 @@ describe("autres écritures de pièces sous concurrence", () => {
 			...Array.from({ length: 3 }, () => h.owner.api.post(`/completions/${pending.id}/approve`)),
 		]);
 		expect(tally(statuses(responses))).toEqual({ 200: 1, 409: 5 });
-		expect((await balances(h.kid)).personal).toBe(15); // 10 de départ + 5
+		expect((await balances(h.kid)).personal).toBe(15); // 10 to start + 5
 	});
 
-	it("annulation simultanée : un seul remboursement", async () => {
+	it("simultaneous undo: a single refund", async () => {
 		const item = await makeHabit(h.kid.api ? h.adult : h.adult, { reward: 5, assigneeIds: [h.kid.userId] });
 		const done = (await h.kid.api.post(`/items/${item.id}/completions`)).json().completion;
 		const responses = await Promise.all(Array.from({ length: 6 }, () => h.kid.api.del(`/completions/${done.id}`)));
@@ -196,7 +196,7 @@ describe("autres écritures de pièces sous concurrence", () => {
 		expect((await balances(h.kid)).personal).toBe(10);
 	});
 
-	it("invariant : le solde de chaque porte-monnaie égale la somme de ses écritures", async () => {
+	it("invariant: each wallet's balance equals the sum of its entries", async () => {
 		const item = await makeHabit(h.kid.api ? h.adult : h.adult, {
 			reward: 3,
 			targetPerPeriod: 10,
@@ -212,7 +212,7 @@ describe("autres écritures de pièces sous concurrence", () => {
 			.get();
 		const b = await balances(h.kid);
 		const own = ctx.sqlite.prepare("SELECT sum(amount) AS s FROM ledger_entries").get() as { s: number };
-		// kid + cagnotte + autres porte-monnaie (owner/adult : aucun) = total du journal
+		// kid + pot + other wallets (owner/adult: none) = ledger total
 		expect(b.personal + b.shared).toBe(own.s);
 		expect(sums?.total).toBe(own.s);
 		expect(b.personal).toBeGreaterThanOrEqual(0);

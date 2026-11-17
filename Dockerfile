@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Image unique : API Fastify + front web statique + tâches planifiées. Node 22, utilisateur non root.
+# Single image: Fastify API + static web front end + scheduled jobs. Node 22, non-root user.
 
 FROM node:22-bookworm-slim AS build
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
@@ -9,7 +9,7 @@ RUN corepack enable \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
 COPY . .
-# Le mobile n'entre pas dans l'image (voir .dockerignore) ; on n'installe que l'API et le web.
+# The mobile app is not part of the image (see .dockerignore); only the API and the web app are installed.
 RUN pnpm install --frozen-lockfile --filter "@lumo/api..." --filter "@lumo/web..."
 RUN pnpm turbo run build --filter=@lumo/api --filter=@lumo/web
 RUN pnpm --filter @lumo/api --prod deploy --legacy /out
@@ -23,7 +23,7 @@ ENV NODE_ENV=production \
 WORKDIR /app
 COPY --from=build --chown=node:node /out /app
 COPY --from=build --chown=node:node /repo/apps/web/dist /app/web
-# /data : volume local (jamais NFS/SMB, WAL oblige).
+# /data: local volume (never NFS/SMB, WAL requires it).
 RUN mkdir -p /data && chown node:node /data
 VOLUME /data
 USER node

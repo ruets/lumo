@@ -30,7 +30,7 @@ export function createInvite(
 	return { token, expiresAt };
 }
 
-/** Invitation valide (non utilisée, non expirée) pour ce jeton, ou erreur `invalid_invite`. */
+/** Valid invitation (unused, not expired) for this token, or an `invalid_invite` error. */
 export function findValidInvite(tx: Tx, token: string, now = new Date()) {
 	const row = tx
 		.select()

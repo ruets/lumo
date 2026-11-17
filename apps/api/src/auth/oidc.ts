@@ -9,7 +9,7 @@ export interface OidcClaims {
 	groups: string[];
 }
 
-/** Abstraction du fournisseur OIDC (Authentik) : permet un faux fournisseur dans les tests. */
+/** Abstraction of the OIDC provider (Authentik): allows a fake provider in tests. */
 export interface OidcProvider {
 	buildAuthorizationUrl(params: {
 		redirectUri: string;
@@ -17,7 +17,7 @@ export interface OidcProvider {
 		nonce: string;
 		codeChallenge: string;
 	}): Promise<string>;
-	/** `expectedState: null` : le client (mobile) a déjà vérifié le state de son côté. */
+	/** `expectedState: null`: the client (mobile) has already checked the state on its side. */
 	exchange(params: {
 		callbackUrl: URL;
 		codeVerifier: string;
@@ -30,7 +30,7 @@ export function createOidcProvider(opts: { issuer: string; clientId: string; cli
 	let configPromise: Promise<client.Configuration> | undefined;
 	const getConfig = () => {
 		configPromise ??= client.discovery(new URL(opts.issuer), opts.clientId, opts.clientSecret).catch((err) => {
-			configPromise = undefined; // réessayer au prochain appel (Authentik peut démarrer après Lumo)
+			configPromise = undefined; // retry on the next call (Authentik may start after Lumo)
 			throw err;
 		});
 		return configPromise;

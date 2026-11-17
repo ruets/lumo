@@ -14,7 +14,7 @@ function schemaOf(schema: z.ZodType, io: "input" | "output"): Json {
 }
 
 const problem = {
-	description: "Erreur (RFC 9457), avec un `code` stable",
+	description: "Error (RFC 9457) with a stable `code`",
 	content: {
 		"application/problem+json": {
 			schema: {
@@ -33,7 +33,7 @@ const problem = {
 	},
 };
 
-/** Spec OpenAPI 3.1 des routes déclaratives, générée depuis les schémas Zod (aucune écriture à la main). */
+/** OpenAPI 3.1 spec of the declarative routes, generated from the Zod schemas (nothing written by hand). */
 export function buildOpenApi(routes: readonly RouteDef[]): Json {
 	const paths: Record<string, Record<string, Json>> = {};
 	for (const r of routes) {
@@ -56,11 +56,11 @@ export function buildOpenApi(routes: readonly RouteDef[]): Json {
 				name: "Idempotency-Key",
 				in: "header",
 				required: true,
-				description: "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+				description: "Unique UUID per request; a duplicate returns the response already stored.",
 				schema: { type: "string", maxLength: 200 },
 			});
 		}
-		const success: Json = { description: r.status === 204 ? "Aucun contenu" : "Succès" };
+		const success: Json = { description: r.status === 204 ? "No content" : "Success" };
 		if (r.response && r.status !== 204) {
 			success.content = { "application/json": { schema: schemaOf(r.response, "output") } };
 		}
@@ -85,7 +85,7 @@ export function buildOpenApi(routes: readonly RouteDef[]): Json {
 			version: "1.0.0",
 			license: { name: "AGPL-3.0-or-later", identifier: "AGPL-3.0-or-later" },
 			description:
-				"API de Lumo. Le serveur est seul juge des pièces : aucun client n'envoie de montant. Les écritures portent un `Idempotency-Key`.",
+				"Lumo API. The server alone decides coins: no client ever sends an amount. Writes carry an `Idempotency-Key`.",
 		},
 		servers: [{ url: "/" }],
 		paths,

@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { households, memberships } from "../db/schema.js";
 import type { DbOrTx } from "./members.js";
 
-/** L'acteur d'une requête : son rôle et les réglages de son foyer. */
+/** The actor of a request: their role and their household settings. */
 export interface ActorCtx extends Actor {
 	householdId: string;
 	timezone: string;

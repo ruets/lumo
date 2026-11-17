@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Profil, foyer, rôle et soldes */
+        /** Profile, household, role and balances */
         get: operations["getApiV1Me"];
         put?: never;
         post?: never;
@@ -45,10 +45,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lister les éléments visibles */
+        /** List the visible items */
         get: operations["getApiV1Items"];
         put?: never;
-        /** Créer une habitude ou une tâche */
+        /** Create a habit or a task */
         post: operations["postApiV1Items"];
         delete?: never;
         options?: never;
@@ -66,11 +66,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Archiver un élément */
+        /** Archive an item */
         delete: operations["deleteApiV1ItemsId"];
         options?: never;
         head?: never;
-        /** Modifier un élément */
+        /** Update an item */
         patch: operations["patchApiV1ItemsId"];
         trace?: never;
     };
@@ -81,7 +81,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Éléments dus ce jour avec leur avancement */
+        /** Items due that day with their progress */
         get: operations["getApiV1Today"];
         put?: never;
         post?: never;
@@ -100,7 +100,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Valider un élément (les pièces sont calculées par le serveur) */
+        /** Complete an item (coins are computed by the server) */
         post: operations["postApiV1ItemsIdCompletions"];
         delete?: never;
         options?: never;
@@ -135,7 +135,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Annuler une validation (contre-écriture au journal) */
+        /** Undo a completion (counter-entry in the ledger) */
         delete: operations["deleteApiV1CompletionsId"];
         options?: never;
         head?: never;
@@ -151,7 +151,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Approuver la validation d'un enfant */
+        /** Approve a child's completion */
         post: operations["postApiV1CompletionsIdApprove"];
         delete?: never;
         options?: never;
@@ -168,7 +168,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rejeter la validation d'un enfant */
+        /** Reject a child's completion */
         post: operations["postApiV1CompletionsIdReject"];
         delete?: never;
         options?: never;
@@ -183,10 +183,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lister les envies */
+        /** List the wishes */
         get: operations["getApiV1Rewards"];
         put?: never;
-        /** Créer une envie (owner et adultes) */
+        /** Create a wish (owner and adults) */
         post: operations["postApiV1Rewards"];
         delete?: never;
         options?: never;
@@ -207,7 +207,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Modifier ou archiver une envie */
+        /** Update or archive a wish */
         patch: operations["patchApiV1RewardsId"];
         trace?: never;
     };
@@ -220,7 +220,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Échanger une envie contre des pièces */
+        /** Redeem a wish for coins */
         post: operations["postApiV1RewardsIdRedemptions"];
         delete?: never;
         options?: never;
@@ -238,7 +238,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Annuler un échange d'envie (remboursement par contre-écriture) */
+        /** Undo a wish redemption (refund by counter-entry) */
         delete: operations["deleteApiV1RedemptionsId"];
         options?: never;
         head?: never;
@@ -254,7 +254,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Virer des pièces de son porte-monnaie vers la cagnotte */
+        /** Transfer coins from your wallet to the shared pot */
         post: operations["postApiV1Transfers"];
         delete?: never;
         options?: never;
@@ -269,7 +269,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Historique d'un porte-monnaie, paginé par curseur */
+        /** A wallet's history, cursor-paginated */
         get: operations["getApiV1Ledger"];
         put?: never;
         post?: never;
@@ -288,7 +288,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Ajustement manuel de pièces (owner) */
+        /** Manual coin adjustment (owner) */
         post: operations["postApiV1LedgerAdjustments"];
         delete?: never;
         options?: never;
@@ -303,7 +303,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Séries, taux de réussite et heatmap */
+        /** Streaks, success rates and heatmap */
         get: operations["getApiV1Stats"];
         put?: never;
         post?: never;
@@ -334,7 +334,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -366,7 +366,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -400,7 +400,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Succès */
+            /** @description Success */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -412,7 +412,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -441,7 +441,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -484,7 +484,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -506,7 +506,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path?: never;
@@ -572,7 +572,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Succès */
+            /** @description Success */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -613,7 +613,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -635,7 +635,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -645,14 +645,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Aucun contenu */
+            /** @description No content */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -674,7 +674,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -715,7 +715,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -756,7 +756,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -785,7 +785,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -836,7 +836,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -858,7 +858,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -874,7 +874,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Succès */
+            /** @description Success */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -899,7 +899,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -928,7 +928,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -949,7 +949,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -971,7 +971,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -981,7 +981,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1006,7 +1006,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -1028,7 +1028,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -1038,7 +1038,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1063,7 +1063,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -1085,7 +1085,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -1095,7 +1095,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1120,7 +1120,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -1147,7 +1147,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1171,7 +1171,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -1193,7 +1193,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path?: never;
@@ -1219,7 +1219,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Succès */
+            /** @description Success */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1241,7 +1241,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -1263,7 +1263,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -1288,7 +1288,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1310,7 +1310,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -1332,7 +1332,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -1342,7 +1342,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1364,7 +1364,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -1386,7 +1386,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -1396,7 +1396,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1418,7 +1418,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -1440,7 +1440,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path?: never;
@@ -1454,7 +1454,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Succès */
+            /** @description Success */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1469,7 +1469,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -1500,7 +1500,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1528,7 +1528,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -1550,7 +1550,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée. */
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
                 "Idempotency-Key": string;
             };
             path?: never;
@@ -1566,7 +1566,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Succès */
+            /** @description Success */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1589,7 +1589,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -1619,7 +1619,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Succès */
+            /** @description Success */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1654,7 +1654,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Erreur (RFC 9457), avec un `code` stable */
+            /** @description Error (RFC 9457) with a stable `code` */
             default: {
                 headers: {
                     [name: string]: unknown;

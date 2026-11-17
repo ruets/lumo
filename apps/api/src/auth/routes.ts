@@ -20,8 +20,8 @@ const username = z
 	.string()
 	.trim()
 	.toLowerCase()
-	.regex(/^[a-z0-9._-]{3,32}$/, "3 à 32 caractères : lettres, chiffres, point, tiret, tiret bas");
-const password = z.string().min(MIN_PASSWORD_LENGTH, `Au moins ${MIN_PASSWORD_LENGTH} caractères`).max(200);
+	.regex(/^[a-z0-9._-]{3,32}$/, "3 to 32 characters: letters, digits, dot, hyphen, underscore");
+const password = z.string().min(MIN_PASSWORD_LENGTH, `At least ${MIN_PASSWORD_LENGTH} characters`).max(200);
 const displayName = z.string().trim().min(1).max(80);
 const client = z.enum(["web", "mobile"]).default("web");
 
@@ -44,7 +44,7 @@ const schemas = {
 function parse<S extends z.ZodType>(schema: S, data: unknown): z.infer<S> {
 	const result = schema.safeParse(data);
 	if (!result.success) {
-		throw errors.validation(result.error.issues.map((i) => `${i.path.join(".") || "body"} : ${i.message}`).join(" ; "));
+		throw errors.validation(result.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "));
 	}
 	return result.data;
 }
@@ -77,7 +77,7 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 		};
 	}
 
-	/** Ouvre une session : cookie pour le web, paire de jetons pour le mobile. */
+	/** Opens a session: cookie for the web, token pair for mobile. */
 	async function startSession(reply: FastifyReply, userId: string, kind: "web" | "mobile") {
 		const session = createSession(db, { userId, kind });
 		if (kind === "web") {
@@ -96,8 +96,8 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 		return oidc;
 	}
 
-	// Public et sans authentification : l'appli mobile l'interroge pour vérifier qu'une adresse est bien un
-	// serveur Lumo (`app`) et pour apprendre comment s'y connecter. L'issuer et le client_id ne sont pas secrets.
+	// Public and unauthenticated: the mobile app queries it to check that an address really is a
+	// Lumo server (`app`) and to learn how to sign in. The issuer and client_id are not secret.
 	app.get("/auth/config", async () => ({
 		app: "lumo" as const,
 		oidc: config.oidcEnabled,
@@ -141,7 +141,7 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 		const state = callbackUrl.searchParams.get("state");
 		if (!state) return fail("oidc_failed");
 
-		// L'état est à usage unique : on le consomme avant tout échange.
+		// The state is single-use: it is consumed before any exchange.
 		const saved = writeTx(db, (tx) => {
 			const row = tx.select().from(oidcStates).where(eq(oidcStates.state, state)).get();
 			if (row) tx.delete(oidcStates).where(eq(oidcStates.state, state)).run();
@@ -161,7 +161,7 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 			return reply.redirect(`${config.PUBLIC_URL.replace(/\/$/, "")}/`);
 		} catch (err) {
 			if (err instanceof AppError) return fail(err.code);
-			req.log.warn({ err }, "échec de l'échange OIDC");
+			req.log.warn({ err }, "OIDC exchange failed");
 			return fail("oidc_failed");
 		}
 	});
@@ -182,7 +182,7 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 				expectedNonce: body.nonce,
 			});
 		} catch (err) {
-			req.log.warn({ err }, "échec de l'échange OIDC mobile");
+			req.log.warn({ err }, "OIDC mobile exchange failed");
 			throw errors.oidcFailed();
 		}
 		const { userId } = resolveOidcLogin(db, config, claims, body.invite ?? null);
@@ -227,7 +227,7 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 		return reply.code(201).send(await startSession(reply, userId, body.client));
 	});
 
-	// ---- Déconnexion ----------------------------------------------------------------------
+	// ---- Sign-out ----------------------------------------------------------------------
 	app.post("/auth/logout", { preHandler: requireAuth }, async (req, reply) => {
 		const auth = req.auth as AuthContext;
 		deleteSession(db, auth.sessionId);

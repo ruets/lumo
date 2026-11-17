@@ -11,7 +11,7 @@ export type Db = BetterSQLite3Database<typeof schema>;
 
 const migrationsFolder = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
-/** Ouvre la base (WAL, clés étrangères actives) et applique les migrations en attente. */
+/** Opens the database (WAL, foreign keys on) and applies pending migrations. */
 export function openDatabase(path: string): { db: Db; sqlite: Database.Database } {
 	mkdirSync(dirname(path), { recursive: true });
 	const sqlite = new Database(path);

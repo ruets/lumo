@@ -11,14 +11,14 @@ const envSchema = z
 		LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
 		DATABASE_PATH: z.string().min(1),
 		PUBLIC_URL: z.url(),
-		SESSION_SECRET: z.string().min(32, "SESSION_SECRET doit faire au moins 32 caractères"),
+		SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters long"),
 		LOCAL_AUTH_ENABLED: bool.default(true),
 		OIDC_ISSUER: z.url().optional(),
 		OIDC_CLIENT_ID: z.string().min(1).optional(),
 		OIDC_CLIENT_SECRET: z.string().min(1).optional(),
-		/** Groupe Authentik dont les membres deviennent `owner`. Vide = désactivé. */
+		/** Authentik group whose members become `owner`. Empty = disabled. */
 		OIDC_ADMIN_GROUP: z.string().default("lumo-admins"),
-		/** Dossier du build web à servir ; absent = pas de front servi. */
+		/** Folder of the web build to serve; unset = no front end served. */
 		WEB_DIST_PATH: z.string().optional(),
 	})
 	.superRefine((env, ctx) => {
@@ -33,7 +33,7 @@ const envSchema = z
 		if (set === 0 && !env.LOCAL_AUTH_ENABLED) {
 			ctx.addIssue({
 				code: "custom",
-				message: "Aucune méthode de connexion : configurer OIDC ou activer LOCAL_AUTH_ENABLED",
+				message: "No sign-in method: configure OIDC or enable LOCAL_AUTH_ENABLED",
 			});
 		}
 	});
@@ -44,7 +44,7 @@ export type Config = z.infer<typeof envSchema> & {
 };
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
-	// Une variable vide (fréquent avec docker-compose : `OIDC_ISSUER=`) vaut « non définie ».
+	// An empty variable (common with docker-compose: `OIDC_ISSUER=`) counts as unset.
 	const cleaned = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== undefined && v !== ""));
 	const parsed = envSchema.safeParse(cleaned);
 	if (!parsed.success) {

@@ -26,7 +26,7 @@ const toEntryView = (e: EntryRow, label: string | null = null): EntryView => ({
 	label,
 });
 
-/** Nom de l'habitude, de la tâche ou de l'envie à l'origine des écritures (`refId` → nom). */
+/** Name of the habit, task or wish behind the entries (`refId` → name). */
 function labelsFor(db: DbOrTx, rows: EntryRow[]): Map<string, string> {
 	const labels = new Map<string, string>();
 	const byCompletion = rows.filter((r) => (r.reason === "completion" || r.reason === "undo") && r.refId);
@@ -62,7 +62,7 @@ function labelsFor(db: DbOrTx, rows: EntryRow[]): Map<string, string> {
 	return labels;
 }
 
-/** Virement perso → cagnotte : deux écritures liées par `transfer_id`, solde vérifié dans la même transaction. */
+/** Personal → pot transfer: two entries linked by `transfer_id`, balance checked in the same transaction. */
 export function transferToShared(tx: Tx, actor: ActorCtx, amount: number, now: Date) {
 	if (!can(actor, "transfer:create")) throw errors.forbidden();
 	const from = personalWalletId(tx, actor.householdId, actor.userId);
@@ -93,7 +93,7 @@ export function adjust(
 	input: { userId: string | null; amount: number; note: string },
 	now: Date,
 ) {
-	if (!can(actor, "ledger:adjust")) throw errors.forbidden("Réservé à l'owner");
+	if (!can(actor, "ledger:adjust")) throw errors.forbidden("Owner only");
 	let walletId: string;
 	if (input.userId === null) {
 		walletId = sharedWalletId(tx, actor.householdId);
@@ -103,7 +103,7 @@ export function adjust(
 			.from(memberships)
 			.where(and(eq(memberships.userId, input.userId), eq(memberships.householdId, actor.householdId)))
 			.get();
-		if (!member) throw errors.validation("body.userId : membre inconnu");
+		if (!member) throw errors.validation("body.userId: unknown member");
 		walletId = personalWalletId(tx, actor.householdId, input.userId);
 	}
 	const id = addEntry(tx, {
@@ -123,11 +123,11 @@ const encodeCursor = (e: EntryRow) => Buffer.from(`${e.createdAt.getTime()}:${e.
 function decodeCursor(cursor: string): { ts: Date; id: string } {
 	const [ms, ...rest] = Buffer.from(cursor, "base64url").toString().split(":");
 	const ts = Number(ms);
-	if (!Number.isFinite(ts) || rest.length === 0) throw errors.validation("query.cursor : curseur invalide");
+	if (!Number.isFinite(ts) || rest.length === 0) throw errors.validation("query.cursor: invalid cursor");
 	return { ts: new Date(ts), id: rest.join(":") };
 }
 
-/** Historique d'un porte-monnaie (le sien ou la cagnotte), du plus récent au plus ancien, par curseur. */
+/** History of a wallet (your own or the pot), newest first, by cursor. */
 export function listLedger(
 	db: DbOrTx,
 	actor: ActorCtx,

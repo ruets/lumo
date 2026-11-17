@@ -22,9 +22,9 @@ export interface AppDeps {
 	db: Db;
 	oidc: OidcProvider | null;
 	logger?: FastifyServerOptions["logger"];
-	/** Horloge ; injectable pour les tests (jours locaux, fenêtres de dates). */
+	/** Clock; injectable for tests (local days, date windows). */
 	clock?: () => Date;
-	/** Test de disponibilité de la base pour `/readyz`. */
+	/** Database availability check for `/readyz`. */
 	ping?: () => void;
 }
 
@@ -48,7 +48,7 @@ export async function buildApp({
 }: AppDeps): Promise<FastifyInstance> {
 	const app = Fastify({
 		logger,
-		// L'API tourne derrière le reverse proxy du homelab.
+		// The API runs behind the homelab reverse proxy.
 		trustProxy: true,
 		bodyLimit: 1024 * 1024,
 	});
@@ -63,9 +63,9 @@ export async function buildApp({
 		if (err instanceof DomainError) return send(new AppError(DOMAIN_STATUS[err.code], err.code, err.message));
 		if (err instanceof ZodError) return send(errors.validation(err.message));
 		const status = err.statusCode;
-		if (status === 429) return send(new AppError(429, "rate_limited", "Trop de requêtes, réessaie plus tard"));
+		if (status === 429) return send(new AppError(429, "rate_limited", "Too many requests, try again later"));
 		if (status && status >= 400 && status < 500) {
-			return send(new AppError(status, "bad_request", "Requête invalide", err.message));
+			return send(new AppError(status, "bad_request", "Invalid request", err.message));
 		}
 		req.log.error({ err }, "erreur interne");
 		return send(new AppError(500, "internal_error", "Erreur interne"));

@@ -35,7 +35,7 @@ function assignedItems(db: DbOrTx, actor: ActorCtx): ItemRow[] {
 		.all();
 }
 
-/** Écran « Aujourd'hui » : éléments dus ce jour (ou tâches à faire) avec leur avancement. */
+/** "Today" screen: items due that day (or tasks to do) with their progress. */
 export function getToday(db: DbOrTx, actor: ActorCtx, date: string | undefined, now: Date): z.input<typeof todayView> {
 	const day = date ?? localDate(now, actor.timezone);
 	const rows = assignedItems(db, actor);
@@ -70,7 +70,7 @@ export function getToday(db: DbOrTx, actor: ActorCtx, date: string | undefined, 
 		if (item.kind === "habit") {
 			if (!isDue(scheduleSchema.parse(item.schedule), day)) continue;
 		} else if (countActive(db, item.id, actor.userId, null) > 0 && approved + pending === 0) {
-			continue; // tâche déjà faite un autre jour
+			continue; // task already done on another day
 		}
 		entries.push({
 			item: toItemView(item, assignees.get(item.id) ?? []),
@@ -78,7 +78,7 @@ export function getToday(db: DbOrTx, actor: ActorCtx, date: string | undefined, 
 			pending,
 			target: item.targetPerPeriod,
 			done: approved >= item.targetPerPeriod,
-			// Validations annulables du jour ; le client annule la première.
+			// Undoable completions of the day; the client undoes the first one.
 			completionIds: [...pendingIds, ...approvedIds],
 		});
 	}
@@ -88,7 +88,7 @@ export function getToday(db: DbOrTx, actor: ActorCtx, date: string | undefined, 
 
 const MAX_RANGE_DAYS = 366;
 
-/** Séries, taux (7 et 30 derniers jours) et heatmap des habitudes de l'acteur. Seules les validations approuvées comptent. */
+/** Streaks, rates (last 7 and 30 days) and heatmap of the actor's habits. Only approved completions count. */
 export function getStats(
 	db: DbOrTx,
 	actor: ActorCtx,
@@ -98,9 +98,8 @@ export function getStats(
 	const today = localDate(now, actor.timezone);
 	const to = q.to ?? today;
 	const from = q.from ?? addDays(to, -29);
-	if (compareDates(from, to) > 0) throw errors.validation("query : from doit précéder to");
-	if (daysBetween(from, to) > MAX_RANGE_DAYS)
-		throw errors.validation(`query : plage limitée à ${MAX_RANGE_DAYS} jours`);
+	if (compareDates(from, to) > 0) throw errors.validation("query: from must come before to");
+	if (daysBetween(from, to) > MAX_RANGE_DAYS) throw errors.validation(`query: range limited to ${MAX_RANGE_DAYS} days`);
 
 	const habits = assignedItems(db, actor).filter((i) => i.kind === "habit");
 	const counts = new Map<string, Record<string, number>>();

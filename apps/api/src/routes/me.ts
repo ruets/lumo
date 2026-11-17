@@ -8,11 +8,11 @@ import { inviteBody, inviteView, meView } from "../schemas.js";
 import { route } from "./define.js";
 
 export const meRoutes = [
-	/** Profil, foyer, rôle et soldes (somme des écritures du journal : aucun solde n'est stocké). */
+	/** Profile, household, role and balances (sum of the ledger entries: no balance is stored). */
 	route({
 		method: "get",
 		url: "/me",
-		summary: "Profil, foyer, rôle et soldes",
+		summary: "Profile, household, role and balances",
 		tag: "Profil",
 		response: meView,
 		handler: ({ db, actor }) => {

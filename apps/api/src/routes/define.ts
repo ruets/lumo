@@ -12,7 +12,7 @@ import { type ActorCtx, loadActor } from "../services/context.js";
 import { type Tx, writeTx } from "../services/members.js";
 
 export interface RouteContext<B, Q, P> {
-	/** Écriture : la transaction `BEGIN IMMEDIATE` de la requête. Lecture : la base (mêmes requêtes, sans écriture). */
+	/** Write: the request's `BEGIN IMMEDIATE` transaction. Read: the database (same queries, no writes). */
 	db: Tx;
 	config: Config;
 	actor: ActorCtx;
@@ -32,15 +32,15 @@ export interface RouteDef {
 	params?: z.ZodType;
 	response?: z.ZodType;
 	status: number;
-	/** Écriture : exécutée dans une transaction unique, avec `Idempotency-Key` obligatoire. */
+	/** Write: run in a single transaction, `Idempotency-Key` required. */
 	idempotent: boolean;
-	// biome-ignore lint/suspicious/noExplicitAny: le typage fin est porté par `route()`
+	// biome-ignore lint/suspicious/noExplicitAny: the fine-grained typing is carried by `route()`
 	handler: (ctx: RouteContext<any, any, any>) => unknown;
 }
 
 type Out<T extends z.ZodType | undefined> = T extends z.ZodType ? z.output<T> : undefined;
 
-/** Déclare une route : les schémas typent le handler et alimentent la spec OpenAPI. */
+/** Declares a route: the schemas type the handler and feed the OpenAPI spec. */
 export function route<
 	TB extends z.ZodType | undefined = undefined,
 	TQ extends z.ZodType | undefined = undefined,
@@ -57,7 +57,7 @@ export function route<
 	response?: TR;
 	status?: number;
 	idempotent?: boolean;
-	// biome-ignore lint/suspicious/noConfusingVoidType: les handlers sans corps (204) renvoient void
+	// biome-ignore lint/suspicious/noConfusingVoidType: handlers without a body (204) return void
 	handler: (ctx: RouteContext<Out<TB>, Out<TQ>, Out<TP>>) => TR extends z.ZodType ? z.input<TR> : undefined | void;
 }): RouteDef {
 	const write = def.method !== "get";
@@ -83,7 +83,7 @@ function parse<S extends z.ZodType>(schema: S | undefined, data: unknown, where:
 		const detail = result.error.issues.map(
 			(i) => `${where}${i.path.length ? `.${i.path.join(".")}` : ""} : ${i.message}`,
 		);
-		throw errors.validation(detail.join(" ; "));
+		throw errors.validation(detail.join("; "));
 	}
 	return result.data;
 }
@@ -132,11 +132,11 @@ export function registerRoutes(
 					throw new AppError(
 						400,
 						"idempotency_key_required",
-						"En-tête Idempotency-Key requis",
-						"Fournir un UUID par requête d'écriture",
+						"Idempotency-Key header required",
+						"Provide one UUID per write request",
 					);
 				}
-				// Recherche, exécution et mémorisation dans la même transaction : un rejeu simultané ne double rien.
+				// Lookup, execution and storage in the same transaction: a simultaneous replay doubles nothing.
 				const outcome = writeTx(db, (tx) => {
 					const previous = tx
 						.select()

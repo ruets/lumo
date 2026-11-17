@@ -12,7 +12,7 @@ import type { DbOrTx, Tx } from "./members.js";
 export type ItemRow = typeof items.$inferSelect;
 type ItemView = z.input<typeof itemView>;
 
-const notFound = () => new AppError(404, "not_found", "Élément introuvable");
+const notFound = () => new AppError(404, "not_found", "Item not found");
 
 export function assigneesOf(db: DbOrTx, itemIds: string[]): Map<string, string[]> {
 	const map = new Map<string, string[]>();
@@ -42,7 +42,7 @@ export function toItemView(row: ItemRow, assigneeIds: string[]): ItemView {
 	};
 }
 
-/** Élément du foyer de l'acteur, non archivé ; sinon 404 (on ne révèle rien d'un autre foyer). */
+/** Item of the actor's household, not archived; otherwise 404 (nothing is revealed about another household). */
 export function getActiveItem(db: DbOrTx, actor: ActorCtx, id: string): ItemRow {
 	const row = db
 		.select()
@@ -59,14 +59,14 @@ function assertMembers(db: DbOrTx, actor: ActorCtx, ids: string[]) {
 		.from(memberships)
 		.where(and(eq(memberships.householdId, actor.householdId), inArray(memberships.userId, ids)))
 		.all();
-	if (found.length !== ids.length) throw errors.validation("assigneeIds : un assigné n'est pas membre du foyer");
+	if (found.length !== ids.length) throw errors.validation("assigneeIds: an assignee is not a member of the household");
 }
 
 const unique = (ids: string[]) => [...new Set(ids)];
 
 export function createItem(tx: Tx, actor: ActorCtx, input: z.output<typeof createItemBody>, now: Date): ItemView {
 	const assigneeIds = unique(input.assigneeIds ?? [actor.userId]);
-	if (!can(actor, "item:create", { assigneeIds })) throw errors.forbidden("Création non autorisée");
+	if (!can(actor, "item:create", { assigneeIds })) throw errors.forbidden("Creation not allowed");
 	assertMembers(tx, actor, assigneeIds);
 
 	const id = randomUUID();
@@ -95,7 +95,7 @@ export function createItem(tx: Tx, actor: ActorCtx, input: z.output<typeof creat
 	return toItemView(row, assigneeIds);
 }
 
-/** Owner et adultes voient tout ; un enfant ne voit que ce qui lui est assigné ou qu'il a créé. */
+/** Owner and adults see everything; a child only sees what is assigned to them or what they created. */
 export function listItems(db: DbOrTx, actor: ActorCtx, includeArchived: boolean): ItemView[] {
 	const base = and(eq(items.householdId, actor.householdId), includeArchived ? undefined : isNull(items.archivedAt));
 	let rows: ItemRow[];
@@ -124,13 +124,13 @@ export function listItems(db: DbOrTx, actor: ActorCtx, includeArchived: boolean)
 
 export function updateItem(tx: Tx, actor: ActorCtx, id: string, input: z.output<typeof updateItemBody>): ItemView {
 	const row = getActiveItem(tx, actor, id);
-	if (!can(actor, "item:update", { createdBy: row.createdBy })) throw errors.forbidden("Modification non autorisée");
-	if (row.kind === "task" && input.schedule) throw errors.validation("body.schedule : une tâche n'a pas de récurrence");
-	if (row.kind === "habit" && input.dueAt !== undefined) throw errors.validation("body.dueAt : réservé aux tâches");
+	if (!can(actor, "item:update", { createdBy: row.createdBy })) throw errors.forbidden("Update not allowed");
+	if (row.kind === "task" && input.schedule) throw errors.validation("body.schedule: a task has no schedule");
+	if (row.kind === "habit" && input.dueAt !== undefined) throw errors.validation("body.dueAt: tasks only");
 
 	if (input.assigneeIds) {
 		const assigneeIds = unique(input.assigneeIds);
-		if (!can(actor, "item:create", { assigneeIds })) throw errors.forbidden("Assignation non autorisée");
+		if (!can(actor, "item:create", { assigneeIds })) throw errors.forbidden("Assignment not allowed");
 		assertMembers(tx, actor, assigneeIds);
 		tx.delete(itemAssignees).where(eq(itemAssignees.itemId, id)).run();
 		tx.insert(itemAssignees)
@@ -154,7 +154,7 @@ export function updateItem(tx: Tx, actor: ActorCtx, id: string, input: z.output<
 	return toItemView(fresh, assigneesOf(tx, [id]).get(id) ?? []);
 }
 
-/** Archivage (jamais de suppression : l'historique des pièces reste lisible). Idempotent. */
+/** Archiving (never deleted: the coin history stays readable). Idempotent. */
 export function archiveItem(tx: Tx, actor: ActorCtx, id: string, now: Date): void {
 	const row = tx
 		.select()
@@ -162,6 +162,6 @@ export function archiveItem(tx: Tx, actor: ActorCtx, id: string, now: Date): voi
 		.where(and(eq(items.id, id), eq(items.householdId, actor.householdId)))
 		.get();
 	if (!row) throw notFound();
-	if (!can(actor, "item:update", { createdBy: row.createdBy })) throw errors.forbidden("Archivage non autorisé");
+	if (!can(actor, "item:update", { createdBy: row.createdBy })) throw errors.forbidden("Archiving not allowed");
 	if (!row.archivedAt) tx.update(items).set({ archivedAt: now }).where(eq(items.id, id)).run();
 }

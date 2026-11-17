@@ -23,7 +23,7 @@ export const rewardRoutes = [
 	route({
 		method: "get",
 		url: "/rewards",
-		summary: "Lister les envies",
+		summary: "List the wishes",
 		tag: "Envies",
 		response: z.object({ rewards: z.array(rewardView) }),
 		handler: ({ db, actor, now }) => ({ rewards: listRewards(db, actor, now) }),
@@ -31,7 +31,7 @@ export const rewardRoutes = [
 	route({
 		method: "post",
 		url: "/rewards",
-		summary: "Créer une envie (owner et adultes)",
+		summary: "Create a wish (owner and adults)",
 		tag: "Envies",
 		body: createRewardBody,
 		response: rewardView,
@@ -41,7 +41,7 @@ export const rewardRoutes = [
 	route({
 		method: "patch",
 		url: "/rewards/:id",
-		summary: "Modifier ou archiver une envie",
+		summary: "Update or archive a wish",
 		tag: "Envies",
 		params: idParams,
 		body: updateRewardBody,
@@ -51,7 +51,7 @@ export const rewardRoutes = [
 	route({
 		method: "post",
 		url: "/rewards/:id/redemptions",
-		summary: "Échanger une envie contre des pièces",
+		summary: "Redeem a wish for coins",
 		tag: "Envies",
 		params: idParams,
 		response: redemptionResult,
@@ -61,7 +61,7 @@ export const rewardRoutes = [
 	route({
 		method: "delete",
 		url: "/redemptions/:id",
-		summary: "Annuler un échange d'envie (remboursement par contre-écriture)",
+		summary: "Undo a wish redemption (refund by counter-entry)",
 		tag: "Envies",
 		params: idParams,
 		response: redemptionResult,
@@ -73,8 +73,8 @@ export const walletRoutes = [
 	route({
 		method: "post",
 		url: "/transfers",
-		summary: "Virer des pièces de son porte-monnaie vers la cagnotte",
-		tag: "Pièces",
+		summary: "Transfer coins from your wallet to the shared pot",
+		tag: "Coins",
 		body: transferBody,
 		response: z.object({ transferId: z.string(), balances: balancesView }),
 		status: 201,
@@ -83,8 +83,8 @@ export const walletRoutes = [
 	route({
 		method: "get",
 		url: "/ledger",
-		summary: "Historique d'un porte-monnaie, paginé par curseur",
-		tag: "Pièces",
+		summary: "A wallet's history, cursor-paginated",
+		tag: "Coins",
 		query: ledgerQuery,
 		response: z.object({
 			wallet: z.enum(["personal", "shared"]),
@@ -98,8 +98,8 @@ export const walletRoutes = [
 	route({
 		method: "post",
 		url: "/ledger/adjustments",
-		summary: "Ajustement manuel de pièces (owner)",
-		tag: "Pièces",
+		summary: "Manual coin adjustment (owner)",
+		tag: "Coins",
 		body: adjustmentBody,
 		response: z.object({ entry: ledgerEntryView }),
 		status: 201,
@@ -108,8 +108,8 @@ export const walletRoutes = [
 	route({
 		method: "get",
 		url: "/stats",
-		summary: "Séries, taux de réussite et heatmap",
-		tag: "Progrès",
+		summary: "Streaks, success rates and heatmap",
+		tag: "Progress",
 		query: statsQuery,
 		response: statsView,
 		handler: ({ db, actor, query, now }) => getStats(db, actor, query, now),

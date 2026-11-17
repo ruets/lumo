@@ -8,7 +8,7 @@ import { households, memberships, users, wallets } from "../db/schema.js";
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 export type DbOrTx = Db | Tx;
 
-/** Exécute `fn` dans une transaction `BEGIN IMMEDIATE` (un seul écrivain à la fois). */
+/** Runs `fn` in a `BEGIN IMMEDIATE` transaction (one writer at a time). */
 export function writeTx<T>(db: Db, fn: (tx: Tx) => T): T {
 	return db.transaction(fn, { behavior: "immediate" });
 }
@@ -18,7 +18,7 @@ export function createHousehold(tx: Tx, input: { name: string; timezone?: string
 	tx.insert(households)
 		.values({ id, name: input.name, ...(input.timezone ? { timezone: input.timezone } : {}) })
 		.run();
-	// La cagnotte du foyer existe dès la création du foyer.
+	// The household pot exists from the moment the household is created.
 	tx.insert(wallets).values({ id: randomUUID(), householdId: id, kind: "shared", userId: null }).run();
 	return id;
 }
@@ -32,7 +32,7 @@ export interface NewUser {
 	passwordHash?: string | null;
 }
 
-/** Crée un utilisateur, son appartenance au foyer et son porte-monnaie personnel. */
+/** Creates a user, their household membership and their personal wallet. */
 export function createMember(tx: Tx, input: { householdId: string; role: Role; user: NewUser }): string {
 	const userId = randomUUID();
 	tx.insert(users)

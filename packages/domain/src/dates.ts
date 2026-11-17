@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Dates calendaires `YYYY-MM-DD` (le « jour local » du foyer). Toute l'arithmétique passe par des
- * dates UTC à minuit : aucun changement d'heure ne peut décaler un jour.
+ * Calendar dates `YYYY-MM-DD` (the household's "local day"). All arithmetic goes through
+ * UTC midnight dates: no daylight-saving change can shift a day.
  */
 
 export type LocalDate = string;
@@ -26,7 +26,7 @@ function format(ms: number): LocalDate {
 
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
-/** Jour local d'un instant dans le fuseau du foyer (ex. `Europe/Paris`). */
+/** Local day of an instant in the household's time zone (e.g. `Europe/Paris`). */
 export function localDate(instant: Date, timeZone: string): LocalDate {
 	let f = formatters.get(timeZone);
 	if (!f) {
@@ -41,7 +41,7 @@ export function addDays(date: LocalDate, days: number): LocalDate {
 	return format(parse(date) + days * DAY_MS);
 }
 
-/** Nombre de jours de `a` à `b` (positif si `b` est après `a`). */
+/** Number of days from `a` to `b` (positive if `b` is after `a`). */
 export function daysBetween(a: LocalDate, b: LocalDate): number {
 	return Math.round((parse(b) - parse(a)) / DAY_MS);
 }
@@ -51,7 +51,7 @@ export function isoWeekday(date: LocalDate): Weekday {
 	return (d === 0 ? 7 : d) as Weekday;
 }
 
-/** Premier jour de la semaine contenant `date`, selon le premier jour choisi par le foyer. */
+/** First day of the week containing `date`, according to the household's chosen first day. */
 export function startOfWeek(date: LocalDate, weekStart: Weekday): LocalDate {
 	return addDays(date, -((isoWeekday(date) - weekStart + 7) % 7));
 }

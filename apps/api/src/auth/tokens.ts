@@ -6,12 +6,12 @@ export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 const ISSUER = "lumo";
 const AUDIENCE = "lumo-api";
 
-/** Jeton opaque aléatoire (256 bits), en base64url. */
+/** Random opaque token (256 bits), base64url. */
 export function randomToken(bytes = 32): string {
 	return randomBytes(bytes).toString("base64url");
 }
 
-/** Seul le hash des jetons est stocké en base. */
+/** Only the token hash is stored in the database. */
 export function hashToken(token: string): string {
 	return createHash("sha256").update(token).digest("hex");
 }

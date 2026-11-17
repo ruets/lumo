@@ -9,14 +9,14 @@ const base = { targetPerDay: 1, weekStart: 1 as const };
 describe("computeStreaks — quotidienne", () => {
 	const daily: Schedule = { type: "daily" };
 
-	it("aucune complétion : 0 et 0", () => {
+	it("no completion: 0 and 0", () => {
 		expect(computeStreaks({ ...base, schedule: daily, counts: {}, from: "2026-11-10", today: "2026-11-17" })).toEqual({
 			current: 0,
 			best: 0,
 		});
 	});
 
-	it("série actuelle et record distincts", () => {
+	it("distinct current and best streaks", () => {
 		const c = counts([
 			"2026-11-10",
 			"2026-11-11",
@@ -32,7 +32,7 @@ describe("computeStreaks — quotidienne", () => {
 		});
 	});
 
-	it("aujourd'hui pas encore fait : la série d'hier reste vivante", () => {
+	it("today not done yet: yesterday's streak stays alive", () => {
 		const c = counts(["2026-11-14", "2026-11-15", "2026-11-16"]);
 		expect(computeStreaks({ ...base, schedule: daily, counts: c, from: "2026-11-10", today: "2026-11-17" })).toEqual({
 			current: 3,
@@ -40,7 +40,7 @@ describe("computeStreaks — quotidienne", () => {
 		});
 	});
 
-	it("un jour manqué hier casse la série actuelle", () => {
+	it("a day missed yesterday breaks the current streak", () => {
 		const c = counts(["2026-11-13", "2026-11-14", "2026-11-15"]);
 		expect(computeStreaks({ ...base, schedule: daily, counts: c, from: "2026-11-10", today: "2026-11-17" })).toEqual({
 			current: 0,
@@ -48,7 +48,7 @@ describe("computeStreaks — quotidienne", () => {
 		});
 	});
 
-	it("objectif de 3 par jour : 2 validations ne suffisent pas", () => {
+	it("goal of 3 per day: 2 completions are not enough", () => {
 		const c = { "2026-11-15": 3, "2026-11-16": 2, "2026-11-17": 3 };
 		expect(
 			computeStreaks({
@@ -62,7 +62,7 @@ describe("computeStreaks — quotidienne", () => {
 		).toEqual({ current: 1, best: 1 });
 	});
 
-	it("ignore ce qui précède la création de l'élément", () => {
+	it("ignores what precedes the item's creation", () => {
 		const c = counts(["2026-11-01", "2026-11-02"]);
 		expect(computeStreaks({ ...base, schedule: daily, counts: c, from: "2026-11-10", today: "2026-11-17" })).toEqual({
 			current: 0,
@@ -71,11 +71,11 @@ describe("computeStreaks — quotidienne", () => {
 	});
 });
 
-describe("computeStreaks — jours fixes", () => {
+describe("computeStreaks — fixed days", () => {
 	const mwf: Schedule = { type: "weekly", days: [1, 3, 5] };
 
-	it("ne compte que les jours où l'élément est dû ; les autres jours ne cassent rien", () => {
-		// lun 9, mer 11, ven 13, lun 16 faits ; aujourd'hui mardi 17 (non dû)
+	it("only counts the days the item is due; other days break nothing", () => {
+		// Mon 9, Wed 11, Fri 13, Mon 16 done; today Tuesday 17 (not due)
 		const c = counts(["2026-11-09", "2026-11-11", "2026-11-13", "2026-11-16"]);
 		expect(computeStreaks({ ...base, schedule: mwf, counts: c, from: "2026-11-09", today: "2026-11-17" })).toEqual({
 			current: 4,
@@ -83,15 +83,15 @@ describe("computeStreaks — jours fixes", () => {
 		});
 	});
 
-	it("un jour dû manqué casse la série", () => {
-		const c = counts(["2026-11-09", "2026-11-13", "2026-11-16"]); // mer 11 manquée
+	it("a missed due day breaks the streak", () => {
+		const c = counts(["2026-11-09", "2026-11-13", "2026-11-16"]); // Wed 11 missed
 		expect(computeStreaks({ ...base, schedule: mwf, counts: c, from: "2026-11-09", today: "2026-11-17" })).toEqual({
 			current: 2,
 			best: 2,
 		});
 	});
 
-	it("une complétion un jour non dû n'ajoute rien", () => {
+	it("a completion on a non-due day adds nothing", () => {
 		const c = counts(["2026-11-17"]);
 		expect(computeStreaks({ ...base, schedule: mwf, counts: c, from: "2026-11-16", today: "2026-11-17" })).toEqual({
 			current: 0,
@@ -100,11 +100,11 @@ describe("computeStreaks — jours fixes", () => {
 	});
 });
 
-describe("computeStreaks — X fois par semaine", () => {
+describe("computeStreaks — X times a week", () => {
 	const three: Schedule = { type: "timesPerWeek", count: 3 };
 
-	it("la période est la semaine ; la semaine en cours ne casse pas la série tant qu'elle est ouverte", () => {
-		// semaine du 2/11 : 3 jours (réussie) ; semaine du 9/11 : 3 jours (réussie) ; semaine du 16/11 : 1 jour (en cours)
+	it("the period is the week; the current week does not break the streak while it is open", () => {
+		// week of 11/2: 3 days (successful); week of 11/9: 3 days (successful); week of 11/16: 1 day (in progress)
 		const c = counts([
 			"2026-11-02",
 			"2026-11-04",
@@ -120,26 +120,26 @@ describe("computeStreaks — X fois par semaine", () => {
 		});
 	});
 
-	it("une semaine passée sous l'objectif casse la série", () => {
-		const c = counts(["2026-11-02", "2026-11-04", "2026-11-06", "2026-11-09", "2026-11-10"]); // sem. du 9 : 2 jours
+	it("a past week below the goal breaks the streak", () => {
+		const c = counts(["2026-11-02", "2026-11-04", "2026-11-06", "2026-11-09", "2026-11-10"]); // week of the 9th: 2 days
 		expect(computeStreaks({ ...base, schedule: three, counts: c, from: "2026-11-02", today: "2026-11-17" })).toEqual({
 			current: 0,
 			best: 1,
 		});
 	});
 
-	it("la semaine en cours qui atteint l'objectif s'ajoute", () => {
+	it("the current week reaching the goal is added", () => {
 		const c = counts(["2026-11-09", "2026-11-10", "2026-11-12", "2026-11-16", "2026-11-17"]);
 		const r = computeStreaks({ ...base, schedule: three, counts: c, from: "2026-11-09", today: "2026-11-18" });
-		expect(r.current).toBe(1); // sem. du 9 réussie, sem. du 16 en cours (2/3)
+		expect(r.current).toBe(1); // week of the 9th successful, week of the 16th in progress (2/3)
 		const done = counts([...Object.keys(c), "2026-11-18"]);
 		expect(
 			computeStreaks({ ...base, schedule: three, counts: done, from: "2026-11-09", today: "2026-11-18" }).current,
 		).toBe(2);
 	});
 
-	it("la semaine suit le premier jour choisi par le foyer (dimanche)", () => {
-		// Semaine dim 8 → sam 14 : dimanche 8, lundi 9, mardi 10 → réussie avec weekStart = 7
+	it("the week follows the household's chosen first day (Sunday)", () => {
+		// Week Sun 8 → Sat 14: Sunday 8, Monday 9, Tuesday 10 → successful with weekStart = 7
 		const c = counts(["2026-11-08", "2026-11-09", "2026-11-10"]);
 		expect(
 			computeStreaks({
@@ -158,7 +158,7 @@ describe("computeStreaks — X fois par semaine", () => {
 });
 
 describe("computeStreaks — mensuelle", () => {
-	it("compte les mois où le jour dû a été validé", () => {
+	it("counts the months where the due day was completed", () => {
 		const monthly: Schedule = { type: "monthly", day: 15 };
 		const c = counts(["2026-09-15", "2026-10-15"]);
 		expect(computeStreaks({ ...base, schedule: monthly, counts: c, from: "2026-09-01", today: "2026-11-17" })).toEqual({
@@ -180,7 +180,7 @@ describe("computeStreaks — mensuelle", () => {
 describe("periodStats (taux)", () => {
 	const daily: Schedule = { type: "daily" };
 
-	it("taux sur les jours dus de la plage", () => {
+	it("rate over the range's due days", () => {
 		const c = counts(["2026-11-11", "2026-11-12", "2026-11-13", "2026-11-15", "2026-11-16"]);
 		expect(
 			periodStats({ ...base, schedule: daily, counts: c, from: "2026-11-11", to: "2026-11-17", today: "2026-11-17" }),
@@ -191,7 +191,7 @@ describe("periodStats (taux)", () => {
 		});
 	});
 
-	it("aujourd'hui non terminé n'est pas encore un échec", () => {
+	it("today not finished is not a failure yet", () => {
 		const c = counts(["2026-11-16"]);
 		expect(
 			periodStats({ ...base, schedule: daily, counts: c, from: "2026-11-16", to: "2026-11-17", today: "2026-11-17" }),
@@ -202,7 +202,7 @@ describe("periodStats (taux)", () => {
 		});
 	});
 
-	it("aucun jour dû : taux nul (null)", () => {
+	it("no due day: null rate", () => {
 		expect(
 			periodStats({
 				...base,
@@ -215,8 +215,8 @@ describe("periodStats (taux)", () => {
 		).toEqual({ done: 0, expected: 0, rate: null });
 	});
 
-	it("X fois par semaine : attendu = count par semaine entière, fait plafonné à count", () => {
-		const c = counts(["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"]); // 5 jours, objectif 3
+	it("X times a week: expected = count per whole week, done capped at count", () => {
+		const c = counts(["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"]); // 5 days, goal 3
 		expect(
 			periodStats({
 				...base,

@@ -36,7 +36,7 @@ export function toCompletionView(c: CompletionRow): CompletionView {
 	};
 }
 
-/** Validations qui comptent vers l'objectif : actives, approuvées ou en attente. `date` null = toutes dates. */
+/** Completions that count toward the goal: active, approved or pending. `date` null = all dates. */
 export function countActive(db: DbOrTx, itemId: string, userId: string, date: string | null): number {
 	return (
 		db
@@ -72,8 +72,8 @@ const result = (tx: DbOrTx, actor: ActorCtx, c: CompletionRow) => ({
 });
 
 /**
- * Valider un élément. Une seule transaction : contrôles, complétion et écriture de pièces.
- * Le client n'envoie jamais de montant ; la récompense vient de l'élément.
+ * Complete an item. A single transaction: checks, completion and coin entry.
+ * The client never sends an amount; the reward comes from the item.
  */
 export function createCompletion(
 	tx: Tx,
@@ -89,7 +89,7 @@ export function createCompletion(
 		.where(and(eq(itemAssignees.itemId, itemId), eq(itemAssignees.userId, actor.userId)))
 		.get();
 	if (!assigned || !can(actor, "completion:create", { userId: actor.userId })) {
-		throw errors.forbidden("Cet élément ne t'est pas assigné");
+		throw errors.forbidden("This item is not assigned to you");
 	}
 
 	const today = localDate(now, actor.timezone);
@@ -97,9 +97,9 @@ export function createCompletion(
 	checkCompletionDate({ date, today, windowDays: actor.backdateDays, role: actor.role });
 
 	if (item.kind === "habit" && !isDue(scheduleSchema.parse(item.schedule), date)) {
-		throw new DomainError("not_due", "Cette habitude n'est pas prévue ce jour-là");
+		throw new DomainError("not_due", "This habit is not planned that day");
 	}
-	// Une tâche se valide une seule fois, quelle que soit la date.
+	// A task is completed only once, whatever the date.
 	assertUnderTarget(countActive(tx, itemId, actor.userId, item.kind === "habit" ? date : null), item.targetPerPeriod);
 
 	const plan = planCompletion({ actorRole: actor.role, requiresApproval: item.requiresApproval, reward: item.reward });
@@ -122,14 +122,14 @@ export function createCompletion(
 	return result(tx, actor, tx.select().from(completions).where(eq(completions.id, id)).get() as CompletionRow);
 }
 
-/** Annuler : `undone_at` + contre-écriture du montant exact payé. */
+/** Undo: `undone_at` + counter-entry of the exact amount paid. */
 export function undoCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 	const { c } = getCompletion(tx, actor, id);
 	const owner = tx.select().from(memberships).where(eq(memberships.userId, c.userId)).get();
 	if (!owner || !can(actor, "completion:undo", { userId: c.userId, userRole: owner.role })) {
-		throw errors.forbidden("Annulation non autorisée");
+		throw errors.forbidden("Undo not allowed");
 	}
-	if (c.undoneAt) throw errors.conflict("already_undone", "Cette validation est déjà annulée");
+	if (c.undoneAt) throw errors.conflict("already_undone", "This completion is already undone");
 
 	tx.update(completions).set({ undoneAt: now }).where(eq(completions.id, id)).run();
 	if (c.status === "approved" && c.ledgerEntryId) {
@@ -150,20 +150,19 @@ export function undoCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 }
 
 function pendingOnly(c: CompletionRow) {
-	if (c.status !== "pending" || c.undoneAt)
-		throw errors.conflict("not_pending", "Cette validation n'est pas en attente");
+	if (c.status !== "pending" || c.undoneAt) throw errors.conflict("not_pending", "This completion is not pending");
 }
 
 export function approveCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 	const { c, i } = getCompletion(tx, actor, id);
-	if (!can(actor, "completion:approve", { userId: c.userId })) throw errors.forbidden("Approbation non autorisée");
+	if (!can(actor, "completion:approve", { userId: c.userId })) throw errors.forbidden("Approval not allowed");
 	pendingOnly(c);
 
 	let ledgerEntryId: string | null = null;
 	if (i.reward > 0) {
 		ledgerEntryId = addEntry(tx, {
 			householdId: actor.householdId,
-			// La récompense va au porte-monnaie de celui qui a validé, pas de l'approbateur.
+			// The reward goes to the wallet of the person who completed it, not the approver.
 			walletId: walletFor(tx, actor.householdId, i.creditsTo, c.userId),
 			amount: i.reward,
 			reason: "completion",
@@ -181,15 +180,15 @@ export function approveCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date
 
 export function rejectCompletion(tx: Tx, actor: ActorCtx, id: string) {
 	const { c } = getCompletion(tx, actor, id);
-	if (!can(actor, "completion:approve", { userId: c.userId })) throw errors.forbidden("Refus non autorisé");
+	if (!can(actor, "completion:approve", { userId: c.userId })) throw errors.forbidden("Rejection not allowed");
 	pendingOnly(c);
 	tx.update(completions).set({ status: "rejected", approvedBy: actor.userId }).where(eq(completions.id, id)).run();
 	return result(tx, actor, tx.select().from(completions).where(eq(completions.id, id)).get() as CompletionRow);
 }
 
-/** Validations en attente d'un accord, pour le foyer de l'acteur. */
+/** Completions waiting for approval, for the actor's household. */
 export function listPending(db: DbOrTx, actor: ActorCtx): CompletionView[] {
-	if (!can(actor, "completion:review")) throw errors.forbidden("Réservé aux adultes");
+	if (!can(actor, "completion:review")) throw errors.forbidden("Adults only");
 	return db
 		.select({ c: completions })
 		.from(completions)

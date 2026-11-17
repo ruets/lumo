@@ -24,8 +24,8 @@ afterEach(async () => {
 const complete = (who: { api: Api }, itemId: string, body: object = {}) =>
 	who.api.post(`/items/${itemId}/completions`, body);
 
-describe("valider : les pièces sont calculées par le serveur, dans la même transaction", () => {
-	it("crédite la récompense dans le porte-monnaie perso et écrit au journal", async () => {
+describe("complete: coins are computed by the server, in the same transaction", () => {
+	it("credits the reward to the personal wallet and writes to the ledger", async () => {
 		const item = await makeHabit(h.owner, { reward: 5 });
 		const res = await complete(h.owner, item.id);
 		expect(res.statusCode).toBe(201);
@@ -48,34 +48,34 @@ describe("valider : les pièces sont calculées par le serveur, dans la même tr
 		expect(await balances(h.owner)).toEqual({ personal: 5, shared: 0 });
 	});
 
-	it("l'historique nomme l'habitude, l'annulation et l'envie échangée", async () => {
-		const item = await makeHabit(h.owner, { name: "Lire", reward: 5 });
+	it("the history names the habit, the undo and the redeemed wish", async () => {
+		const item = await makeHabit(h.owner, { name: "Read", reward: 5 });
 		const done = await complete(h.owner, item.id);
 		await h.owner.api.del(`/completions/${done.json().completion.id}`);
 		await complete(h.owner, item.id);
-		const reward = (await h.owner.api.post("/rewards", { name: "Ciné", cost: 3 })).json();
+		const reward = (await h.owner.api.post("/rewards", { name: "Cinema", cost: 3 })).json();
 		await h.owner.api.post(`/rewards/${reward.id}/redemptions`);
 		const labels = (await h.owner.api.get("/ledger")).json().entries.map((e: { label: string | null }) => e.label);
-		// Horloge figée : l'ordre entre écritures simultanées n'est pas défini, on compare sans l'ordre.
-		expect([...labels].sort()).toEqual(["Ciné", "Lire", "Lire", "Lire"]);
+		// Frozen clock: the order between simultaneous entries is undefined, so we compare without order.
+		expect([...labels].sort()).toEqual(["Cinema", "Read", "Read", "Read"]);
 	});
 
-	it("refuse tout montant envoyé par le client", async () => {
+	it("rejects any amount sent by the client", async () => {
 		const item = await makeHabit(h.owner, { reward: 5 });
 		const res = await complete(h.owner, item.id, { amount: 1000 });
 		expect(res.statusCode).toBe(400);
 		expect(ctx.db.select().from(ledgerEntries).all()).toHaveLength(0);
 	});
 
-	it("crédite la cagnotte quand l'élément le demande", async () => {
+	it("credits the pot when the item asks for it", async () => {
 		const item = await makeHabit(h.owner, { reward: 3, creditsTo: "shared" });
 		await complete(h.owner, item.id);
 		expect(await balances(h.owner)).toEqual({ personal: 0, shared: 3 });
-		// la cagnotte est visible par tout le foyer
+		// the pot is visible to the whole household
 		expect((await balances(h.kid)).shared).toBe(3);
 	});
 
-	it("objectif par jour : 3 validations paient chacune, la 4e est refusée (409 target_reached)", async () => {
+	it("daily goal: 3 completions each pay, the 4th is rejected (409 target_reached)", async () => {
 		const item = await makeHabit(h.owner, { reward: 2, targetPerPeriod: 3 });
 		for (let i = 0; i < 3; i++) expect((await complete(h.owner, item.id)).statusCode).toBe(201);
 		const fourth = await complete(h.owner, item.id);
@@ -84,54 +84,54 @@ describe("valider : les pièces sont calculées par le serveur, dans la même tr
 		expect((await balances(h.owner)).personal).toBe(6);
 	});
 
-	it("une récompense nulle valide sans écriture", async () => {
+	it("a zero reward completes without an entry", async () => {
 		const item = await makeHabit(h.owner, { reward: 0 });
 		expect((await complete(h.owner, item.id)).statusCode).toBe(201);
 		expect(ctx.db.select().from(ledgerEntries).all()).toHaveLength(0);
 	});
 
-	it("on ne valide que ses propres éléments", async () => {
+	it("you only complete your own items", async () => {
 		const forKid = await makeHabit(h.adult, { assigneeIds: [h.kid.userId] });
 		const res = await complete(h.owner, forKid.id);
 		expect(res.statusCode).toBe(403);
 		expect((await complete(h.kid, forKid.id)).statusCode).toBe(201);
 	});
 
-	it("un élément archivé ou inconnu ne se valide pas", async () => {
+	it("an archived or unknown item cannot be completed", async () => {
 		const item = await makeHabit(h.owner);
 		await h.owner.api.del(`/items/${item.id}`);
 		expect((await complete(h.owner, item.id)).statusCode).toBe(404);
 		expect((await complete(h.owner, "inconnu")).statusCode).toBe(404);
 	});
 
-	it("habitude à jours fixes : refusée un jour non dû (409 not_due)", async () => {
-		const item = await makeHabit(h.owner, { schedule: { type: "weekly", days: [1, 3, 5] } }); // mardi 17 : pas dû
+	it("fixed-day habit: rejected on a non-due day (409 not_due)", async () => {
+		const item = await makeHabit(h.owner, { schedule: { type: "weekly", days: [1, 3, 5] } }); // Tuesday the 17th: not due
 		const res = await complete(h.owner, item.id);
 		expect(res.statusCode).toBe(409);
 		expect(res.json().code).toBe("not_due");
 	});
 
-	it("tâche ponctuelle : une seule validation, quelle que soit la date", async () => {
-		const task = await h.owner.api.post("/items", { kind: "task", name: "Poster le colis", reward: 4 });
+	it("one-off task: a single completion, whatever the date", async () => {
+		const task = await h.owner.api.post("/items", { kind: "task", name: "Post the parcel", reward: 4 });
 		expect((await complete(h.owner, task.json().id)).statusCode).toBe(201);
 		expect((await complete(h.owner, task.json().id, { date: "2026-11-16" })).json().code).toBe("target_reached");
 	});
 
-	it("la journée est celle du foyer (fuseau Europe/Paris), pas l'UTC", async () => {
-		ctx.clock.now = new Date("2026-11-17T23:30:00Z"); // 00:30 le 18 à Paris
+	it("the day is the household's (Europe/Paris time zone), not UTC", async () => {
+		ctx.clock.now = new Date("2026-11-17T23:30:00Z"); // 00:30 on the 18th in Paris
 		const item = await makeHabit(h.owner);
 		expect((await complete(h.owner, item.id)).json().completion.localDate).toBe("2026-11-18");
 	});
 });
 
-describe("jours passés", () => {
-	it("hier et avant-hier passent pour tous (fenêtre par défaut : 2 jours)", async () => {
+describe("past days", () => {
+	it("yesterday and the day before pass for everyone (default window: 2 days)", async () => {
 		const item = await makeHabit(h.adult);
 		expect((await complete(h.adult, item.id, { date: "2026-11-16" })).statusCode).toBe(201);
 		expect((await complete(h.adult, item.id, { date: "2026-11-15" })).statusCode).toBe(201);
 	});
 
-	it("au-delà de la fenêtre : refusé à un adulte, permis à un owner", async () => {
+	it("beyond the window: rejected for an adult, allowed for an owner", async () => {
 		const mine = await makeHabit(h.adult);
 		const res = await complete(h.adult, mine.id, { date: "2026-11-10" });
 		expect(res.statusCode).toBe(403);
@@ -141,7 +141,7 @@ describe("jours passés", () => {
 		expect((await complete(h.owner, ownerItem.id, { date: "2026-11-10" })).statusCode).toBe(201);
 	});
 
-	it("jamais dans le futur", async () => {
+	it("never in the future", async () => {
 		const item = await makeHabit(h.owner);
 		const res = await complete(h.owner, item.id, { date: "2026-11-18" });
 		expect(res.statusCode).toBe(400);
@@ -149,8 +149,8 @@ describe("jours passés", () => {
 	});
 });
 
-describe("annuler", () => {
-	it("pose undone_at et écrit une contre-écriture (le journal n'est jamais modifié)", async () => {
+describe("undo", () => {
+	it("sets undone_at and writes a counter-entry (the ledger is never modified)", async () => {
 		const item = await makeHabit(h.owner, { reward: 5 });
 		const done = (await complete(h.owner, item.id)).json().completion;
 		const res = await h.owner.api.del(`/completions/${done.id}`);
@@ -164,7 +164,7 @@ describe("annuler", () => {
 		]);
 	});
 
-	it("libère la place : on peut revalider après annulation", async () => {
+	it("frees the slot: you can complete again after an undo", async () => {
 		const item = await makeHabit(h.owner, { reward: 5 });
 		const done = (await complete(h.owner, item.id)).json().completion;
 		await h.owner.api.del(`/completions/${done.id}`);
@@ -172,7 +172,7 @@ describe("annuler", () => {
 		expect((await balances(h.owner)).personal).toBe(5);
 	});
 
-	it("rembourse le montant exact payé, même si la récompense a changé depuis", async () => {
+	it("refunds the exact amount paid, even if the reward changed since", async () => {
 		const item = await makeHabit(h.owner, { reward: 5 });
 		const done = (await complete(h.owner, item.id)).json().completion;
 		await h.owner.api.patch(`/items/${item.id}`, { reward: 50 });
@@ -180,7 +180,7 @@ describe("annuler", () => {
 		expect((await balances(h.owner)).personal).toBe(0);
 	});
 
-	it("deux annulations : la seconde est refusée (409)", async () => {
+	it("two undos: the second is rejected (409)", async () => {
 		const item = await makeHabit(h.owner);
 		const done = (await complete(h.owner, item.id)).json().completion;
 		await h.owner.api.del(`/completions/${done.id}`);
@@ -189,7 +189,7 @@ describe("annuler", () => {
 		expect(again.json().code).toBe("already_undone");
 	});
 
-	it("droits : un enfant n'annule pas la complétion d'un adulte ; un adulte annule celle d'un enfant", async () => {
+	it("rights: a child cannot undo an adult's completion; an adult can undo a child's", async () => {
 		const adultItem = await makeHabit(h.adult);
 		const adultDone = (await complete(h.adult, adultItem.id)).json().completion;
 		expect((await h.kid.api.del(`/completions/${adultDone.id}`)).statusCode).toBe(403);
@@ -200,30 +200,30 @@ describe("annuler", () => {
 	});
 });
 
-describe("accord d'un adulte", () => {
+describe("adult approval", () => {
 	let item: { id: string };
 	beforeEach(async () => {
 		item = await makeHabit(h.adult, { reward: 5, requiresApproval: true, assigneeIds: [h.kid.userId, h.adult.userId] });
 	});
 
-	it("enfant : complétion en attente, aucune écriture, aucun solde", async () => {
+	it("child: pending completion, no entry, no balance", async () => {
 		const res = await complete(h.kid, item.id);
 		expect(res.json().completion.status).toBe("pending");
 		expect(ctx.db.select().from(ledgerEntries).all()).toHaveLength(0);
 		expect(await balances(h.kid)).toEqual({ personal: 0, shared: 0 });
 	});
 
-	it("un adulte sur le même élément est crédité tout de suite", async () => {
+	it("an adult on the same item is credited right away", async () => {
 		expect((await complete(h.adult, item.id)).json().completion.status).toBe("approved");
 		expect((await balances(h.adult)).personal).toBe(5);
 	});
 
-	it("l'attente compte pour l'objectif : pas de double envoi", async () => {
+	it("waiting counts toward the goal: no double submission", async () => {
 		await complete(h.kid, item.id);
 		expect((await complete(h.kid, item.id)).json().code).toBe("target_reached");
 	});
 
-	it("approuver crée l'écriture dans le porte-monnaie de l'enfant", async () => {
+	it("approving creates the entry in the child's wallet", async () => {
 		const pending = (await complete(h.kid, item.id)).json().completion;
 		const res = await h.adult.api.post(`/completions/${pending.id}/approve`);
 		expect(res.statusCode).toBe(200);
@@ -233,7 +233,7 @@ describe("accord d'un adulte", () => {
 		expect(entry).toMatchObject({ amount: 5, reason: "completion", createdBy: h.adult.userId });
 	});
 
-	it("rejeter ne crédite rien", async () => {
+	it("rejecting credits nothing", async () => {
 		const pending = (await complete(h.kid, item.id)).json().completion;
 		const res = await h.adult.api.post(`/completions/${pending.id}/reject`);
 		expect(res.json().completion.status).toBe("rejected");
@@ -241,7 +241,7 @@ describe("accord d'un adulte", () => {
 		expect(ctx.db.select().from(ledgerEntries).all()).toHaveLength(0);
 	});
 
-	it("approuver deux fois est refusé (409 not_pending), pas de double crédit", async () => {
+	it("approving twice is rejected (409 not_pending), no double credit", async () => {
 		const pending = (await complete(h.kid, item.id)).json().completion;
 		await h.adult.api.post(`/completions/${pending.id}/approve`);
 		const again = await h.adult.api.post(`/completions/${pending.id}/approve`);
@@ -250,27 +250,27 @@ describe("accord d'un adulte", () => {
 		expect((await balances(h.kid)).personal).toBe(5);
 	});
 
-	it("un enfant n'approuve pas, ni sa propre complétion", async () => {
+	it("a child cannot approve, not even their own completion", async () => {
 		const pending = (await complete(h.kid, item.id)).json().completion;
 		expect((await h.kid.api.post(`/completions/${pending.id}/approve`)).statusCode).toBe(403);
 	});
 
-	it("les complétions en attente se listent (adultes), et un adulte n'approuve pas la sienne", async () => {
+	it("pending completions can be listed (adults), and an adult cannot approve their own", async () => {
 		const pending = (await complete(h.kid, item.id)).json().completion;
 		const list = (await h.adult.api.get("/completions?status=pending")).json().completions;
 		expect(list.map((c: { id: string }) => c.id)).toEqual([pending.id]);
 		expect((await h.kid.api.get("/completions?status=pending")).statusCode).toBe(403);
 	});
 
-	it("annuler une complétion en attente ne touche pas au journal", async () => {
+	it("undoing a pending completion does not touch the ledger", async () => {
 		const pending = (await complete(h.kid, item.id)).json().completion;
 		expect((await h.kid.api.del(`/completions/${pending.id}`)).statusCode).toBe(200);
 		expect(ctx.db.select().from(ledgerEntries).all()).toHaveLength(0);
 	});
 });
 
-describe("idempotence", () => {
-	it("un doublon (même clé) renvoie la même réponse sans second crédit", async () => {
+describe("idempotency", () => {
+	it("a duplicate (same key) returns the same response without a second credit", async () => {
 		const item = await makeHabit(h.owner, { reward: 5 });
 		const key = { "idempotency-key": "11111111-1111-4111-8111-111111111111" };
 		const first = await h.owner.api.post(`/items/${item.id}/completions`, {}, key);
@@ -283,15 +283,15 @@ describe("idempotence", () => {
 		expect(ctx.db.select().from(ledgerEntries).all()).toHaveLength(1);
 	});
 
-	it("une erreur n'est pas mémorisée : on peut réessayer avec la même clé", async () => {
+	it("an error is not stored: you can retry with the same key", async () => {
 		const item = await makeHabit(h.owner, { reward: 5, schedule: { type: "weekly", days: [1] } });
 		const key = { "idempotency-key": "22222222-2222-4222-8222-222222222222" };
 		expect((await h.owner.api.post(`/items/${item.id}/completions`, {}, key)).statusCode).toBe(409);
-		ctx.clock.now = new Date("2026-11-16T10:00:00Z"); // lundi : devient dû
+		ctx.clock.now = new Date("2026-11-16T10:00:00Z"); // Monday: becomes due
 		expect((await h.owner.api.post(`/items/${item.id}/completions`, {}, key)).statusCode).toBe(201);
 	});
 
-	it("la clé est propre à chaque utilisateur", async () => {
+	it("the key is specific to each user", async () => {
 		const mine = await makeHabit(h.owner, { assigneeIds: [h.owner.userId, h.adult.userId] });
 		const key = { "idempotency-key": "33333333-3333-4333-8333-333333333333" };
 		expect((await h.owner.api.post(`/items/${mine.id}/completions`, {}, key)).statusCode).toBe(201);
@@ -301,12 +301,12 @@ describe("idempotence", () => {
 	});
 });
 
-describe("virements perso → cagnotte", () => {
+describe("personal → pot transfers", () => {
 	beforeEach(async () => {
 		await complete(h.kid, (await makeHabit(h.adult, { reward: 5, assigneeIds: [h.kid.userId] })).id);
 	});
 
-	it("deux écritures opposées liées par le même transfer_id, dans la même transaction", async () => {
+	it("two opposite entries linked by the same transfer_id, in the same transaction", async () => {
 		const res = await h.kid.api.post("/transfers", { amount: 3 });
 		expect(res.statusCode).toBe(201);
 		expect(res.json().balances).toEqual({ personal: 2, shared: 3 });
@@ -317,14 +317,14 @@ describe("virements perso → cagnotte", () => {
 		expect(entries[0]?.transferId).toBe(res.json().transferId);
 	});
 
-	it("solde insuffisant : 409, rien n'est écrit", async () => {
+	it("insufficient balance: 409, nothing is written", async () => {
 		const res = await h.kid.api.post("/transfers", { amount: 6 });
 		expect(res.statusCode).toBe(409);
 		expect(res.json().code).toBe("insufficient_balance");
 		expect(ctx.db.select().from(ledgerEntries).where(eq(ledgerEntries.reason, "transfer")).all()).toHaveLength(0);
 	});
 
-	it("autorise de tout virer ; refuse 0, négatif, décimal", async () => {
+	it("allows transferring everything; rejects 0, negative, decimal", async () => {
 		expect((await h.kid.api.post("/transfers", { amount: 5 })).statusCode).toBe(201);
 		for (const amount of [0, -2, 1.5]) {
 			expect((await h.kid.api.post("/transfers", { amount })).statusCode).toBe(400);
@@ -332,21 +332,21 @@ describe("virements perso → cagnotte", () => {
 	});
 });
 
-describe("envies et échanges", () => {
+describe("wishes and redemptions", () => {
 	const makeReward = (by: { api: Api }, over: object = {}) =>
-		by.api.post("/rewards", { name: "Cinéma", cost: 4, fundedFrom: "personal", ...over });
+		by.api.post("/rewards", { name: "Cinema", cost: 4, fundedFrom: "personal", ...over });
 
 	beforeEach(async () => {
 		const item = await makeHabit(h.adult, { reward: 5, assigneeIds: [h.kid.userId] });
 		await complete(h.kid, item.id);
 	});
 
-	it("seuls owner et adulte créent des envies", async () => {
+	it("only owner and adults create wishes", async () => {
 		expect((await makeReward(h.kid)).statusCode).toBe(403);
-		const res = await makeReward(h.adult, { description: "Soirée film", link: "https://example.org/film" });
+		const res = await makeReward(h.adult, { description: "Movie night", link: "https://example.org/film" });
 		expect(res.statusCode).toBe(201);
 		expect(res.json()).toMatchObject({
-			name: "Cinéma",
+			name: "Cinema",
 			cost: 4,
 			fundedFrom: "personal",
 			limitCount: null,
@@ -354,13 +354,13 @@ describe("envies et échanges", () => {
 		});
 	});
 
-	it("exige un prix d'au moins 1 pièce et une limite cohérente", async () => {
+	it("requires a price of at least 1 coin and a consistent limit", async () => {
 		expect((await makeReward(h.adult, { cost: 0 })).statusCode).toBe(400);
 		expect((await makeReward(h.adult, { limitCount: 2 })).statusCode).toBe(400);
 		expect((await makeReward(h.adult, { limitCount: 2, limitPeriod: "week" })).statusCode).toBe(201);
 	});
 
-	it("échanger débite le prix et enregistre l'échange avec son écriture", async () => {
+	it("redeeming debits the price and records the redemption with its entry", async () => {
 		const reward = (await makeReward(h.adult)).json();
 		const res = await h.kid.api.post(`/rewards/${reward.id}/redemptions`);
 		expect(res.statusCode).toBe(201);
@@ -374,14 +374,14 @@ describe("envies et échanges", () => {
 		expect(entry).toMatchObject({ amount: -4, reason: "redemption", refId: redemption?.id });
 	});
 
-	it("solde insuffisant : 409 insufficient_balance", async () => {
+	it("insufficient balance: 409 insufficient_balance", async () => {
 		const reward = (await makeReward(h.adult, { cost: 6 })).json();
 		const res = await h.kid.api.post(`/rewards/${reward.id}/redemptions`);
 		expect(res.statusCode).toBe(409);
 		expect(res.json().code).toBe("insufficient_balance");
 	});
 
-	it("limite d'usage par période : 1 par semaine, puis de nouveau possible la semaine suivante", async () => {
+	it("per-period usage limit: 1 per week, then possible again the following week", async () => {
 		await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 20, note: "bonus" });
 		const reward = (await makeReward(h.adult, { cost: 1, limitCount: 1, limitPeriod: "week" })).json();
 		const remaining = async () =>
@@ -392,12 +392,12 @@ describe("envies et échanges", () => {
 		const second = await h.kid.api.post(`/rewards/${reward.id}/redemptions`);
 		expect(second.statusCode).toBe(409);
 		expect(second.json().code).toBe("limit_reached");
-		ctx.clock.now = new Date("2026-11-24T10:00:00Z"); // semaine suivante
+		ctx.clock.now = new Date("2026-11-24T10:00:00Z"); // the following week
 		expect(await remaining()).toBe(1);
 		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).statusCode).toBe(201);
 	});
 
-	it("envie financée par la cagnotte : réservée aux adultes, débite la cagnotte", async () => {
+	it("wish funded by the pot: adults only, debits the pot", async () => {
 		await h.kid.api.post("/transfers", { amount: 5 });
 		const reward = (await makeReward(h.adult, { cost: 3, fundedFrom: "shared" })).json();
 		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).statusCode).toBe(403);
@@ -406,28 +406,28 @@ describe("envies et échanges", () => {
 		expect(res.json().balances.shared).toBe(2);
 	});
 
-	it("envie réservée à certains membres", async () => {
+	it("wish reserved for some members", async () => {
 		const reward = (await makeReward(h.adult, { assigneeIds: [h.adult.userId] })).json();
 		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).statusCode).toBe(403);
 	});
 
-	it("envie archivée : plus échangeable, et absente de la liste", async () => {
+	it("archived wish: no longer redeemable, and absent from the list", async () => {
 		const reward = (await makeReward(h.adult)).json();
 		await h.adult.api.patch(`/rewards/${reward.id}`, { archived: true });
 		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).statusCode).toBe(404);
 		expect((await h.kid.api.get("/rewards")).json().rewards).toHaveLength(0);
 	});
 
-	it("modifier une envie : adultes seulement", async () => {
+	it("updating a wish: adults only", async () => {
 		const reward = (await makeReward(h.adult)).json();
 		expect((await h.kid.api.patch(`/rewards/${reward.id}`, { cost: 1 })).statusCode).toBe(403);
 		expect((await h.adult.api.patch(`/rewards/${reward.id}`, { cost: 9 })).json().cost).toBe(9);
 	});
 });
 
-describe("annuler un échange d'envie", () => {
+describe("undoing a wish redemption", () => {
 	const makeReward = (over: object = {}) =>
-		h.adult.api.post("/rewards", { name: "Cinéma", cost: 4, fundedFrom: "personal", ...over });
+		h.adult.api.post("/rewards", { name: "Cinema", cost: 4, fundedFrom: "personal", ...over });
 	const redeem = async (by: { api: Api }, rewardId: string) =>
 		(await by.api.post(`/rewards/${rewardId}/redemptions`)).json().redemption.id as string;
 
@@ -436,7 +436,7 @@ describe("annuler un échange d'envie", () => {
 		await complete(h.kid, item.id);
 	});
 
-	it("rembourse le montant exact par une contre-écriture, sans toucher au journal existant", async () => {
+	it("refunds the exact amount by a counter-entry, without touching the existing ledger", async () => {
 		const reward = (await makeReward()).json();
 		const id = await redeem(h.kid, reward.id);
 		expect(await balances(h.kid)).toEqual({ personal: 6, shared: 0 });
@@ -452,7 +452,7 @@ describe("annuler un échange d'envie", () => {
 		expect(after.find((e) => e.reason === "undo")).toMatchObject({ amount: 4, refId: id, createdBy: h.kid.userId });
 	});
 
-	it("deux annulations simultanées : un seul remboursement", async () => {
+	it("two simultaneous undos: a single refund", async () => {
 		const reward = (await makeReward()).json();
 		const id = await redeem(h.kid, reward.id);
 		const [a, b] = await Promise.all([h.kid.api.del(`/redemptions/${id}`), h.kid.api.del(`/redemptions/${id}`)]);
@@ -460,14 +460,14 @@ describe("annuler un échange d'envie", () => {
 		expect(await balances(h.kid)).toEqual({ personal: 10, shared: 0 });
 	});
 
-	it("rembourse ce qui a été payé, même si le prix a changé depuis", async () => {
+	it("refunds what was paid, even if the price changed since", async () => {
 		const reward = (await makeReward()).json();
 		const id = await redeem(h.kid, reward.id);
 		await h.adult.api.patch(`/rewards/${reward.id}`, { cost: 9 });
 		expect((await h.kid.api.del(`/redemptions/${id}`)).json().balances.personal).toBe(10);
 	});
 
-	it("une seconde annulation est refusée (409), pas de double remboursement", async () => {
+	it("a second undo is rejected (409), no double refund", async () => {
 		const reward = (await makeReward()).json();
 		const id = await redeem(h.kid, reward.id);
 		await h.kid.api.del(`/redemptions/${id}`);
@@ -477,7 +477,7 @@ describe("annuler un échange d'envie", () => {
 		expect(await balances(h.kid)).toEqual({ personal: 10, shared: 0 });
 	});
 
-	it("libère la limite d'usage : on peut de nouveau échanger", async () => {
+	it("frees the usage limit: you can redeem again", async () => {
 		const reward = (await makeReward({ cost: 1, limitCount: 1, limitPeriod: "week" })).json();
 		const id = await redeem(h.kid, reward.id);
 		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).json().code).toBe("limit_reached");
@@ -487,7 +487,7 @@ describe("annuler un échange d'envie", () => {
 		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).statusCode).toBe(201);
 	});
 
-	it("envie financée par la cagnotte : rembourse la cagnotte", async () => {
+	it("wish funded by the pot: refunds the pot", async () => {
 		await h.kid.api.post("/transfers", { amount: 6 });
 		const reward = (await makeReward({ cost: 5, fundedFrom: "shared" })).json();
 		const id = await redeem(h.adult, reward.id);
@@ -495,7 +495,7 @@ describe("annuler un échange d'envie", () => {
 		expect((await h.adult.api.del(`/redemptions/${id}`)).json().balances.shared).toBe(6);
 	});
 
-	it("droits : un enfant n'annule pas l'échange d'un adulte ; un adulte annule celui d'un enfant", async () => {
+	it("rights: a child cannot undo an adult's redemption; an adult can undo a child's", async () => {
 		await h.owner.api.post("/ledger/adjustments", { userId: h.adult.userId, amount: 20, note: "test" });
 		const cheap = (await makeReward({ cost: 1 })).json();
 		const adults = await redeem(h.adult, cheap.id);
@@ -508,27 +508,30 @@ describe("annuler un échange d'envie", () => {
 		expect((await h.kid.api.del("/redemptions/inconnu")).statusCode).toBe(404);
 	});
 
-	it("l'historique nomme l'envie sur la ligne de remboursement", async () => {
-		const reward = (await makeReward({ name: "Glace" })).json();
+	it("the history names the wish on the refund line", async () => {
+		const reward = (await makeReward({ name: "Ice cream" })).json();
 		const id = await redeem(h.kid, reward.id);
 		await h.kid.api.del(`/redemptions/${id}`);
 		const entries = (await h.kid.api.get("/ledger")).json().entries;
-		expect(entries.find((e: { reason: string }) => e.reason === "undo")).toMatchObject({ label: "Glace", amount: 4 });
+		expect(entries.find((e: { reason: string }) => e.reason === "undo")).toMatchObject({
+			label: "Ice cream",
+			amount: 4,
+		});
 	});
 });
 
-describe("journal et ajustements", () => {
-	it("ajustement manuel : owner seulement, note obligatoire, positif ou négatif", async () => {
+describe("ledger and adjustments", () => {
+	it("manual adjustment: owner only, note required, positive or negative", async () => {
 		const ok = await h.owner.api.post("/ledger/adjustments", {
 			userId: h.kid.userId,
 			amount: 10,
-			note: "Récompense exceptionnelle",
+			note: "Exceptional reward",
 		});
 		expect(ok.statusCode).toBe(201);
 		expect(ok.json().entry).toMatchObject({
 			amount: 10,
 			reason: "adjustment",
-			note: "Récompense exceptionnelle",
+			note: "Exceptional reward",
 			createdBy: h.owner.userId,
 		});
 		expect((await balances(h.kid)).personal).toBe(10);
@@ -551,12 +554,12 @@ describe("journal et ajustements", () => {
 		).toBe(400);
 	});
 
-	it("ajuste la cagnotte avec userId null", async () => {
+	it("adjusts the pot with a null userId", async () => {
 		await h.owner.api.post("/ledger/adjustments", { userId: null, amount: 7, note: "Don" });
 		expect((await balances(h.kid)).shared).toBe(7);
 	});
 
-	it("historique paginé par curseur, du plus récent au plus ancien, sans doublon ni trou", async () => {
+	it("cursor-paginated history, newest first, no duplicate or gap", async () => {
 		for (let i = 1; i <= 5; i++) {
 			ctx.clock.now = new Date(ctx.clock.now.getTime() + 1000);
 			await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: i, note: `n${i}` });
@@ -577,7 +580,7 @@ describe("journal et ajustements", () => {
 		expect(pages).toBe(3);
 	});
 
-	it("chacun ne lit que son porte-monnaie et la cagnotte ; le solde est la somme du journal", async () => {
+	it("everyone only reads their own wallet and the pot; the balance is the sum of the ledger", async () => {
 		await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 8, note: "a" });
 		await h.owner.api.post("/ledger/adjustments", { userId: h.owner.userId, amount: 3, note: "b" });
 		const mine = (await h.kid.api.get("/ledger?wallet=personal")).json();
