@@ -1,0 +1,97 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import type { MeResponse, RewardList } from "@lumo/api-client";
+import { t } from "@lumo/i18n";
+import { useState } from "react";
+import { RewardDialog } from "../components/forms";
+import { AddButton, Bar, CoinIcon, PageTitle } from "../components/ui";
+import { useRedeem, useRewards, useToday } from "../lib/hooks";
+
+type Reward = RewardList[number];
+
+function meta(r: Reward): string {
+	if (r.limitCount === null || r.limitPeriod === null)
+		return r.link ? r.link.replace(/^https?:\/\//, "") : t("wishes.unlimited");
+	const period = t(`wishes.period.${r.limitPeriod}` as const);
+	return (r.remaining ?? 0) > 0
+		? t("wishes.limitLeft", { count: r.remaining ?? 0, period })
+		: t("wishes.limitNone", { period });
+}
+
+export function WishesPage({ me }: { me: MeResponse }) {
+	const rewards = useRewards();
+	const redeem = useRedeem();
+	const today = useToday();
+	const [creating, setCreating] = useState(false);
+	const [last, setLast] = useState<Reward | null>(null);
+	const balance = me.wallets.personal.balance;
+	const earnedToday = (today.data?.items ?? []).reduce((s, e) => s + e.item.reward * e.approved, 0);
+
+	return (
+		<div className="grid gap-5">
+			<PageTitle>{t("wishes.title")}</PageTitle>
+
+			<section className="flex items-center justify-between rounded-[26px] bg-primary p-5 text-white">
+				<div className="grid gap-1.5">
+					<p className="m-0 text-[13px] font-bold uppercase tracking-widest">{t("wishes.balance")}</p>
+					<p className="m-0 flex items-center gap-2.5 font-display text-[34px] font-bold">
+						<CoinIcon size={30} />
+						{balance}
+					</p>
+					<p aria-live="polite" className="m-0 text-sm font-semibold">
+						{last
+							? t("wishes.redeemed", { name: last.name.toLowerCase(), cost: last.cost })
+							: t("today.earned", { amount: earnedToday })}
+					</p>
+				</div>
+				<p className="m-0 text-sm font-semibold">{t("wishes.sharedBalance", { amount: me.wallets.shared.balance })}</p>
+			</section>
+
+			{rewards.data?.rewards.length === 0 && <p className="m-0 text-muted">{t("wishes.empty")}</p>}
+			<ul className="m-0 grid list-none gap-2.5 p-0 md:grid-cols-2">
+				{rewards.data?.rewards.map((r) => {
+					const wallet = r.fundedFrom === "shared" ? me.wallets.shared.balance : balance;
+					const exhausted = r.limitCount !== null && (r.remaining ?? 0) <= 0;
+					const canBuy = wallet >= r.cost && !exhausted;
+					return (
+						<li key={r.id} className="grid gap-2.5 rounded-[20px] bg-surface px-4 py-3.5">
+							<div className="flex items-center justify-between gap-3">
+								<span className="grid gap-[3px]">
+									<span className="text-base font-bold">{r.name}</span>
+									<span className="text-[13px] text-muted">{meta(r)}</span>
+								</span>
+								{canBuy ? (
+									<button
+										type="button"
+										aria-label={t("wishes.redeem", { name: r.name, cost: r.cost })}
+										disabled={redeem.isPending}
+										onClick={() => redeem.mutate(r.id, { onSuccess: () => setLast(r) })}
+										className="flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-coin px-4 font-body text-sm font-bold text-bg"
+									>
+										<CoinIcon size={16} />
+										{r.cost}
+									</button>
+								) : (
+									<span className="flex shrink-0 items-center gap-1.5 px-1 text-sm font-bold text-soft">
+										<CoinIcon size={16} />
+										{r.cost}
+									</span>
+								)}
+							</div>
+							{!canBuy && (
+								<div className="grid gap-1.5">
+									<Bar pct={exhausted ? 100 : (100 * wallet) / r.cost} color="bg-primary-soft" />
+									<span className="text-[13px] text-muted">
+										{exhausted ? "Revient bientôt" : t("today.missing", { amount: r.cost - wallet })}
+									</span>
+								</div>
+							)}
+						</li>
+					);
+				})}
+			</ul>
+
+			<AddButton label={t("wishes.new")} onClick={() => setCreating(true)} />
+			{creating && <RewardDialog onClose={() => setCreating(false)} />}
+		</div>
+	);
+}
