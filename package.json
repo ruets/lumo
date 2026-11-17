@@ -1,0 +1,27 @@
+{
+	"name": "lumo",
+	"private": true,
+	"version": "0.0.0",
+	"license": "AGPL-3.0-or-later",
+	"description": "Suivi d'habitudes gamifié pour un foyer, self-hosted.",
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"build": "turbo run build",
+		"dev": "turbo run dev --parallel",
+		"typecheck": "turbo run typecheck",
+		"test": "turbo run test",
+		"lint": "biome check .",
+		"format": "biome format --write .",
+		"db:generate": "pnpm --filter @lumo/api db:generate"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.6.8",
+		"@types/node": "^22.20.5",
+		"turbo": "^2.11.11",
+		"typescript": "^7.0.2",
+		"vitest": "^5.1.0"
+	},
+	"packageManager": "pnpm@11.13.0"
+}

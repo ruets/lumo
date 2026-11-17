@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.turbo/
+*.tsbuildinfo
+coverage/
+
+# Données et secrets locaux
+.env
+.env.*
+!.env.example
+/data/
+*.db
+*.db-wal
+*.db-shm
+
+# Expo
+.expo/
+apps/mobile/android/
+apps/mobile/ios/
+
+.DS_Store
