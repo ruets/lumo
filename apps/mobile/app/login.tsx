@@ -16,17 +16,9 @@ import { Button, Field, font, T } from "../src/ui";
 
 WebBrowser.maybeCompleteAuthSession();
 
-export default function Login() {
+/** Bouton Authentik. Composant à part : les hooks OIDC exigent un issuer valide, on ne le monte que s'il est configuré. */
+function OidcButton({ onError }: { onError: (message: string) => void }) {
 	const qc = useQueryClient();
-	const config = useAuthConfig();
-	const [error, setError] = useState<string | null>(null);
-	const [username, setUsername] = useState("");
-	const [password, setPassword] = useState("");
-	const [displayName, setDisplayName] = useState("");
-	const [householdName, setHouseholdName] = useState("");
-
-	const done = () => qc.invalidateQueries({ queryKey: keys.me });
-
 	// Authorization Code + PKCE conduit par expo-auth-session ; l'API échange ensuite le code.
 	const discovery = useAutoDiscovery(OIDC_ISSUER);
 	const nonce = useMemo(() => randomUUID(), []);
@@ -56,8 +48,22 @@ export default function Login() {
 				await saveTokens(tokens);
 				await qc.invalidateQueries({ queryKey: keys.me });
 			})
-			.catch((err: unknown) => setError(describeError(err)));
-	}, [response, request, redirectUri, nonce, qc]);
+			.catch((err: unknown) => onError(describeError(err)));
+	}, [response, request, redirectUri, nonce, qc, onError]);
+
+	return <Button label={t("auth.oidc")} disabled={!request} onPress={() => void promptAsync()} />;
+}
+
+export default function Login() {
+	const qc = useQueryClient();
+	const config = useAuthConfig();
+	const [error, setError] = useState<string | null>(null);
+	const [username, setUsername] = useState("");
+	const [password, setPassword] = useState("");
+	const [displayName, setDisplayName] = useState("");
+	const [householdName, setHouseholdName] = useState("");
+
+	const done = () => qc.invalidateQueries({ queryKey: keys.me });
 
 	async function submit() {
 		setError(null);
@@ -83,9 +89,7 @@ export default function Login() {
 					<T style={{ fontFamily: font.displayBold, fontSize: 32 }}>{t("app.name")}</T>
 					{error && <T style={{ color: colors.danger, fontFamily: font.semi }}>{error}</T>}
 					{config.isPending && <ActivityIndicator color={colors.primaryLink} />}
-					{config.data?.oidc && OIDC_ISSUER !== "" && !config.data.setupRequired && (
-						<Button label={t("auth.oidc")} disabled={!request} onPress={() => void promptAsync()} />
-					)}
+					{config.data?.oidc && OIDC_ISSUER !== "" && !config.data.setupRequired && <OidcButton onError={setError} />}
 					{config.data?.local && (
 						<>
 							{config.data.setupRequired && (

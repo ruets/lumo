@@ -185,14 +185,14 @@ Droits vérifiés côté API par `can(actor, action, resource)` du paquet `domai
 
 Deux applis séparées (React pour le web, React Native/Expo pour le mobile). Elles partagent `domain`, `api-client`, `tokens` et `i18n`, pas les composants.
 
-|              | Web                            | Mobile                                              |
-| ------------ | ------------------------------ | --------------------------------------------------- |
-| Framework    | React 19 + Vite, SPA           | Expo, Expo Router                                   |
-| Navigation   | TanStack Router                | Onglets : Aujourd'hui, Habitudes, Progrès, Envies   |
-| Données      | TanStack Query + client généré | TanStack Query, cache persisté                      |
+|              | Web                            | Mobile                                                     |
+| ------------ | ------------------------------ | ---------------------------------------------------------- |
+| Framework    | React 19 + Vite, SPA           | Expo, Expo Router                                          |
+| Navigation   | TanStack Router                | Onglets : Aujourd'hui, Habitudes, Progrès, Envies          |
+| Données      | TanStack Query + client généré | TanStack Query, cache persisté                             |
 | Styles       | Tailwind v4 + tokens           | `StyleSheet` + tokens (NativeWind écarté, voir ci-dessous) |
-| Hors ligne   | PWA en lecture (à faire)       | File des validations rejouée avec `Idempotency-Key` |
-| Distribution | Servi par l'API                | APK Android via EAS Build (iOS plus tard)           |
+| Hors ligne   | PWA en lecture (à faire)       | File des validations rejouée avec `Idempotency-Key`        |
+| Distribution | Servi par l'API                | APK Android via EAS Build (iOS plus tard)                  |
 
 ### Implémentation (étape 3)
 
@@ -204,6 +204,7 @@ Maquette de référence : le canvas « Lumo — maquette de l'appli » (thème s
 - **Logique partagée** : `domain/progress` (`summarizeProgress` : barres, taux, tendance), `i18n/format` (dates en français, libellés de récurrence, messages d'erreur par code).
 
 **File hors ligne (mobile).** Valider passe toujours par la file : l'entrée (`itemId`, jour local, clé d'idempotence) est écrite dans AsyncStorage, affichée tout de suite par-dessus les données du serveur, puis envoyée dans l'ordre.
+
 - La clé d'idempotence est fixée à la création : un rejeu après une réponse perdue ne crédite jamais deux fois.
 - Le jour local est fixé à la saisie : une validation rejouée le lendemain garde son jour.
 - Coupure réseau, 5xx ou 401 : l'entrée reste et on s'arrête (l'ordre est conservé). Refus du serveur (objectif atteint, jour trop ancien…) : l'entrée est abandonnée avec un message, les suivantes continuent.
