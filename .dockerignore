@@ -1,0 +1,15 @@
+.git
+.github
+.claude
+**/node_modules
+**/dist
+**/.turbo
+**/.expo
+apps/mobile
+data
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
+docs
