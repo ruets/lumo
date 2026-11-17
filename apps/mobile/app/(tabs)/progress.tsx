@@ -5,13 +5,18 @@ import { dayNumber, shortDate, t, weekdayShort } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
-import { statsWindow, useLedger, useMe, useStats, useToday } from "../../src/hooks";
+import { Alert, Pressable, View } from "react-native";
+import { statsWindow, useLedger, useMe, useStats, useToday, useUndoRedemption } from "../../src/hooks";
 import { useRefresh } from "../../src/refresh";
+import { showToast } from "../../src/store";
 import { font, Screen, Segmented, T, Title } from "../../src/ui";
 
 function entryLabel(e: LedgerEntry): string {
-	if (e.label) return e.reason === "undo" ? `${t("ledger.undo")} · ${e.label}` : e.label;
+	if (e.label) {
+		if (e.reason !== "undo") return e.label;
+		// Le remboursement d'un échange est positif ; l'annulation d'une validation est négative.
+		return `${e.amount > 0 ? t("ledger.undoRedemption") : t("ledger.undo")} · ${e.label}`;
+	}
 	if (e.note) return e.note;
 	return t(`ledger.${e.reason}` as const);
 }
@@ -24,6 +29,7 @@ export default function ProgressScreen() {
 	const win = now.data ? statsWindow(now.data.date) : undefined;
 	const stats = useStats(win?.from, win?.to);
 	const ledger = useLedger();
+	const undoRedemption = useUndoRedemption();
 	const refresh = useRefresh();
 
 	if (!me || !now.data || !stats.data)
@@ -37,6 +43,24 @@ export default function ProgressScreen() {
 	const maxExpected = Math.max(1, ...s.bars.map((b) => b.expected));
 	const streak = Math.max(0, ...stats.data.habits.map((h) => h.streak.current));
 	const entries = ledger.data?.entries ?? [];
+	// Un échange est annulable tant qu'aucun remboursement ne le référence (le remboursement est plus récent, donc listé).
+	const refunded = new Set(entries.filter((e) => e.reason === "undo" && e.amount > 0).map((e) => e.refId));
+	const cancel = (e: LedgerEntry) => {
+		const id = e.refId;
+		if (!id) return;
+		const amount = Math.abs(e.amount);
+		Alert.alert(t("ledger.undoAction"), t("ledger.undoConfirm", { amount }), [
+			{ text: t("common.cancel"), style: "cancel" },
+			{
+				text: t("ledger.undoAction"),
+				onPress: () =>
+					undoRedemption.mutate(id, {
+						onSuccess: () => showToast(t("ledger.undone", { amount })),
+						onError: () => showToast(t("common.offline")),
+					}),
+			},
+		]);
+	};
 	const earned = entries
 		.filter((e) => e.createdAt.slice(0, 10) >= s.from && e.createdAt.slice(0, 10) <= s.to)
 		.reduce((sum, e) => (e.reason === "completion" || e.reason === "undo" ? sum + e.amount : sum), 0);
@@ -154,16 +178,41 @@ export default function ProgressScreen() {
 								<T style={{ fontFamily: font.semi, fontSize: 15 }}>{entryLabel(e)}</T>
 								<T style={{ fontSize: 12, color: colors.muted }}>{shortDate(e.createdAt.slice(0, 10))}</T>
 							</View>
-							<T
-								style={{
-									fontFamily: font.displayBold,
-									fontSize: 15,
-									color: e.amount > 0 ? colors.coin : colors.textSoft,
-								}}
-							>
-								{e.amount > 0 ? "+" : "−"}
-								{Math.abs(e.amount)}
-							</T>
+							<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+								{e.reason === "redemption" && e.refId && !refunded.has(e.refId) && (
+									<Pressable
+										accessibilityRole="button"
+										accessibilityLabel={t("ledger.undoActionFor", { name: e.label ?? "" })}
+										disabled={undoRedemption.isPending}
+										onPress={() => cancel(e)}
+										style={{
+											minHeight: 44,
+											paddingHorizontal: 12,
+											borderRadius: 22,
+											borderWidth: 1,
+											borderColor: colors.borderDashed,
+											justifyContent: "center",
+										}}
+									>
+										<T style={{ fontFamily: font.bold, fontSize: 12, color: colors.textSoft }}>
+											{t("ledger.undoAction")}
+										</T>
+									</Pressable>
+								)}
+								{e.reason === "redemption" && e.refId && refunded.has(e.refId) && (
+									<T style={{ fontFamily: font.semi, fontSize: 12, color: colors.muted }}>{t("ledger.refunded")}</T>
+								)}
+								<T
+									style={{
+										fontFamily: font.displayBold,
+										fontSize: 15,
+										color: e.amount > 0 ? colors.coin : colors.textSoft,
+									}}
+								>
+									{e.amount > 0 ? "+" : "−"}
+									{Math.abs(e.amount)}
+								</T>
+							</View>
 						</View>
 					))}
 				</View>

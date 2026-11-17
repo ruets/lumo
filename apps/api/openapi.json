@@ -2944,9 +2944,138 @@
 												},
 												"redeemedAt": {
 													"type": "string"
+												},
+												"undoneAt": {
+													"type": ["string", "null"]
 												}
 											},
-											"required": ["id", "rewardId", "userId", "walletId", "redeemedAt"],
+											"required": ["id", "rewardId", "userId", "walletId", "redeemedAt", "undoneAt"],
+											"additionalProperties": false
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												}
+											},
+											"required": ["personal", "shared"],
+											"additionalProperties": false
+										}
+									},
+									"required": ["redemption", "balances"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/redemptions/{id}": {
+			"delete": {
+				"summary": "Annuler un échange d'envie (remboursement par contre-écriture)",
+				"tags": ["Envies"],
+				"operationId": "deleteApiV1RedemptionsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"redemption": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"rewardId": {
+													"type": "string"
+												},
+												"userId": {
+													"type": "string"
+												},
+												"walletId": {
+													"type": "string"
+												},
+												"redeemedAt": {
+													"type": "string"
+												},
+												"undoneAt": {
+													"type": ["string", "null"]
+												}
+											},
+											"required": ["id", "rewardId", "userId", "walletId", "redeemedAt", "undoneAt"],
 											"additionalProperties": false
 										},
 										"balances": {

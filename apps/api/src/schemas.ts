@@ -179,6 +179,7 @@ export const redemptionResult = z.object({
 		userId: z.string(),
 		walletId: z.string(),
 		redeemedAt: z.string(),
+		undoneAt: z.string().nullable(),
 	}),
 	balances: balancesView,
 });

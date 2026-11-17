@@ -15,6 +15,13 @@
       "when": 1794910752606,
       "tag": "0001_ledger_append_only",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794928753730,
+      "tag": "0002_plain_vertigo",
+      "breakpoints": true
     }
   ]
 }

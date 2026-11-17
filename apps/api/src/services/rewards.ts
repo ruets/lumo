@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { can, localDate, periodStart, planRedemption } from "@lumo/domain";
 import { and, eq, gte, inArray, isNull } from "drizzle-orm";
 import type { z } from "zod";
-import { memberships, redemptions, rewardAssignees, rewards } from "../db/schema.js";
+import { ledgerEntries, memberships, redemptions, rewardAssignees, rewards } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { createRewardBody, rewardView, updateRewardBody } from "../schemas.js";
 import type { ActorCtx } from "./context.js";
@@ -49,6 +49,7 @@ function usedInPeriodOf(db: DbOrTx, actor: ActorCtx, reward: RewardRow, now: Dat
 			and(
 				eq(redemptions.rewardId, reward.id),
 				eq(redemptions.userId, actor.userId),
+				isNull(redemptions.undoneAt),
 				// marge d'un jour : le filtre exact se fait en jour local, fuseau du foyer compris
 				gte(redemptions.redeemedAt, new Date(now.getTime() - 400 * 86_400_000)),
 			),
@@ -201,7 +202,55 @@ export function redeemReward(tx: Tx, actor: ActorCtx, rewardId: string, now: Dat
 	});
 	tx.insert(redemptions).values({ id, rewardId, userId: actor.userId, walletId, redeemedAt: now, ledgerEntryId }).run();
 	return {
-		redemption: { id, rewardId, userId: actor.userId, walletId, redeemedAt: now.toISOString() },
+		redemption: { id, rewardId, userId: actor.userId, walletId, redeemedAt: now.toISOString(), undoneAt: null },
+		balances: balancesFor(tx, actor),
+	};
+}
+
+/**
+ * Annuler un échange : `undone_at` + contre-écriture du montant exact payé, dans le porte-monnaie d'origine
+ * (perso ou cagnotte). La limite d'usage de la période est libérée ; le journal n'est jamais modifié.
+ */
+export function undoRedemption(tx: Tx, actor: ActorCtx, id: string, now: Date) {
+	const row = tx
+		.select({ r: redemptions, owner: memberships })
+		.from(redemptions)
+		.innerJoin(rewards, eq(rewards.id, redemptions.rewardId))
+		.innerJoin(
+			memberships,
+			and(eq(memberships.userId, redemptions.userId), eq(memberships.householdId, actor.householdId)),
+		)
+		.where(and(eq(redemptions.id, id), eq(rewards.householdId, actor.householdId)))
+		.get();
+	if (!row) throw notFound();
+	const { r, owner } = row;
+	if (!can(actor, "redemption:undo", { userId: r.userId, userRole: owner.role })) {
+		throw errors.forbidden("Annulation non autorisée");
+	}
+	if (r.undoneAt) throw errors.conflict("already_undone", "Cet échange est déjà annulé");
+
+	tx.update(redemptions).set({ undoneAt: now }).where(eq(redemptions.id, id)).run();
+	const original = tx.select().from(ledgerEntries).where(eq(ledgerEntries.id, r.ledgerEntryId)).get();
+	if (original) {
+		addEntry(tx, {
+			householdId: actor.householdId,
+			walletId: original.walletId,
+			amount: -original.amount,
+			reason: "undo",
+			refId: id,
+			createdBy: actor.userId,
+			now,
+		});
+	}
+	return {
+		redemption: {
+			id,
+			rewardId: r.rewardId,
+			userId: r.userId,
+			walletId: r.walletId,
+			redeemedAt: r.redeemedAt.toISOString(),
+			undoneAt: now.toISOString(),
+		},
 		balances: balancesFor(tx, actor),
 	};
 }

@@ -108,6 +108,7 @@ function useWrite<V, R>(fn: (v: V) => Promise<R>) {
 
 /** Annuler une validation envoyée (nécessite le réseau). */
 export const useUndo = () => useWrite((completionId: string) => api.undoCompletion(completionId));
+export const useUndoRedemption = () => useWrite((redemptionId: string) => api.undoRedemption(redemptionId));
 export const useRedeem = () => useWrite((rewardId: string) => api.redeemReward(rewardId));
 export const useReview = () =>
 	useWrite(({ id, approve }: { id: string; approve: boolean }) =>

@@ -5,10 +5,15 @@ import { dayNumber, shortDate, t, weekdayShort } from "@lumo/i18n";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageTitle, Segmented } from "../components/ui";
-import { statsWindow, useLedger, useStats, useToday } from "../lib/hooks";
+import { statsWindow, useLedger, useStats, useToday, useUndoRedemption } from "../lib/hooks";
+import { showToast } from "../lib/toast";
 
 function entryLabel(e: LedgerEntry): string {
-	if (e.label) return e.reason === "undo" ? `${t("ledger.undo")} · ${e.label}` : e.label;
+	if (e.label) {
+		if (e.reason !== "undo") return e.label;
+		// Le remboursement d'un échange est positif ; l'annulation d'une validation est négative.
+		return `${e.amount > 0 ? t("ledger.undoRedemption") : t("ledger.undo")} · ${e.label}`;
+	}
 	if (e.note) return e.note;
 	return t(`ledger.${e.reason}` as const);
 }
@@ -21,6 +26,7 @@ export function ProgressPage({ me }: { me: MeResponse }) {
 	const win = now.data ? statsWindow(now.data.date) : undefined;
 	const stats = useStats(win?.from, win?.to);
 	const ledger = useLedger();
+	const undoRedemption = useUndoRedemption();
 
 	if (!now.data || !stats.data) return <p className="text-muted">{t("common.loading")}</p>;
 
@@ -28,6 +34,12 @@ export function ProgressPage({ me }: { me: MeResponse }) {
 	const maxExpected = Math.max(1, ...s.bars.map((b) => b.expected));
 	const streak = Math.max(0, ...stats.data.habits.map((h) => h.streak.current));
 	const entries = ledger.data?.entries ?? [];
+	// Un échange est annulable tant qu'aucun remboursement ne le référence (le remboursement est plus récent, donc listé).
+	const refunded = new Set(entries.filter((e) => e.reason === "undo" && e.amount > 0).map((e) => e.refId));
+	const cancel = (e: LedgerEntry) => {
+		if (!e.refId || !window.confirm(t("ledger.undoConfirm", { amount: Math.abs(e.amount) }))) return;
+		undoRedemption.mutate(e.refId, { onSuccess: () => showToast(t("ledger.undone", { amount: Math.abs(e.amount) })) });
+	};
 	const earned = entries
 		.filter((e) => e.createdAt.slice(0, 10) >= s.from && e.createdAt.slice(0, 10) <= s.to)
 		.reduce((sum, e) => (e.reason === "completion" || e.reason === "undo" ? sum + e.amount : sum), 0);
@@ -116,9 +128,25 @@ export function ProgressPage({ me }: { me: MeResponse }) {
 								<span className="text-[15px] font-semibold">{entryLabel(e)}</span>
 								<span className="text-xs text-muted">{when(e.createdAt)}</span>
 							</span>
-							<span className={`font-display text-[15px] font-bold ${e.amount > 0 ? "text-coin" : "text-soft"}`}>
-								{e.amount > 0 ? "+" : "−"}
-								{Math.abs(e.amount)}
+							<span className="flex items-center gap-3">
+								{e.reason === "redemption" && e.refId && !refunded.has(e.refId) && (
+									<button
+										type="button"
+										aria-label={t("ledger.undoActionFor", { name: e.label ?? "" })}
+										disabled={undoRedemption.isPending}
+										onClick={() => cancel(e)}
+										className="min-h-11 cursor-pointer rounded-full border border-edge bg-transparent px-3 font-body text-xs font-bold text-soft hover:bg-raised"
+									>
+										{t("ledger.undoAction")}
+									</button>
+								)}
+								{e.reason === "redemption" && e.refId && refunded.has(e.refId) && (
+									<span className="text-xs font-semibold text-muted">{t("ledger.refunded")}</span>
+								)}
+								<span className={`font-display text-[15px] font-bold ${e.amount > 0 ? "text-coin" : "text-soft"}`}>
+									{e.amount > 0 ? "+" : "−"}
+									{Math.abs(e.amount)}
+								</span>
 							</span>
 						</li>
 					))}
