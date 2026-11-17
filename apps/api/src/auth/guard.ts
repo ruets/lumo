@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import type { FastifyReply, FastifyRequest } from "fastify";
+import type { Config } from "../config.js";
+import type { Db } from "../db/client.js";
+import { errors } from "../errors.js";
+import { findWebSession, isSessionActive } from "./sessions.js";
+import { verifyAccessToken } from "./tokens.js";
+
+export const SESSION_COOKIE = "lumo_session";
+
+export interface AuthContext {
+	userId: string;
+	sessionId: string;
+	via: "bearer" | "cookie";
+}
+
+declare module "fastify" {
+	interface FastifyRequest {
+		auth: AuthContext | null;
+	}
+}
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+async function authenticate(req: FastifyRequest, db: Db, config: Config): Promise<AuthContext | null> {
+	const header = req.headers.authorization;
+	if (header?.startsWith("Bearer ")) {
+		const claims = await verifyAccessToken(config.SESSION_SECRET, header.slice(7));
+		if (claims && isSessionActive(db, claims.sessionId, claims.userId)) {
+			return { userId: claims.userId, sessionId: claims.sessionId, via: "bearer" };
+		}
+		return null;
+	}
+	const cookie = req.cookies[SESSION_COOKIE];
+	if (cookie) {
+		const session = findWebSession(db, cookie);
+		if (session) return { userId: session.userId, sessionId: session.id, via: "cookie" };
+	}
+	return null;
+}
+
+/**
+ * Garde d'authentification. Pour une session par cookie, toute requête qui modifie l'état doit
+ * venir de l'origine du site (défense CSRF en plus de `SameSite=Lax`).
+ */
+export function createRequireAuth(db: Db, config: Config) {
+	const origin = new URL(config.PUBLIC_URL).origin;
+	return async function requireAuth(req: FastifyRequest, _reply: FastifyReply) {
+		const auth = await authenticate(req, db, config);
+		if (!auth) throw errors.unauthenticated();
+		if (auth.via === "cookie" && !SAFE_METHODS.has(req.method) && req.headers.origin !== origin) {
+			throw errors.forbidden("Origine de la requête non autorisée");
+		}
+		req.auth = auth;
+	};
+}
