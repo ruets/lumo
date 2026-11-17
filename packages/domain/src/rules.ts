@@ -45,6 +45,7 @@ export function assertUnderTarget(existing: number, target: number): void {
 export function checkCompletionDate(input: {
 	date: LocalDate;
 	today: LocalDate;
+	/** How many days back are allowed; `Number.POSITIVE_INFINITY` = no limit. */
 	windowDays: number;
 	role: Role;
 }): void {

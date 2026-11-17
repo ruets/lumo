@@ -504,7 +504,7 @@ export interface operations {
                             name: string;
                             timezone: string;
                             weekStart: number;
-                            backdateDays: number;
+                            backdateDays: number | null;
                         };
                         members: {
                             userId: string;
@@ -557,7 +557,7 @@ export interface operations {
                     name?: string;
                     timezone?: string;
                     weekStart?: number;
-                    backdateDays?: number;
+                    backdateDays?: number | null;
                 };
             };
         };
@@ -574,7 +574,7 @@ export interface operations {
                             name: string;
                             timezone: string;
                             weekStart: number;
-                            backdateDays: number;
+                            backdateDays: number | null;
                         };
                         members: {
                             userId: string;

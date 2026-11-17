@@ -13,6 +13,7 @@ import {
 	setLocale,
 	shortDate,
 	t,
+	weekdayNarrow,
 	weekdayShort,
 } from "./index.js";
 
@@ -91,6 +92,9 @@ describe("dates and schedules", () => {
 		expect(shortDate("2026-11-17", "en")).toBe("Nov 17");
 		expect(weekdayShort(1, "en")).toBe("Mon");
 		expect(weekdayShort(1, "fr")).toBe("lun");
+		expect(weekdayNarrow(1, "en")).toBe("M");
+		expect(weekdayNarrow(7, "en")).toBe("S");
+		expect(weekdayNarrow(1, "fr")).toBe("L");
 		expect(dayNumber("2026-11-07")).toBe(7);
 	});
 

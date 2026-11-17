@@ -243,6 +243,25 @@ describe("PATCH /household", () => {
 		expect((await h.owner.api.get("/today")).json().date).toBe("2026-11-17");
 	});
 
+	it("the backdate limit can be turned off (null) and back on", async () => {
+		const item = await makeHabit(h.adult);
+		await h.owner.api.patch("/household", { backdateDays: 0 });
+		expect((await h.adult.api.post(`/items/${item.id}/completions`, { date: "2026-11-16" })).statusCode).toBe(403);
+
+		const off = await h.owner.api.patch("/household", { backdateDays: null });
+		expect(off.statusCode).toBe(200);
+		expect(off.json().household.backdateDays).toBeNull();
+		expect((await h.kid.api.get("/household")).json().household.backdateDays).toBeNull();
+		// No limit: an adult can complete a day months ago (never the future).
+		expect((await h.adult.api.post(`/items/${item.id}/completions`, { date: "2026-03-01" })).statusCode).toBe(201);
+		const future = await h.adult.api.post(`/items/${item.id}/completions`, { date: "2026-11-18" });
+		expect(future.json().code).toBe("future_date");
+
+		const on = await h.owner.api.patch("/household", { backdateDays: 3 });
+		expect(on.json().household.backdateDays).toBe(3);
+		expect((await h.adult.api.post(`/items/${item.id}/completions`, { date: "2026-02-01" })).statusCode).toBe(403);
+	});
+
 	it("only the owner can change the household", async () => {
 		expect((await h.adult.api.patch("/household", { name: "Hijacked" })).statusCode).toBe(403);
 		expect((await h.kid.api.patch("/household", { name: "Hijacked" })).statusCode).toBe(403);

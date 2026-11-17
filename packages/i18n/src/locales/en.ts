@@ -69,6 +69,7 @@ export const en = {
 	"household.settings.timezoneHint": "For example Europe/Paris. Days are counted in this time zone.",
 	"household.settings.weekStart": "Week starts on",
 	"household.settings.backdate": "Days back allowed",
+	"household.settings.backdateUnlimited": "No limit",
 	"household.settings.backdateHint": "How far back anyone can complete something. Owners can always go further.",
 	"household.settings.save": "Save settings",
 	"join.title": "Join a household",

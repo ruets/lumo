@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { Member } from "@lumo/api-client";
-import { shortDate, t, weekdayLong } from "@lumo/i18n";
+import type { HouseholdResponse, Member } from "@lumo/api-client";
+import { shortDate, t, weekdayLong, weekdayNarrow } from "@lumo/i18n";
 import { colors, radii, spacing } from "@lumo/tokens";
 import { Stack } from "expo-router";
 import { useState } from "react";
-import { Alert, Share, Switch, View } from "react-native";
+import { Alert, Pressable, Share, Switch, View } from "react-native";
 import {
 	useCreateInvite,
 	useHousehold,
@@ -116,36 +116,69 @@ function MemberRow({
 
 function SettingsSection() {
 	const household = useHousehold();
-	const update = useUpdateHousehold();
 	const h = household.data?.household;
-	const [name, setName] = useState<string | null>(null);
-	const [timezone, setTimezone] = useState<string | null>(null);
-	const [weekStart, setWeekStart] = useState<number | null>(null);
-	const [backdate, setBackdate] = useState<string | null>(null);
-	if (!h) return null;
+	// Keyed on the saved values so the form resets to what the server now holds.
+	return h ? <SettingsForm key={JSON.stringify(h)} h={h} /> : null;
+}
+
+function SettingsForm({ h }: { h: HouseholdResponse["household"] }) {
+	const update = useUpdateHousehold();
+	const [name, setName] = useState(h.name);
+	const [timezone, setTimezone] = useState(h.timezone);
+	const [weekStart, setWeekStart] = useState(h.weekStart);
+	const [backdate, setBackdate] = useState(String(h.backdateDays ?? 2));
+	const [unlimited, setUnlimited] = useState(h.backdateDays === null);
 	return (
 		<Section title={t("household.settings.title")}>
-			<Field label={t("household.settings.name")} value={name ?? h.name} onChangeText={setName} maxLength={80} />
+			<Field label={t("household.settings.name")} value={name} onChangeText={setName} maxLength={80} />
 			<Field
 				label={t("household.settings.timezone")}
-				value={timezone ?? h.timezone}
+				value={timezone}
 				onChangeText={setTimezone}
 				autoCapitalize="none"
 				autoCorrect={false}
 			/>
 			<T style={{ fontSize: 12, color: colors.muted }}>{t("household.settings.timezoneHint")}</T>
+
 			<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.muted }}>{t("household.settings.weekStart")}</T>
-			<View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+			<View style={{ flexDirection: "row", justifyContent: "space-between" }}>
 				{[1, 2, 3, 4, 5, 6, 7].map((d) => (
-					<Chip key={d} label={weekdayLong(d)} on={(weekStart ?? h.weekStart) === d} onPress={() => setWeekStart(d)} />
+					<Pressable
+						key={d}
+						accessibilityRole="button"
+						accessibilityLabel={weekdayLong(d)}
+						accessibilityState={{ selected: weekStart === d }}
+						onPress={() => setWeekStart(d)}
+						style={{
+							width: 40,
+							height: 44,
+							borderRadius: 22,
+							alignItems: "center",
+							justifyContent: "center",
+							backgroundColor: weekStart === d ? colors.primary : colors.surfaceRaised,
+						}}
+					>
+						<T style={{ fontFamily: font.bold, fontSize: 14, color: weekStart === d ? "#fff" : colors.textSoft }}>
+							{weekdayNarrow(d)}
+						</T>
+					</Pressable>
 				))}
 			</View>
+
 			<Field
 				label={t("household.settings.backdate")}
-				value={backdate ?? String(h.backdateDays)}
+				value={backdate}
 				onChangeText={setBackdate}
 				keyboardType="number-pad"
+				editable={!unlimited}
+				style={unlimited ? { opacity: 0.4 } : undefined}
 			/>
+			<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
+				<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.textSoft, flex: 1 }}>
+					{t("household.settings.backdateUnlimited")}
+				</T>
+				<Switch value={unlimited} onValueChange={setUnlimited} trackColor={{ true: colors.primary }} />
+			</View>
 			<T style={{ fontSize: 12, color: colors.muted }}>{t("household.settings.backdateHint")}</T>
 			<Button
 				label={t("household.settings.save")}
@@ -153,20 +186,12 @@ function SettingsSection() {
 				onPress={() =>
 					update.mutate(
 						{
-							name: (name ?? h.name).trim(),
-							timezone: (timezone ?? h.timezone).trim(),
-							weekStart: weekStart ?? h.weekStart,
-							backdateDays: Number(backdate ?? h.backdateDays),
+							name: name.trim(),
+							timezone: timezone.trim(),
+							weekStart,
+							backdateDays: unlimited ? null : Number(backdate),
 						},
-						{
-							onSuccess: () => {
-								setName(null);
-								setTimezone(null);
-								setWeekStart(null);
-								setBackdate(null);
-								showToast(t("household.saved"), 1500);
-							},
-						},
+						{ onSuccess: () => showToast(t("household.saved"), 1500) },
 					)
 				}
 			/>
