@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { PageTitle } from "../components/ui";
 import { useAccount, useLeaveHousehold, useLogout } from "../lib/hooks";
 import { LanguageSelect } from "../lib/locale";
+import { HouseholdAccess } from "./NoHousehold";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
@@ -17,16 +18,20 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export function SettingsPage({ me }: { me: MeResponse }) {
+	const household = me.household;
 	const logout = useLogout();
 	const leave = useLeaveHousehold();
-	const isSuperAdmin = useAccount().data?.isSuperAdmin ?? false;
+	const account = useAccount().data;
+	const isSuperAdmin = account?.isSuperAdmin ?? false;
 	return (
 		<div className="grid max-w-xl gap-5">
 			<PageTitle>{t("settings.title")}</PageTitle>
 			<Section title={t("settings.account")}>
 				<p className="m-0 text-lg font-bold">{me.user.displayName}</p>
 				<p className="m-0 text-sm text-muted">
-					{t(`role.${me.role}` as const)} · {t("settings.household", { name: me.household.name })}
+					{me.household && me.role
+						? `${t(`role.${me.role}` as const)} · ${t("settings.household", { name: me.household.name })}`
+						: t("settings.noHousehold")}
 				</p>
 				<button
 					type="button"
@@ -35,22 +40,32 @@ export function SettingsPage({ me }: { me: MeResponse }) {
 				>
 					{t("auth.logout")}
 				</button>
-				<button
-					type="button"
-					disabled={leave.isPending}
-					onClick={() => window.confirm(t("household.leaveConfirm", { name: me.household.name })) && leave.mutate()}
-					className="min-h-11 cursor-pointer rounded-xl border border-edge bg-transparent font-body text-sm font-semibold text-bad hover:bg-raised"
-				>
-					{t("household.leave")}
-				</button>
+				{household && (
+					<button
+						type="button"
+						disabled={leave.isPending}
+						onClick={() => window.confirm(t("household.leaveConfirm", { name: household.name })) && leave.mutate()}
+						className="min-h-11 cursor-pointer rounded-xl border border-edge bg-transparent font-body text-sm font-semibold text-bad hover:bg-raised"
+					>
+						{t("household.leave")}
+					</button>
+				)}
 			</Section>
-			<Link
-				to="/household"
-				className="flex min-h-12 items-center justify-between rounded-[20px] bg-surface px-4 font-semibold text-ink no-underline hover:bg-raised"
-			>
-				{t("household.open")}
-				<span aria-hidden="true">›</span>
-			</Link>
+			{me.household ? (
+				<Link
+					to="/household"
+					className="flex min-h-12 items-center justify-between rounded-[20px] bg-surface px-4 font-semibold text-ink no-underline hover:bg-raised"
+				>
+					{t("household.open")}
+					<span aria-hidden="true">›</span>
+				</Link>
+			) : (
+				account && (
+					<Section title={t("settings.accessTitle")}>
+						<HouseholdAccess account={account} />
+					</Section>
+				)
+			)}
 			{isSuperAdmin && (
 				<Link
 					to="/admin"

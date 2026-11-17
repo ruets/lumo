@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { can } from "@lumo/domain";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { createInvite } from "../auth/invites.js";
-import { households, ledgerEntries, users, wallets } from "../db/schema.js";
+import { households, users } from "../db/schema.js";
 import { errors } from "../errors.js";
 import { inviteBody, inviteView, meView } from "../schemas.js";
+import { balancesFor, personalWalletId, sharedWalletId } from "../services/ledger.js";
 import { route } from "./define.js";
 
 export const meRoutes = [
@@ -14,40 +15,26 @@ export const meRoutes = [
 		url: "/me",
 		summary: "Profile, household, role and balances",
 		tag: "Profile",
+		scope: "account",
 		response: meView,
 		handler: ({ db, actor }) => {
 			const user = db.select().from(users).where(eq(users.id, actor.userId)).get();
-			const household = db.select().from(households).where(eq(households.id, actor.householdId)).get();
-			if (!user || !household) throw errors.unauthenticated();
-
-			const own = db
-				.select()
-				.from(wallets)
-				.where(
-					and(eq(wallets.householdId, household.id), or(eq(wallets.kind, "shared"), eq(wallets.userId, actor.userId))),
-				)
-				.all();
-			const totals = db
-				.select({ walletId: ledgerEntries.walletId, total: sql<number>`coalesce(sum(${ledgerEntries.amount}), 0)` })
-				.from(ledgerEntries)
-				.where(
-					inArray(
-						ledgerEntries.walletId,
-						own.map((w) => w.id),
-					),
-				)
-				.groupBy(ledgerEntries.walletId)
-				.all();
-			const wallet = (kind: "personal" | "shared") => {
-				const w = own.find((x) => x.kind === kind);
-				if (!w) throw new Error(`${kind} wallet missing`);
-				return { id: w.id, balance: totals.find((t) => t.walletId === w.id)?.total ?? 0 };
-			};
+			if (!user) throw errors.unauthenticated();
+			const household = actor.householdId
+				? (db.select().from(households).where(eq(households.id, actor.householdId)).get() ?? null)
+				: null;
+			const balances = balancesFor(db, actor);
 			return {
 				user: { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl },
-				household: { id: household.id, name: household.name, timezone: household.timezone },
-				role: actor.role,
-				wallets: { personal: wallet("personal"), shared: wallet("shared") },
+				household: household ? { id: household.id, name: household.name, timezone: household.timezone } : null,
+				role: household ? actor.role : null,
+				wallets: {
+					personal: { id: personalWalletId(db, actor.userId), balance: balances.personal },
+					shared:
+						household && balances.shared !== null
+							? { id: sharedWalletId(db, household.id), balance: balances.shared }
+							: null,
+				},
 			};
 		},
 	}),

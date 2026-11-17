@@ -6,7 +6,7 @@ import type { z } from "zod";
 import { completions, items, ledgerEntries, memberships, redemptions, rewards } from "../db/schema.js";
 import { errors } from "../errors.js";
 import type { ledgerEntryView } from "../schemas.js";
-import type { ActorCtx } from "./context.js";
+import type { ActorCtx, HouseholdActorCtx } from "./context.js";
 import { addEntry, balancesFor, personalWalletId, sharedWalletId, walletBalance } from "./ledger.js";
 import type { DbOrTx, Tx } from "./members.js";
 
@@ -63,9 +63,9 @@ function labelsFor(db: DbOrTx, rows: EntryRow[]): Map<string, string> {
 }
 
 /** Personal → pot transfer: two entries linked by `transfer_id`, balance checked in the same transaction. */
-export function transferToShared(tx: Tx, actor: ActorCtx, amount: number, now: Date) {
+export function transferToShared(tx: Tx, actor: HouseholdActorCtx, amount: number, now: Date) {
 	if (!can(actor, "transfer:create")) throw errors.forbidden();
-	const from = personalWalletId(tx, actor.householdId, actor.userId);
+	const from = personalWalletId(tx, actor.userId);
 	const to = sharedWalletId(tx, actor.householdId);
 	const [debit, credit] = planTransfer({ balance: walletBalance(tx, from), amount });
 	const transferId = randomUUID();
@@ -89,7 +89,7 @@ export function transferToShared(tx: Tx, actor: ActorCtx, amount: number, now: D
 /** Manual adjustment (owner): `userId` null = pot. A note always explains the adjustment. */
 export function adjust(
 	tx: Tx,
-	actor: ActorCtx,
+	actor: HouseholdActorCtx,
 	input: { userId: string | null; amount: number; note: string },
 	now: Date,
 ) {
@@ -104,7 +104,7 @@ export function adjust(
 			.where(and(eq(memberships.userId, input.userId), eq(memberships.householdId, actor.householdId)))
 			.get();
 		if (!member) throw errors.validation("body.userId: unknown member");
-		walletId = personalWalletId(tx, actor.householdId, input.userId);
+		walletId = personalWalletId(tx, input.userId);
 	}
 	const id = addEntry(tx, {
 		householdId: actor.householdId,
@@ -133,10 +133,11 @@ export function listLedger(
 	actor: ActorCtx,
 	q: { wallet: "personal" | "shared"; cursor?: string | undefined; limit: number },
 ) {
+	if (q.wallet === "shared" && !actor.householdId) throw errors.noHousehold();
 	const walletId =
-		q.wallet === "shared"
+		q.wallet === "shared" && actor.householdId
 			? sharedWalletId(db, actor.householdId)
-			: personalWalletId(db, actor.householdId, actor.userId);
+			: personalWalletId(db, actor.userId);
 	const c = q.cursor ? decodeCursor(q.cursor) : null;
 	const rows = db
 		.select()

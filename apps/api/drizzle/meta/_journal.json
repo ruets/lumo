@@ -5,36 +5,15 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1794910748058,
+      "when": 1794959618833,
       "tag": "0000_init",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
-      "when": 1794910752606,
+      "when": 1794959619319,
       "tag": "0001_ledger_append_only",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1794928753730,
-      "tag": "0002_plain_vertigo",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1794954249104,
-      "tag": "0003_wandering_lord_hawal",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1794958369494,
-      "tag": "0004_fine_shadowcat",
       "breakpoints": true
     }
   ]

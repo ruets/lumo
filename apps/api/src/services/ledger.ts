@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { ledgerEntries, wallets } from "../db/schema.js";
+import { errors } from "../errors.js";
 import type { ActorCtx } from "./context.js";
 import type { DbOrTx, Tx } from "./members.js";
 
@@ -17,18 +18,21 @@ export function sharedWalletId(db: DbOrTx, householdId: string): string {
 	return row.id;
 }
 
-export function personalWalletId(db: DbOrTx, householdId: string, userId: string): string {
+export function personalWalletId(db: DbOrTx, userId: string): string {
 	const row = db
 		.select({ id: wallets.id })
 		.from(wallets)
-		.where(and(eq(wallets.householdId, householdId), eq(wallets.userId, userId)))
+		.where(and(eq(wallets.kind, "personal"), eq(wallets.userId, userId)))
 		.get();
 	if (!row) throw new Error("wallet missing");
 	return row.id;
 }
 
-export function walletFor(db: DbOrTx, householdId: string, kind: "personal" | "shared", userId: string): string {
-	return kind === "shared" ? sharedWalletId(db, householdId) : personalWalletId(db, householdId, userId);
+/** The wallet of a kind for this person; the pot needs a household. */
+export function walletFor(db: DbOrTx, kind: "personal" | "shared", userId: string, householdId: string | null): string {
+	if (kind === "personal") return personalWalletId(db, userId);
+	if (!householdId) throw errors.noHousehold();
+	return sharedWalletId(db, householdId);
 }
 
 /** A balance is never stored: sum of the wallet's entries. */
@@ -41,10 +45,10 @@ export function walletBalance(db: DbOrTx, walletId: string): number {
 	return row?.total ?? 0;
 }
 
-export function balancesFor(db: DbOrTx, actor: ActorCtx): { personal: number; shared: number } {
+export function balancesFor(db: DbOrTx, actor: ActorCtx): { personal: number; shared: number | null } {
 	return {
-		personal: walletBalance(db, personalWalletId(db, actor.householdId, actor.userId)),
-		shared: walletBalance(db, sharedWalletId(db, actor.householdId)),
+		personal: walletBalance(db, personalWalletId(db, actor.userId)),
+		shared: actor.householdId ? walletBalance(db, sharedWalletId(db, actor.householdId)) : null,
 	};
 }
 
@@ -52,7 +56,7 @@ export function balancesFor(db: DbOrTx, actor: ActorCtx): { personal: number; sh
 export function addEntry(
 	tx: Tx,
 	entry: {
-		householdId: string;
+		householdId: string | null;
 		walletId: string;
 		amount: number;
 		reason: LedgerReason;

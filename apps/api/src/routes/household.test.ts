@@ -137,7 +137,7 @@ describe("DELETE /members/:id", () => {
 		expect((await h.owner.api.del(`/members/${h.kid.userId}`)).statusCode).toBe(204);
 		const members = (await h.owner.api.get("/household")).json().members;
 		expect(members.map((m: { userId: string }) => m.userId).sort()).toEqual([h.owner.userId, h.adult.userId].sort());
-		expect((await h.kid.api.get("/me")).statusCode).toBe(403); // no household any more
+		expect((await h.kid.api.get("/household")).statusCode).toBe(403); // no household any more
 		const login = await ctx.app.inject({
 			method: "POST",
 			url: "/api/v1/auth/local/login",

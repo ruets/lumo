@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUID } from "node:crypto";
 import type { Role } from "@lumo/domain";
-import { and, count, eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { households, memberships, users, wallets } from "../db/schema.js";
 
@@ -48,25 +48,14 @@ export function createAccount(tx: Tx, user: NewUser): string {
 			isSuperAdmin: user.isSuperAdmin ?? false,
 		})
 		.run();
+	// Coins belong to the account: the personal wallet exists from the start and follows it between households.
+	tx.insert(wallets).values({ id: randomUUID(), householdId: null, kind: "personal", userId }).run();
 	return userId;
 }
 
-/**
- * Puts an existing account into a household with the given role. Their personal wallet there is reused when it
- * exists (someone coming back finds their coins), created otherwise.
- */
+/** Puts an existing account into a household with the given role. */
 export function joinHousehold(tx: Tx, input: { householdId: string; userId: string; role: Role }): void {
 	tx.insert(memberships).values({ householdId: input.householdId, userId: input.userId, role: input.role }).run();
-	const wallet = tx
-		.select({ id: wallets.id })
-		.from(wallets)
-		.where(and(eq(wallets.householdId, input.householdId), eq(wallets.userId, input.userId)))
-		.get();
-	if (!wallet) {
-		tx.insert(wallets)
-			.values({ id: randomUUID(), householdId: input.householdId, kind: "personal", userId: input.userId })
-			.run();
-	}
 }
 
 /** Creates an account together with its household membership and personal wallet. */

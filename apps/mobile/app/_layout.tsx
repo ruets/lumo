@@ -20,7 +20,6 @@ function Routes() {
 	const hasServer = server.url !== null;
 	const account = useAccount(hasServer);
 	const authed = hasServer && Boolean(account.data);
-	const inHousehold = authed && Boolean(account.data?.household);
 
 	useEffect(() => {
 		void loadServer();
@@ -41,13 +40,10 @@ function Routes() {
 	if (!server.loaded || (hasServer && account.isPending)) return null;
 	return (
 		<Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0E1220" } }}>
-			<Stack.Protected guard={inHousehold}>
+			<Stack.Protected guard={authed}>
 				<Stack.Screen name="(tabs)" />
 				<Stack.Screen name="settings" />
 				<Stack.Screen name="household" />
-			</Stack.Protected>
-			<Stack.Protected guard={authed && !inHousehold}>
-				<Stack.Screen name="no-household" />
 			</Stack.Protected>
 			<Stack.Protected guard={authed && Boolean(account.data?.isSuperAdmin)}>
 				<Stack.Screen name="admin" />

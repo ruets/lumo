@@ -59,6 +59,9 @@ export const users = sqliteTable(
 		email: text("email"),
 		/** Argon2id hash; null for an OIDC-only account. */
 		passwordHash: text("password_hash"),
+		/** Time zone and first weekday used while the account is in no household (a household has its own). */
+		timezone: text("timezone").notNull().default("UTC"),
+		weekStart: integer("week_start").notNull().default(1),
 		/** Instance-level role: manages accounts and households, sees no content. */
 		isSuperAdmin: integer("is_super_admin", { mode: "boolean" }).notNull().default(false),
 		/** A disabled account cannot sign in; its data is kept. */
@@ -99,21 +102,20 @@ export const wallets = sqliteTable(
 	"wallets",
 	{
 		id: id(),
-		householdId: text("household_id")
-			.notNull()
-			.references(() => households.id, { onDelete: "cascade" }),
+		/** The household pot only; a personal wallet belongs to the account, whatever households it joins. */
+		householdId: text("household_id").references(() => households.id, { onDelete: "cascade" }),
 		kind: text("kind", { enum: WALLET_KINDS }).notNull(),
 		/** Null for the household pot. */
 		userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
 		createdAt: createdAt(),
 	},
 	(t) => [
-		uniqueIndex("wallets_personal_uq").on(t.householdId, t.userId),
+		uniqueIndex("wallets_personal_uq").on(t.userId).where(sql`${t.kind} = 'personal'`),
 		uniqueIndex("wallets_shared_uq").on(t.householdId).where(sql`${t.kind} = 'shared'`),
 		check("wallets_kind_check", inList(t.kind.name, WALLET_KINDS)),
 		check(
 			"wallets_user_check",
-			sql`(${t.kind} = 'personal' AND ${t.userId} IS NOT NULL) OR (${t.kind} = 'shared' AND ${t.userId} IS NULL)`,
+			sql`(${t.kind} = 'personal' AND ${t.userId} IS NOT NULL AND ${t.householdId} IS NULL) OR (${t.kind} = 'shared' AND ${t.userId} IS NULL AND ${t.householdId} IS NOT NULL)`,
 		),
 	],
 );
@@ -122,9 +124,9 @@ export const items = sqliteTable(
 	"items",
 	{
 		id: id(),
-		householdId: text("household_id")
-			.notNull()
-			.references(() => households.id, { onDelete: "cascade" }),
+		/** Exactly one of `householdId` (shared with a household) and `ownerId` (personal) is set. */
+		householdId: text("household_id").references(() => households.id, { onDelete: "cascade" }),
+		ownerId: text("owner_id").references(() => users.id, { onDelete: "cascade" }),
 		kind: text("kind", { enum: ITEM_KINDS }).notNull(),
 		name: text("name").notNull(),
 		description: text("description"),
@@ -144,6 +146,8 @@ export const items = sqliteTable(
 	},
 	(t) => [
 		index("items_household_idx").on(t.householdId, t.archivedAt),
+		index("items_owner_idx").on(t.ownerId, t.archivedAt),
+		check("items_scope_check", sql`(${t.householdId} IS NULL) <> (${t.ownerId} IS NULL)`),
 		check("items_kind_check", inList(t.kind.name, ITEM_KINDS)),
 		check("items_credits_to_check", inList(t.creditsTo.name, WALLET_KINDS)),
 		check("items_target_check", sql`${t.targetPerPeriod} >= 1`),
@@ -168,9 +172,8 @@ export const ledgerEntries = sqliteTable(
 	"ledger_entries",
 	{
 		id: id(),
-		householdId: text("household_id")
-			.notNull()
-			.references(() => households.id, { onDelete: "cascade" }),
+		/** Household the entry is about, if any (personal coins earned on a personal item have none). */
+		householdId: text("household_id").references(() => households.id, { onDelete: "cascade" }),
 		walletId: text("wallet_id")
 			.notNull()
 			.references(() => wallets.id),
@@ -224,9 +227,9 @@ export const rewards = sqliteTable(
 	"rewards",
 	{
 		id: id(),
-		householdId: text("household_id")
-			.notNull()
-			.references(() => households.id, { onDelete: "cascade" }),
+		/** Exactly one of `householdId` and `ownerId` is set. */
+		householdId: text("household_id").references(() => households.id, { onDelete: "cascade" }),
+		ownerId: text("owner_id").references(() => users.id, { onDelete: "cascade" }),
 		name: text("name").notNull(),
 		description: text("description"),
 		cost: integer("cost").notNull(),
@@ -239,6 +242,8 @@ export const rewards = sqliteTable(
 	},
 	(t) => [
 		index("rewards_household_idx").on(t.householdId, t.archivedAt),
+		index("rewards_owner_idx").on(t.ownerId, t.archivedAt),
+		check("rewards_scope_check", sql`(${t.householdId} IS NULL) <> (${t.ownerId} IS NULL)`),
 		check("rewards_cost_check", sql`${t.cost} >= 0`),
 		check("rewards_funded_from_check", inList(t.fundedFrom.name, WALLET_KINDS)),
 		check(

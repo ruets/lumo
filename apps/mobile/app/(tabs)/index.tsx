@@ -69,7 +69,8 @@ function RemainingRow({ e, onTap }: { e: TodayItem; onTap: () => void }) {
 }
 
 function Approvals() {
-	const pending = usePending(true);
+	const me = useMe().data;
+	const pending = usePending(Boolean(me?.household));
 	const items = useItems();
 	const review = useReview();
 	const list = pending.data?.completions ?? [];

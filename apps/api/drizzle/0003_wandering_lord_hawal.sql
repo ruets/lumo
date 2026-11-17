@@ -1,1 +1,0 @@
-ALTER TABLE `households` ADD `backdate_unlimited` integer DEFAULT false NOT NULL;

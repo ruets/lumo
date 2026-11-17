@@ -1,1 +1,0 @@
-ALTER TABLE `redemptions` ADD `undone_at` integer;

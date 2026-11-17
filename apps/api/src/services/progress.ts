@@ -17,7 +17,7 @@ import { errors } from "../errors.js";
 import type { statsView, todayView } from "../schemas.js";
 import { countActive } from "./completions.js";
 import type { ActorCtx } from "./context.js";
-import { assigneesOf, type ItemRow, toItemView } from "./items.js";
+import { accessibleItems, assigneesOf, type ItemRow, toItemView } from "./items.js";
 import type { DbOrTx } from "./members.js";
 
 function assignedItems(db: DbOrTx, actor: ActorCtx): ItemRow[] {
@@ -31,7 +31,7 @@ function assignedItems(db: DbOrTx, actor: ActorCtx): ItemRow[] {
 	return db
 		.select()
 		.from(items)
-		.where(and(inArray(items.id, ids), eq(items.householdId, actor.householdId), isNull(items.archivedAt)))
+		.where(and(inArray(items.id, ids), accessibleItems(actor), isNull(items.archivedAt)))
 		.all();
 }
 

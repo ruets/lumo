@@ -16,7 +16,7 @@ import {
 } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { householdView, memberView, updateHouseholdBody, updateMemberBody } from "../schemas.js";
-import type { AccountCtx, ActorCtx } from "./context.js";
+import type { AccountCtx, HouseholdActorCtx } from "./context.js";
 import { createHousehold, type DbOrTx, joinHousehold, type Tx } from "./members.js";
 
 type MemberView = z.input<typeof memberView>;
@@ -41,7 +41,7 @@ function membersOf(db: DbOrTx, householdId: string): MemberView[] {
 }
 
 /** The household, its members (visible to every member) and, for the owner, the pending invitations. */
-export function getHousehold(db: DbOrTx, actor: ActorCtx, now: Date): HouseholdView {
+export function getHousehold(db: DbOrTx, actor: HouseholdActorCtx, now: Date): HouseholdView {
 	const h = db.select().from(households).where(eq(households.id, actor.householdId)).get();
 	if (!h) throw errors.unauthenticated();
 	const pending = can(actor, "household:manage")
@@ -73,7 +73,7 @@ export function getHousehold(db: DbOrTx, actor: ActorCtx, now: Date): HouseholdV
 /** Owner only. A household always keeps at least one owner (domain rule). */
 export function updateMember(
 	tx: Tx,
-	actor: ActorCtx,
+	actor: HouseholdActorCtx,
 	userId: string,
 	input: z.output<typeof updateMemberBody>,
 ): MemberView {
@@ -108,7 +108,7 @@ export function updateMember(
 }
 
 /** Owner only: deletes an invitation that has not been used yet. */
-export function revokeInvite(tx: Tx, actor: ActorCtx, inviteId: string): void {
+export function revokeInvite(tx: Tx, actor: HouseholdActorCtx, inviteId: string): void {
 	if (!can(actor, "household:manage")) throw errors.forbidden("Only an owner can revoke invitations");
 	const removed = tx
 		.delete(invites)
@@ -121,7 +121,7 @@ export function revokeInvite(tx: Tx, actor: ActorCtx, inviteId: string): void {
 /** Owner only: household name, time zone, first day of the week and backdate window. */
 export function updateHousehold(
 	tx: Tx,
-	actor: ActorCtx,
+	actor: HouseholdActorCtx,
 	input: z.output<typeof updateHouseholdBody>,
 	now: Date,
 ): HouseholdView {
@@ -177,7 +177,7 @@ function ownerCountOf(tx: Tx, householdId: string): number {
  * Owner only. The member leaves the household but keeps their account: they can sign in, keep their coins and join
  * another household. Never yourself, never the last owner (domain rules).
  */
-export function removeMember(tx: Tx, actor: ActorCtx, userId: string): void {
+export function removeMember(tx: Tx, actor: HouseholdActorCtx, userId: string): void {
 	if (!can(actor, "household:manage")) throw errors.forbidden("Only an owner can remove members");
 	const target = tx
 		.select()
@@ -195,7 +195,7 @@ export function removeMember(tx: Tx, actor: ActorCtx, userId: string): void {
 }
 
 /** Leaving on your own: allowed for everybody except the last owner. */
-export function leaveHousehold(tx: Tx, actor: ActorCtx): void {
+export function leaveHousehold(tx: Tx, actor: HouseholdActorCtx): void {
 	assertCanLeaveHousehold({ role: actor.role, ownerCount: ownerCountOf(tx, actor.householdId) });
 	detachFromHousehold(tx, actor.householdId, actor.userId);
 }

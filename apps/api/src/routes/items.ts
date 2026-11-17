@@ -26,6 +26,7 @@ import { route } from "./define.js";
 
 export const itemRoutes = [
 	route({
+		scope: "account",
 		method: "post",
 		url: "/items",
 		summary: "Create a habit or a task",
@@ -36,6 +37,7 @@ export const itemRoutes = [
 		handler: ({ db, actor, body, now }) => createItem(db, actor, body, now),
 	}),
 	route({
+		scope: "account",
 		method: "get",
 		url: "/items",
 		summary: "List the visible items",
@@ -45,6 +47,7 @@ export const itemRoutes = [
 		handler: ({ db, actor, query }) => ({ items: listItems(db, actor, query.includeArchived) }),
 	}),
 	route({
+		scope: "account",
 		method: "patch",
 		url: "/items/:id",
 		summary: "Update an item",
@@ -55,6 +58,7 @@ export const itemRoutes = [
 		handler: ({ db, actor, params, body }) => updateItem(db, actor, params.id, body),
 	}),
 	route({
+		scope: "account",
 		method: "delete",
 		url: "/items/:id",
 		summary: "Archive an item",
@@ -64,6 +68,7 @@ export const itemRoutes = [
 		handler: ({ db, actor, params, now }) => archiveItem(db, actor, params.id, now),
 	}),
 	route({
+		scope: "account",
 		method: "get",
 		url: "/today",
 		summary: "Items due that day with their progress",
@@ -73,6 +78,7 @@ export const itemRoutes = [
 		handler: ({ db, actor, query, now }) => getToday(db, actor, query.date, now),
 	}),
 	route({
+		scope: "account",
 		method: "post",
 		url: "/items/:id/completions",
 		summary: "Complete an item (coins are computed by the server)",
@@ -93,6 +99,7 @@ export const itemRoutes = [
 		handler: ({ db, actor }) => ({ completions: listPending(db, actor) }),
 	}),
 	route({
+		scope: "account",
 		method: "delete",
 		url: "/completions/:id",
 		summary: "Undo a completion (counter-entry in the ledger)",

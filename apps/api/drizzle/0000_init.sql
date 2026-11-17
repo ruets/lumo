@@ -35,6 +35,7 @@ CREATE TABLE `households` (
 	`timezone` text DEFAULT 'Europe/Paris' NOT NULL,
 	`week_start` integer DEFAULT 1 NOT NULL,
 	`backdate_days` integer DEFAULT 2 NOT NULL,
+	`backdate_unlimited` integer DEFAULT false NOT NULL,
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
 	CONSTRAINT "households_week_start_check" CHECK("households"."week_start" BETWEEN 1 AND 7),
 	CONSTRAINT "households_backdate_days_check" CHECK("households"."backdate_days" >= 0)
@@ -50,6 +51,11 @@ CREATE TABLE `idempotency_keys` (
 );
 --> statement-breakpoint
 CREATE INDEX `idempotency_keys_created_idx` ON `idempotency_keys` (`created_at`);--> statement-breakpoint
+CREATE TABLE `instance_settings` (
+	`key` text PRIMARY KEY NOT NULL,
+	`value` text NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `invites` (
 	`id` text PRIMARY KEY NOT NULL,
 	`household_id` text NOT NULL,
@@ -78,7 +84,8 @@ CREATE TABLE `item_assignees` (
 CREATE INDEX `item_assignees_user_idx` ON `item_assignees` (`user_id`);--> statement-breakpoint
 CREATE TABLE `items` (
 	`id` text PRIMARY KEY NOT NULL,
-	`household_id` text NOT NULL,
+	`household_id` text,
+	`owner_id` text,
 	`kind` text NOT NULL,
 	`name` text NOT NULL,
 	`description` text,
@@ -93,7 +100,9 @@ CREATE TABLE `items` (
 	`created_by` text NOT NULL,
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
 	FOREIGN KEY (`household_id`) REFERENCES `households`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "items_scope_check" CHECK(("items"."household_id" IS NULL) <> ("items"."owner_id" IS NULL)),
 	CONSTRAINT "items_kind_check" CHECK(kind IN ('habit', 'task')),
 	CONSTRAINT "items_credits_to_check" CHECK(credits_to IN ('personal', 'shared')),
 	CONSTRAINT "items_target_check" CHECK("items"."target_per_period" >= 1),
@@ -101,9 +110,10 @@ CREATE TABLE `items` (
 );
 --> statement-breakpoint
 CREATE INDEX `items_household_idx` ON `items` (`household_id`,`archived_at`);--> statement-breakpoint
+CREATE INDEX `items_owner_idx` ON `items` (`owner_id`,`archived_at`);--> statement-breakpoint
 CREATE TABLE `ledger_entries` (
 	`id` text PRIMARY KEY NOT NULL,
-	`household_id` text NOT NULL,
+	`household_id` text,
 	`wallet_id` text NOT NULL,
 	`amount` integer NOT NULL,
 	`reason` text NOT NULL,
@@ -149,6 +159,7 @@ CREATE TABLE `redemptions` (
 	`user_id` text NOT NULL,
 	`wallet_id` text NOT NULL,
 	`redeemed_at` integer NOT NULL,
+	`undone_at` integer,
 	`ledger_entry_id` text NOT NULL,
 	FOREIGN KEY (`reward_id`) REFERENCES `rewards`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
@@ -167,7 +178,8 @@ CREATE TABLE `reward_assignees` (
 --> statement-breakpoint
 CREATE TABLE `rewards` (
 	`id` text PRIMARY KEY NOT NULL,
-	`household_id` text NOT NULL,
+	`household_id` text,
+	`owner_id` text,
 	`name` text NOT NULL,
 	`description` text,
 	`cost` integer NOT NULL,
@@ -178,12 +190,15 @@ CREATE TABLE `rewards` (
 	`archived_at` integer,
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
 	FOREIGN KEY (`household_id`) REFERENCES `households`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "rewards_scope_check" CHECK(("rewards"."household_id" IS NULL) <> ("rewards"."owner_id" IS NULL)),
 	CONSTRAINT "rewards_cost_check" CHECK("rewards"."cost" >= 0),
 	CONSTRAINT "rewards_funded_from_check" CHECK(funded_from IN ('personal', 'shared')),
 	CONSTRAINT "rewards_limit_check" CHECK(("rewards"."limit_count" IS NULL AND "rewards"."limit_period" IS NULL) OR ("rewards"."limit_count" >= 1 AND "rewards"."limit_period" IN ('day', 'week', 'month', 'year')))
 );
 --> statement-breakpoint
 CREATE INDEX `rewards_household_idx` ON `rewards` (`household_id`,`archived_at`);--> statement-breakpoint
+CREATE INDEX `rewards_owner_idx` ON `rewards` (`owner_id`,`archived_at`);--> statement-breakpoint
 CREATE TABLE `sessions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -210,6 +225,11 @@ CREATE TABLE `users` (
 	`username` text,
 	`email` text,
 	`password_hash` text,
+	`timezone` text DEFAULT 'UTC' NOT NULL,
+	`week_start` integer DEFAULT 1 NOT NULL,
+	`is_super_admin` integer DEFAULT false NOT NULL,
+	`disabled_at` integer,
+	`deleted_at` integer,
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL
 );
 --> statement-breakpoint
@@ -218,15 +238,15 @@ CREATE UNIQUE INDEX `users_username_uq` ON `users` (`username`);--> statement-br
 CREATE UNIQUE INDEX `users_email_uq` ON `users` (`email`);--> statement-breakpoint
 CREATE TABLE `wallets` (
 	`id` text PRIMARY KEY NOT NULL,
-	`household_id` text NOT NULL,
+	`household_id` text,
 	`kind` text NOT NULL,
 	`user_id` text,
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
 	FOREIGN KEY (`household_id`) REFERENCES `households`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "wallets_kind_check" CHECK(kind IN ('personal', 'shared')),
-	CONSTRAINT "wallets_user_check" CHECK(("wallets"."kind" = 'personal' AND "wallets"."user_id" IS NOT NULL) OR ("wallets"."kind" = 'shared' AND "wallets"."user_id" IS NULL))
+	CONSTRAINT "wallets_user_check" CHECK(("wallets"."kind" = 'personal' AND "wallets"."user_id" IS NOT NULL AND "wallets"."household_id" IS NULL) OR ("wallets"."kind" = 'shared' AND "wallets"."user_id" IS NULL AND "wallets"."household_id" IS NOT NULL))
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `wallets_personal_uq` ON `wallets` (`household_id`,`user_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `wallets_personal_uq` ON `wallets` (`user_id`) WHERE "wallets"."kind" = 'personal';--> statement-breakpoint
 CREATE UNIQUE INDEX `wallets_shared_uq` ON `wallets` (`household_id`) WHERE "wallets"."kind" = 'shared';

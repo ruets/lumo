@@ -43,13 +43,17 @@ export function WishesPage({ me }: { me: MeResponse }) {
 							: t("today.earned", { count: earnedToday })}
 					</p>
 				</div>
-				<p className="m-0 text-sm font-semibold">{t("wishes.sharedBalance", { amount: me.wallets.shared.balance })}</p>
+				{me.wallets.shared && (
+					<p className="m-0 text-sm font-semibold">
+						{t("wishes.sharedBalance", { amount: me.wallets.shared.balance })}
+					</p>
+				)}
 			</section>
 
 			{rewards.data?.rewards.length === 0 && <p className="m-0 text-muted">{t("wishes.empty")}</p>}
 			<ul className="m-0 grid list-none gap-2.5 p-0 md:grid-cols-2">
 				{rewards.data?.rewards.map((r) => {
-					const wallet = r.fundedFrom === "shared" ? me.wallets.shared.balance : balance;
+					const wallet = r.fundedFrom === "shared" ? (me.wallets.shared?.balance ?? 0) : balance;
 					const exhausted = r.limitCount !== null && (r.remaining ?? 0) <= 0;
 					const canBuy = wallet >= r.cost && !exhausted;
 					return (

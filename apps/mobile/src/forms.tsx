@@ -5,7 +5,7 @@ import { colors } from "@lumo/tokens";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Switch, View } from "react-native";
-import { describeError } from "./hooks";
+import { describeError, useMe } from "./hooks";
 import { api } from "./session";
 import { Button, Chip, Field, font, Sheet, T } from "./ui";
 
@@ -26,6 +26,18 @@ function useSubmit<I>(call: (i: I) => Promise<unknown>, onClose: () => void) {
 	return { m, error };
 }
 
+function ScopeChips({ personal, onChange }: { personal: boolean; onChange: (personal: boolean) => void }) {
+	return (
+		<>
+			<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.muted }}>{t("form.scope")}</T>
+			<View style={{ flexDirection: "row", gap: 8 }}>
+				<Chip label={t("form.scope.household")} on={!personal} onPress={() => onChange(false)} />
+				<Chip label={t("form.scope.personal")} on={personal} onPress={() => onChange(true)} />
+			</View>
+		</>
+	);
+}
+
 export function ItemSheet({
 	kind,
 	visible,
@@ -43,6 +55,8 @@ export function ItemSheet({
 	const [days, setDays] = useState<number[]>([1]);
 	const [target, setTarget] = useState("1");
 	const [approval, setApproval] = useState(false);
+	const inHousehold = Boolean(useMe().data?.household);
+	const [personal, setPersonal] = useState(false);
 	const { m, error } = useSubmit(
 		(i: CreateItemInput) => api.createItem(i),
 		() => {
@@ -52,7 +66,12 @@ export function ItemSheet({
 	);
 
 	function submit() {
-		const common = { name: name.trim(), reward: Number(reward) || 0, requiresApproval: approval };
+		const common = {
+			name: name.trim(),
+			reward: Number(reward) || 0,
+			scope: inHousehold && !personal ? ("household" as const) : ("personal" as const),
+			requiresApproval: inHousehold && !personal && approval,
+		};
 		if (kind === "task") return m.mutate({ kind: "task", ...common });
 		const schedule =
 			freq === "daily"
@@ -68,6 +87,7 @@ export function ItemSheet({
 	return (
 		<Sheet title={kind === "habit" ? t("items.newHabit") : t("items.newTask")} visible={visible} onClose={onClose}>
 			<Field label={t("form.name")} value={name} onChangeText={setName} maxLength={120} />
+			{inHousehold && <ScopeChips personal={personal} onChange={setPersonal} />}
 			<Field label={t("form.reward")} value={reward} onChangeText={setReward} keyboardType="number-pad" />
 			{kind === "habit" && (
 				<>
@@ -98,12 +118,14 @@ export function ItemSheet({
 					<Field label={t("form.target")} value={target} onChangeText={setTarget} keyboardType="number-pad" />
 				</>
 			)}
-			<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
-				<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.textSoft, flex: 1 }}>
-					{t("form.requiresApproval")}
-				</T>
-				<Switch value={approval} onValueChange={setApproval} trackColor={{ true: colors.primary }} />
-			</View>
+			{inHousehold && !personal && (
+				<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
+					<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.textSoft, flex: 1 }}>
+						{t("form.requiresApproval")}
+					</T>
+					<Switch value={approval} onValueChange={setApproval} trackColor={{ true: colors.primary }} />
+				</View>
+			)}
 			{error && <T style={{ color: colors.danger, fontFamily: font.semi }}>{error}</T>}
 			<View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8 }}>
 				<Button label={t("common.cancel")} variant="ghost" onPress={onClose} />
@@ -124,6 +146,8 @@ export function RewardSheet({ visible, onClose }: { visible: boolean; onClose: (
 	const [limited, setLimited] = useState(false);
 	const [limitCount, setLimitCount] = useState("1");
 	const [period, setPeriod] = useState<"day" | "week" | "month" | "year">("week");
+	const inHousehold = Boolean(useMe().data?.household);
+	const [personal, setPersonal] = useState(false);
 	const { m, error } = useSubmit(
 		(i: Parameters<typeof api.createReward>[0]) => api.createReward(i),
 		() => {
@@ -135,6 +159,7 @@ export function RewardSheet({ visible, onClose }: { visible: boolean; onClose: (
 	return (
 		<Sheet title={t("wishes.new")} visible={visible} onClose={onClose}>
 			<Field label={t("form.name")} value={name} onChangeText={setName} maxLength={120} />
+			{inHousehold && <ScopeChips personal={personal} onChange={setPersonal} />}
 			<Field label={t("form.cost")} value={cost} onChangeText={setCost} keyboardType="number-pad" />
 			<Field label={t("form.link")} value={link} onChangeText={setLink} autoCapitalize="none" keyboardType="url" />
 			<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
@@ -166,6 +191,7 @@ export function RewardSheet({ visible, onClose }: { visible: boolean; onClose: (
 						m.mutate({
 							name: name.trim(),
 							cost: Number(cost) || 1,
+							scope: inHousehold && !personal ? ("household" as const) : ("personal" as const),
 							...(link.trim() ? { link: link.trim() } : {}),
 							...(limited ? { limitCount: Number(limitCount) || 1, limitPeriod: period } : {}),
 						})

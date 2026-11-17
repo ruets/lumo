@@ -80,10 +80,14 @@ describe("accounts without a household", () => {
 
 		// Still signed in, still able to sign in again, but without access to the household.
 		expect((await h.kid.api.get("/account")).json().household).toBeNull();
-		const me = await h.kid.api.get("/me");
-		expect(me.statusCode).toBe(403);
-		expect(me.json().code).toBe("no_household");
-		expect((await h.kid.api.get("/items")).statusCode).toBe(403);
+		// The app still works for them, on their own: no household, no pot.
+		expect((await h.kid.api.get("/me")).json()).toMatchObject({
+			household: null,
+			role: null,
+			wallets: { shared: null },
+		});
+		expect((await h.kid.api.get("/items")).json().items).toEqual([]);
+		expect((await h.kid.api.get("/household")).json().code).toBe("no_household");
 		expect((await login("kid")).status).toBe(200);
 		expect(ctx.db.select().from(users).where(eq(users.id, h.kid.userId)).get()).toMatchObject({ username: "kid" });
 	});

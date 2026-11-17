@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUID } from "node:crypto";
 import { can, scheduleSchema } from "@lumo/domain";
-import { and, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, type SQL } from "drizzle-orm";
 import type { z } from "zod";
 import { itemAssignees, items, memberships } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { createItemBody, itemView, updateItemBody } from "../schemas.js";
 import type { ActorCtx } from "./context.js";
+import { inHousehold } from "./context.js";
 import type { DbOrTx, Tx } from "./members.js";
 
 export type ItemRow = typeof items.$inferSelect;
@@ -39,25 +40,31 @@ export function toItemView(row: ItemRow, assigneeIds: string[]): ItemView {
 		archivedAt: row.archivedAt?.toISOString() ?? null,
 		createdBy: row.createdBy,
 		assigneeIds,
+		scope: row.householdId ? "household" : "personal",
 	};
 }
 
-/** Item of the actor's household, not archived; otherwise 404 (nothing is revealed about another household). */
+/** Items the actor can see: their own personal items and those of their household. */
+export function accessibleItems(actor: ActorCtx): SQL | undefined {
+	return or(eq(items.ownerId, actor.userId), actor.householdId ? eq(items.householdId, actor.householdId) : undefined);
+}
+
+/** Item of the actor (personal) or of their household, not archived; otherwise 404 (nothing is revealed about others). */
 export function getActiveItem(db: DbOrTx, actor: ActorCtx, id: string): ItemRow {
 	const row = db
 		.select()
 		.from(items)
-		.where(and(eq(items.id, id), eq(items.householdId, actor.householdId)))
+		.where(and(eq(items.id, id), accessibleItems(actor)))
 		.get();
 	if (!row || row.archivedAt) throw notFound();
 	return row;
 }
 
-function assertMembers(db: DbOrTx, actor: ActorCtx, ids: string[]) {
+function assertMembers(db: DbOrTx, householdId: string, ids: string[]) {
 	const found = db
 		.select({ id: memberships.userId })
 		.from(memberships)
-		.where(and(eq(memberships.householdId, actor.householdId), inArray(memberships.userId, ids)))
+		.where(and(eq(memberships.householdId, householdId), inArray(memberships.userId, ids)))
 		.all();
 	if (found.length !== ids.length) throw errors.validation("assigneeIds: an assignee is not a member of the household");
 }
@@ -65,15 +72,26 @@ function assertMembers(db: DbOrTx, actor: ActorCtx, ids: string[]) {
 const unique = (ids: string[]) => [...new Set(ids)];
 
 export function createItem(tx: Tx, actor: ActorCtx, input: z.output<typeof createItemBody>, now: Date): ItemView {
+	const scope = input.scope ?? (inHousehold(actor) ? "household" : "personal");
+	if (scope === "household" && !actor.householdId) throw errors.noHousehold();
 	const assigneeIds = unique(input.assigneeIds ?? [actor.userId]);
 	if (!can(actor, "item:create", { assigneeIds })) throw errors.forbidden("Creation not allowed");
-	assertMembers(tx, actor, assigneeIds);
+	if (scope === "personal") {
+		// A personal item is yours alone: nobody to assign, no approval, and only your own coins.
+		if (assigneeIds.some((id) => id !== actor.userId))
+			throw errors.validation("assigneeIds: a personal item is yours alone");
+		if (input.creditsTo !== "personal") throw errors.validation("creditsTo: a personal item credits your own coins");
+		if (input.requiresApproval) throw errors.validation("requiresApproval: not for personal items");
+	} else {
+		assertMembers(tx, actor.householdId as string, assigneeIds);
+	}
 
 	const id = randomUUID();
 	tx.insert(items)
 		.values({
 			id,
-			householdId: actor.householdId,
+			householdId: scope === "household" ? actor.householdId : null,
+			ownerId: scope === "personal" ? actor.userId : null,
 			kind: input.kind,
 			name: input.name,
 			description: input.description ?? null,
@@ -95,24 +113,26 @@ export function createItem(tx: Tx, actor: ActorCtx, input: z.output<typeof creat
 	return toItemView(row, assigneeIds);
 }
 
-/** Owner and adults see everything; a child only sees what is assigned to them or what they created. */
+/**
+ * Your personal items, plus the household's: owner and adults see all of them, a child only what is assigned to
+ * them or what they created.
+ */
 export function listItems(db: DbOrTx, actor: ActorCtx, includeArchived: boolean): ItemView[] {
-	const base = and(eq(items.householdId, actor.householdId), includeArchived ? undefined : isNull(items.archivedAt));
-	let rows: ItemRow[];
+	let rows = db
+		.select()
+		.from(items)
+		.where(and(accessibleItems(actor), includeArchived ? undefined : isNull(items.archivedAt)))
+		.all();
 	if (actor.role === "child") {
-		const mine = db
-			.select({ id: itemAssignees.itemId })
-			.from(itemAssignees)
-			.where(eq(itemAssignees.userId, actor.userId))
-			.all()
-			.map((r) => r.id);
-		rows = db
-			.select()
-			.from(items)
-			.where(and(base, or(eq(items.createdBy, actor.userId), mine.length ? inArray(items.id, mine) : undefined)))
-			.all();
-	} else {
-		rows = db.select().from(items).where(base).all();
+		const mine = new Set(
+			db
+				.select({ id: itemAssignees.itemId })
+				.from(itemAssignees)
+				.where(eq(itemAssignees.userId, actor.userId))
+				.all()
+				.map((r) => r.id),
+		);
+		rows = rows.filter((r) => r.ownerId === actor.userId || r.createdBy === actor.userId || mine.has(r.id));
 	}
 	rows.sort((a, b) => Number(b.pinned) - Number(a.pinned) || a.name.localeCompare(b.name, "fr"));
 	const assignees = assigneesOf(
@@ -128,10 +148,15 @@ export function updateItem(tx: Tx, actor: ActorCtx, id: string, input: z.output<
 	if (row.kind === "task" && input.schedule) throw errors.validation("body.schedule: a task has no schedule");
 	if (row.kind === "habit" && input.dueAt !== undefined) throw errors.validation("body.dueAt: tasks only");
 
-	if (input.assigneeIds) {
+	if (!row.householdId) {
+		if (input.assigneeIds) throw errors.validation("assigneeIds: a personal item is yours alone");
+		if (input.creditsTo === "shared") throw errors.validation("creditsTo: a personal item credits your own coins");
+		if (input.requiresApproval) throw errors.validation("requiresApproval: not for personal items");
+	}
+	if (input.assigneeIds && row.householdId) {
 		const assigneeIds = unique(input.assigneeIds);
 		if (!can(actor, "item:create", { assigneeIds })) throw errors.forbidden("Assignment not allowed");
-		assertMembers(tx, actor, assigneeIds);
+		assertMembers(tx, row.householdId, assigneeIds);
 		tx.delete(itemAssignees).where(eq(itemAssignees.itemId, id)).run();
 		tx.insert(itemAssignees)
 			.values(assigneeIds.map((userId) => ({ itemId: id, userId })))
@@ -159,7 +184,7 @@ export function archiveItem(tx: Tx, actor: ActorCtx, id: string, now: Date): voi
 	const row = tx
 		.select()
 		.from(items)
-		.where(and(eq(items.id, id), eq(items.householdId, actor.householdId)))
+		.where(and(eq(items.id, id), accessibleItems(actor)))
 		.get();
 	if (!row) throw notFound();
 	if (!can(actor, "item:update", { createdBy: row.createdBy })) throw errors.forbidden("Archiving not allowed");

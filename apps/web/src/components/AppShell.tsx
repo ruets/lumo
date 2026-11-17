@@ -118,7 +118,9 @@ export function AppShell({ me }: { me: MeResponse }) {
 						<Avatar name={me.user.displayName} />
 						<span className="grid min-w-0">
 							<span className="truncate">{me.user.displayName}</span>
-							<span className="truncate text-xs font-normal text-muted">{me.household.name}</span>
+							<span className="truncate text-xs font-normal text-muted">
+								{me.household?.name ?? t("settings.noHousehold")}
+							</span>
 						</span>
 					</Link>
 				</div>

@@ -15,8 +15,8 @@ import type { z } from "zod";
 import { completions, itemAssignees, items, ledgerEntries, memberships } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { completionView } from "../schemas.js";
-import type { ActorCtx } from "./context.js";
-import { getActiveItem } from "./items.js";
+import type { ActorCtx, HouseholdActorCtx } from "./context.js";
+import { accessibleItems, getActiveItem } from "./items.js";
 import { addEntry, balancesFor, walletFor } from "./ledger.js";
 import type { DbOrTx, Tx } from "./members.js";
 
@@ -60,7 +60,7 @@ function getCompletion(db: DbOrTx, actor: ActorCtx, id: string) {
 		.select({ c: completions, i: items })
 		.from(completions)
 		.innerJoin(items, eq(items.id, completions.itemId))
-		.where(and(eq(completions.id, id), eq(items.householdId, actor.householdId)))
+		.where(and(eq(completions.id, id), accessibleItems(actor)))
 		.get();
 	if (!row) throw new AppError(404, "not_found", "Completion not found");
 	return row;
@@ -107,8 +107,8 @@ export function createCompletion(
 	let ledgerEntryId: string | null = null;
 	if (plan.credit > 0) {
 		ledgerEntryId = addEntry(tx, {
-			householdId: actor.householdId,
-			walletId: walletFor(tx, actor.householdId, item.creditsTo, actor.userId),
+			householdId: item.householdId,
+			walletId: walletFor(tx, item.creditsTo, actor.userId, actor.householdId),
 			amount: plan.credit,
 			reason: "completion",
 			refId: id,
@@ -126,7 +126,7 @@ export function createCompletion(
 export function undoCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 	const { c } = getCompletion(tx, actor, id);
 	const owner = tx.select().from(memberships).where(eq(memberships.userId, c.userId)).get();
-	if (!owner || !can(actor, "completion:undo", { userId: c.userId, userRole: owner.role })) {
+	if (!can(actor, "completion:undo", { userId: c.userId, userRole: owner?.role ?? "adult" })) {
 		throw errors.forbidden("Undo not allowed");
 	}
 	if (c.undoneAt) throw errors.conflict("already_undone", "This completion is already undone");
@@ -136,7 +136,7 @@ export function undoCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 		const original = tx.select().from(ledgerEntries).where(eq(ledgerEntries.id, c.ledgerEntryId)).get();
 		if (original) {
 			addEntry(tx, {
-				householdId: actor.householdId,
+				householdId: original.householdId,
 				walletId: original.walletId,
 				amount: -original.amount,
 				reason: "undo",
@@ -161,9 +161,9 @@ export function approveCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date
 	let ledgerEntryId: string | null = null;
 	if (i.reward > 0) {
 		ledgerEntryId = addEntry(tx, {
-			householdId: actor.householdId,
+			householdId: i.householdId,
 			// The reward goes to the wallet of the person who completed it, not the approver.
-			walletId: walletFor(tx, actor.householdId, i.creditsTo, c.userId),
+			walletId: walletFor(tx, i.creditsTo, c.userId, actor.householdId),
 			amount: i.reward,
 			reason: "completion",
 			refId: id,
@@ -187,7 +187,7 @@ export function rejectCompletion(tx: Tx, actor: ActorCtx, id: string) {
 }
 
 /** Completions waiting for approval, for the actor's household. */
-export function listPending(db: DbOrTx, actor: ActorCtx): CompletionView[] {
+export function listPending(db: DbOrTx, actor: HouseholdActorCtx): CompletionView[] {
 	if (!can(actor, "completion:review")) throw errors.forbidden("Adults only");
 	return db
 		.select({ c: completions })

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUID } from "node:crypto";
 import { can, localDate, periodStart, planRedemption } from "@lumo/domain";
-import { and, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, or } from "drizzle-orm";
 import type { z } from "zod";
 import { ledgerEntries, memberships, redemptions, rewardAssignees, rewards } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { createRewardBody, rewardView, updateRewardBody } from "../schemas.js";
-import type { ActorCtx } from "./context.js";
+import { type ActorCtx, inHousehold } from "./context.js";
 import { addEntry, balancesFor, walletBalance, walletFor } from "./ledger.js";
 import type { DbOrTx, Tx } from "./members.js";
 
@@ -35,8 +35,12 @@ const toView = (r: RewardRow, assigneeIds: string[], remaining: number | null = 
 	link: r.link,
 	archivedAt: r.archivedAt?.toISOString() ?? null,
 	assigneeIds,
+	scope: r.householdId ? "household" : "personal",
 	remaining,
 });
+
+const accessibleRewards = (actor: ActorCtx) =>
+	or(eq(rewards.ownerId, actor.userId), actor.householdId ? eq(rewards.householdId, actor.householdId) : undefined);
 
 /** The actor's redemptions in the current limit period (household local days). */
 function usedInPeriodOf(db: DbOrTx, actor: ActorCtx, reward: RewardRow, now: Date): number {
@@ -58,12 +62,12 @@ function usedInPeriodOf(db: DbOrTx, actor: ActorCtx, reward: RewardRow, now: Dat
 		.filter((r) => localDate(r.at, actor.timezone) >= start).length;
 }
 
-function assertMembers(db: DbOrTx, actor: ActorCtx, ids: string[]) {
+function assertMembers(db: DbOrTx, householdId: string, ids: string[]) {
 	if (ids.length === 0) return;
 	const found = db
 		.select({ id: memberships.userId })
 		.from(memberships)
-		.where(and(eq(memberships.householdId, actor.householdId), inArray(memberships.userId, ids)))
+		.where(and(eq(memberships.householdId, householdId), inArray(memberships.userId, ids)))
 		.all();
 	if (found.length !== ids.length) throw errors.validation("assigneeIds: an assignee is not a member of the household");
 }
@@ -72,21 +76,30 @@ function getRewardRow(db: DbOrTx, actor: ActorCtx, id: string, opts: { allowArch
 	const row = db
 		.select()
 		.from(rewards)
-		.where(and(eq(rewards.id, id), eq(rewards.householdId, actor.householdId)))
+		.where(and(eq(rewards.id, id), accessibleRewards(actor)))
 		.get();
 	if (!row || (row.archivedAt && !opts.allowArchived)) throw notFound();
 	return row;
 }
 
 export function createReward(tx: Tx, actor: ActorCtx, input: z.output<typeof createRewardBody>, now: Date): RewardView {
-	if (!can(actor, "reward:manage")) throw errors.forbidden("Adults only");
+	const scope = input.scope ?? (inHousehold(actor) ? "household" : "personal");
+	if (scope === "household" && !actor.householdId) throw errors.noHousehold();
 	const assigneeIds = [...new Set(input.assigneeIds)];
-	assertMembers(tx, actor, assigneeIds);
+	if (scope === "household") {
+		if (!can(actor, "reward:manage")) throw errors.forbidden("Adults only");
+		assertMembers(tx, actor.householdId as string, assigneeIds);
+	} else {
+		// A personal wish is yours alone and paid from your own coins.
+		if (assigneeIds.length > 0) throw errors.validation("assigneeIds: a personal wish is yours alone");
+		if (input.fundedFrom !== "personal") throw errors.validation("fundedFrom: a personal wish uses your own coins");
+	}
 	const id = randomUUID();
 	tx.insert(rewards)
 		.values({
 			id,
-			householdId: actor.householdId,
+			householdId: scope === "household" ? actor.householdId : null,
+			ownerId: scope === "personal" ? actor.userId : null,
 			name: input.name,
 			description: input.description ?? null,
 			cost: input.cost,
@@ -109,7 +122,7 @@ export function listRewards(db: DbOrTx, actor: ActorCtx, now: Date): RewardView[
 	const rows = db
 		.select()
 		.from(rewards)
-		.where(and(eq(rewards.householdId, actor.householdId), isNull(rewards.archivedAt)))
+		.where(and(accessibleRewards(actor), isNull(rewards.archivedAt)))
 		.all();
 	const assignees = assigneesOf(
 		db,
@@ -125,7 +138,9 @@ export function listRewards(db: DbOrTx, actor: ActorCtx, now: Date): RewardView[
 		)
 		.filter(
 			(v) =>
-				actor.role !== "child" || can(actor, "reward:redeem", { fundedFrom: v.fundedFrom, assigneeIds: v.assigneeIds }),
+				v.scope === "personal" ||
+				actor.role !== "child" ||
+				can(actor, "reward:redeem", { fundedFrom: v.fundedFrom, assigneeIds: v.assigneeIds }),
 		)
 		.sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name, "fr"));
 }
@@ -137,17 +152,22 @@ export function updateReward(
 	input: z.output<typeof updateRewardBody>,
 	now: Date,
 ): RewardView {
-	if (!can(actor, "reward:manage")) throw errors.forbidden("Adults only");
 	const row = getRewardRow(tx, actor, id, { allowArchived: true });
+	if (row.householdId && !can(actor, "reward:manage")) throw errors.forbidden("Adults only");
+	if (!row.householdId) {
+		if (input.assigneeIds && input.assigneeIds.length > 0)
+			throw errors.validation("assigneeIds: a personal wish is yours alone");
+		if (input.fundedFrom === "shared") throw errors.validation("fundedFrom: a personal wish uses your own coins");
+	}
 
 	const limitCount = input.limitCount !== undefined ? input.limitCount : row.limitCount;
 	const limitPeriod = input.limitPeriod !== undefined ? input.limitPeriod : row.limitPeriod;
 	if ((limitCount === null) !== (limitPeriod === null))
 		throw errors.validation("limitCount and limitPeriod go together");
 
-	if (input.assigneeIds) {
+	if (input.assigneeIds && row.householdId) {
 		const ids = [...new Set(input.assigneeIds)];
-		assertMembers(tx, actor, ids);
+		assertMembers(tx, row.householdId, ids);
 		tx.delete(rewardAssignees).where(eq(rewardAssignees.rewardId, id)).run();
 		if (ids.length)
 			tx.insert(rewardAssignees)
@@ -176,13 +196,13 @@ export function updateReward(
 export function redeemReward(tx: Tx, actor: ActorCtx, rewardId: string, now: Date) {
 	const reward = getRewardRow(tx, actor, rewardId);
 	const assigneeIds = assigneesOf(tx, [rewardId]).get(rewardId) ?? [];
-	if (!can(actor, "reward:redeem", { fundedFrom: reward.fundedFrom, assigneeIds })) {
+	if (reward.householdId && !can(actor, "reward:redeem", { fundedFrom: reward.fundedFrom, assigneeIds })) {
 		throw errors.forbidden("You cannot redeem this wish");
 	}
 
 	const usedInPeriod = usedInPeriodOf(tx, actor, reward, now);
 
-	const walletId = walletFor(tx, actor.householdId, reward.fundedFrom, actor.userId);
+	const walletId = walletFor(tx, reward.fundedFrom, actor.userId, actor.householdId);
 	const { amount } = planRedemption({
 		cost: reward.cost,
 		balance: walletBalance(tx, walletId),
@@ -192,7 +212,7 @@ export function redeemReward(tx: Tx, actor: ActorCtx, rewardId: string, now: Dat
 
 	const id = randomUUID();
 	const ledgerEntryId = addEntry(tx, {
-		householdId: actor.householdId,
+		householdId: reward.householdId,
 		walletId,
 		amount,
 		reason: "redemption",
@@ -213,18 +233,15 @@ export function redeemReward(tx: Tx, actor: ActorCtx, rewardId: string, now: Dat
  */
 export function undoRedemption(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 	const row = tx
-		.select({ r: redemptions, owner: memberships })
+		.select({ r: redemptions })
 		.from(redemptions)
 		.innerJoin(rewards, eq(rewards.id, redemptions.rewardId))
-		.innerJoin(
-			memberships,
-			and(eq(memberships.userId, redemptions.userId), eq(memberships.householdId, actor.householdId)),
-		)
-		.where(and(eq(redemptions.id, id), eq(rewards.householdId, actor.householdId)))
+		.where(and(eq(redemptions.id, id), accessibleRewards(actor)))
 		.get();
 	if (!row) throw notFound();
-	const { r, owner } = row;
-	if (!can(actor, "redemption:undo", { userId: r.userId, userRole: owner.role })) {
+	const { r } = row;
+	const owner = tx.select().from(memberships).where(eq(memberships.userId, r.userId)).get();
+	if (!can(actor, "redemption:undo", { userId: r.userId, userRole: owner?.role ?? "adult" })) {
 		throw errors.forbidden("Undo not allowed");
 	}
 	if (r.undoneAt) throw errors.conflict("already_undone", "This redemption is already undone");
@@ -233,7 +250,7 @@ export function undoRedemption(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 	const original = tx.select().from(ledgerEntries).where(eq(ledgerEntries.id, r.ledgerEntryId)).get();
 	if (original) {
 		addEntry(tx, {
-			householdId: actor.householdId,
+			householdId: original.householdId,
 			walletId: original.walletId,
 			amount: -original.amount,
 			reason: "undo",

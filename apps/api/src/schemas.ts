@@ -35,6 +35,8 @@ const itemCommon = {
 	pinned: z.boolean().default(false),
 	requiresApproval: z.boolean().default(false),
 	assigneeIds: assigneeIds.optional(),
+	/** Defaults to the household when the account has one, personal otherwise. */
+	scope: z.enum(["personal", "household"]).optional(),
 };
 
 export const createItemBody = z.discriminatedUnion("kind", [
@@ -95,6 +97,8 @@ export const itemView = z.object({
 	archivedAt: z.string().nullable(),
 	createdBy: z.string(),
 	assigneeIds: z.array(z.string()),
+	/** `personal`: belongs to the account alone; `household`: shared with the household. */
+	scope: z.enum(["personal", "household"]),
 });
 
 // ---- Completions ------------------------------------------------------------------------
@@ -104,7 +108,8 @@ export const completeBody = z.object({ date: localDateSchema.optional() }).stric
 
 export const pendingQuery = z.object({ status: z.literal("pending") });
 
-export const balancesView = z.object({ personal: z.number().int(), shared: z.number().int() });
+/** `shared` is the household pot: `null` for an account in no household. */
+export const balancesView = z.object({ personal: z.number().int(), shared: z.number().int().nullable() });
 
 export const completionView = z.object({
 	id: z.string(),
@@ -135,6 +140,8 @@ export const createRewardBody = z
 		description: z.string().trim().max(1000).nullish(),
 		cost: z.number().int().min(1).max(1_000_000),
 		fundedFrom: walletKind.default("personal"),
+		/** Defaults to the household when the account has one, personal otherwise. */
+		scope: z.enum(["personal", "household"]).optional(),
 		link: z.url().max(500).nullish(),
 		assigneeIds: z.array(z.string().min(1).max(100)).max(30).default([]),
 		...limitFields,
@@ -168,6 +175,7 @@ export const rewardView = z.object({
 	link: z.string().nullable(),
 	archivedAt: z.string().nullable(),
 	assigneeIds: z.array(z.string()),
+	scope: z.enum(["personal", "household"]),
 	/** Redemptions still possible in the period (list only); `null`: no limit or not computed. */
 	remaining: z.number().int().nullable(),
 });
@@ -262,11 +270,12 @@ export const statsView = z.object({
 
 export const meView = z.object({
 	user: z.object({ id: z.string(), displayName: z.string(), avatarUrl: z.string().nullable() }),
-	household: z.object({ id: z.string(), name: z.string(), timezone: z.string() }),
-	role: z.enum(["owner", "adult", "child"]),
+	/** `null` when the account is in no household: personal items and coins still work. */
+	household: z.object({ id: z.string(), name: z.string(), timezone: z.string() }).nullable(),
+	role: z.enum(["owner", "adult", "child"]).nullable(),
 	wallets: z.object({
 		personal: z.object({ id: z.string(), balance: z.number().int() }),
-		shared: z.object({ id: z.string(), balance: z.number().int() }),
+		shared: z.object({ id: z.string(), balance: z.number().int() }).nullable(),
 	}),
 });
 
