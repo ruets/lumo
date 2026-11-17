@@ -9,7 +9,7 @@ import { createHousehold, createMember, userCount, usernameTaken, writeTx } from
 import { findValidInvite, markInviteUsed } from "./invites.js";
 import type { OidcClaims } from "./oidc.js";
 
-const adminGroup = (config: Config) => config.OIDC_ADMIN_GROUP.trim() || null;
+const adminGroup = (config: Config) => config.OIDC_ADMIN_GROUP ?? null;
 
 /**
  * Links an OIDC identity to a Lumo user.

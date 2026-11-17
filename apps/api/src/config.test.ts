@@ -24,6 +24,13 @@ describe("loadConfig", () => {
 		expect(c.oidcEnabled).toBe(true);
 	});
 
+	it("admin group: disabled unless OIDC_ADMIN_GROUP is set, and an empty value keeps it disabled", () => {
+		expect(loadConfig(base).OIDC_ADMIN_GROUP).toBeUndefined();
+		expect(loadConfig({ ...base, OIDC_ADMIN_GROUP: "" }).OIDC_ADMIN_GROUP).toBeUndefined();
+		expect(loadConfig({ ...base, OIDC_ADMIN_GROUP: "  " }).OIDC_ADMIN_GROUP).toBeUndefined();
+		expect(loadConfig({ ...base, OIDC_ADMIN_GROUP: "family-admins" }).OIDC_ADMIN_GROUP).toBe("family-admins");
+	});
+
 	it("rejects a partial OIDC config", () => {
 		expect(() => loadConfig({ ...base, OIDC_ISSUER: "https://auth.example.org/" })).toThrow(/go together/);
 	});

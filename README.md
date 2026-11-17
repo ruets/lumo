@@ -38,3 +38,5 @@ docker compose up -d   # app + Litestream backup
 CI publishes the single web + API image to `ghcr.io/<owner>/<repo>` (`edge` on every push to `main`, SemVer and `latest` on `vX.Y.Z` tags) and builds the Android APK (attached to the GitHub release on tags).
 
 In Authentik: a single OIDC application (confidential client) with two redirect URIs, `PUBLIC_URL/api/v1/auth/callback` for the web and `lumo://auth` for mobile. Mobile never holds the secret: it gets the code through PKCE and the API exchanges it.
+
+Optional: set `OIDC_ADMIN_GROUP` to the name of an Authentik group (for example `lumo-admins`) so its members become owners when they sign in. Without it, nobody is promoted from their groups.
