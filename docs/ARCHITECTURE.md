@@ -27,7 +27,7 @@ License: **AGPL-3.0** (LICENSE file + SPDX header in every package).
 | Coins         | Personal wallet per member + household pot, history, personal → pot transfers, manual adjustment by an admin              | Streak bonus                      |
 | Wishes        | Price, per-period usage limit, link, redemption for coins, wishes funded by the pot                                       |                                   |
 | Progress      | Week and month rates, current and best streak, heatmap                                                                    | CSV export                        |
-| Household     | Members, roles, invitations, sharing a habit between members                                                              | Several households per instance   |
+| Household     | Members, roles, invitations, sharing a habit between members, several households per person (model v2)                    | Calendar sharing                  |
 | Notifications | Mobile push for reminders                                                                                                 | Web Push, e-mail digest           |
 
 Out of scope: freehand drawing, public demo mode. The pot screen may come after the MVP, but the schema plans for it from the start.
@@ -65,7 +65,72 @@ packages/i18n       translations (English source, French first translation), loc
 scripts/            one-off tools (HabitTrove import, later)
 ```
 
-## Data model (SQLite)
+## Model v2: accounts, supervision and households (decided, not implemented yet)
+
+This section supersedes "Data model", the household parts of "Business rules" and "Authentication and rights" below, which still describe what is implemented today (one household per instance, everything belongs to the household). It is decided before the first deployment, so the schema and its initial migration are rewritten, with no data to migrate. Each part of the tables below is updated as the code lands.
+
+### Principles
+
+- **An account belongs to a person.** It owns its profile settings (time zone, first day of the week, feature toggles), its balance, its wishes and its personal habits and tasks. It exists without any household.
+- **A household is an optional shared space**: members, shared habits and tasks (optionally assigned to a member), shared wishes and a pot. A person can belong to several households. Each item carries its household, so a person's rights on it come from their membership of that household: there is no "active household".
+- **Supervision is a property of the account.** An account is supervised if and only if it has at least one guardian (parent or tutor). Household roles shrink to `owner` and `member`: "child" no longer exists in a household.
+- **Privacy by default.** Only guardians see the detail of a supervised account. Household owners see the shared items, not their members' personal space. Super admins see no content at all.
+
+### Entities
+
+| Entity / table      | What changes                                                                                                                                                                              |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`             | `is_super_admin`, `disabled_at`, `time_zone`, `week_start`, `features` (JSON), and for supervised accounts the rights `can_create`, `can_modify`, `can_delete`, `can_transfer`            |
+| `guardianships`     | `guardian_id`, `ward_id`, `status` (`pending`, `active`), created by consent of both sides. The ward's `supervised` state is derived: at least one `active` row                           |
+| `households`        | `features` (JSON: pot, wishes, habits, tasks), `pot_withdrawals` (`owners`, `members`, `nobody`), `backdate_days` (nullable = no limit); no more time zone or week start (moved to users) |
+| `memberships`       | `(household_id, user_id)` unique, `role` is `owner` or `member`; a user can have several rows                                                                                             |
+| `wallets`           | one personal wallet per user (`user_id`, no household) and one pot per household (`household_id`, no user)                                                                                |
+| `items`, `rewards`  | exactly one of `owner_user_id` (personal) and `household_id` (shared); shared items can be assigned to members                                                                            |
+| `ledger_entries`    | tied to a wallet; the household column goes away (a pot entry is found through its wallet)                                                                                                |
+| `invites`           | for a household only: `household_id`, `role` (`owner` or `member`); an existing account can use one                                                                                       |
+| `instance_settings` | who may create a household (`anyone` or `admins`, default `anyone`), edited in the Admin panel                                                                                            |
+
+Time zone and first day of the week are per account because a person cannot have two "todays". A household keeps only what is its own, such as its backdate window.
+
+### Rights
+
+Effective right = what the role allows, **and** (if the account is supervised) what its guardians allow.
+
+| Who              | Can                                                                                                                                                                                                                                             | Cannot                                                                                          |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Account (self)   | Manage its own profile, personal items and wishes, complete items, transfer between its wallet and the pots of its households                                                                                                                   | If supervised: create, modify, delete or transfer without the matching right from its guardians |
+| Guardian         | See and edit the ward's items, wishes and history; set the ward's rights; approve the ward's completions that need approval; adjust the ward's balance with a note; stop supervising (the account becomes unsupervised when the last one stops) | See anything of an account it does not supervise                                                |
+| Household owner  | Invite, change roles, remove members, edit household settings and features, manage shared items and wishes, adjust the pot, pay out from the pot, change the pot withdrawal policy                                                              | See a member's personal space                                                                   |
+| Household member | See the shared items and who completed what, create and edit shared items they made, complete shared items, give to the pot, withdraw from it if the household allows it                                                                        | Manage members or settings                                                                      |
+| Super admin      | List accounts and households, create local accounts, create and delete households, disable, enable or delete an account, grant or remove the super admin role, remove an account from a household, adjust a household's pot                     | See any item, wish or history; designate a guardian                                             |
+
+Guards: never delete or demote the last super admin, never delete yourself, never remove the last owner of a household.
+
+### Flows
+
+- **First start.** The first account (local setup or first OIDC sign-in) becomes super admin and owner of a first household, so the app is usable at once.
+- **Account creation.** By a super admin (local account), or automatically for an OIDC identity when `OIDC_AUTO_CREATE_USERS=true` (otherwise an unknown OIDC identity is refused). No self-registration.
+- **Household creation.** Open to any account by default (the creator becomes owner); a super admin can restrict it to super admins in the Admin panel.
+- **Joining a household.** By invitation code, as today, from a signed-in account. Invitations exist for households only.
+- **Leaving or being removed.** The membership goes. The account, its sessions, its personal items, wishes and wallet stay (including coins earned from shared items and credited to the personal wallet). The person loses the household's items, wishes and pot; what they gave to the pot stays there.
+- **Supervision.** Created by mutual consent: a guardian proposes, or the person designates a guardian, and the other side accepts. A guardian can end it for themselves at any time; when none is left the account is no longer supervised. Nothing forces supervision on an adult.
+- **Pot transfers.** Any member can give from their wallet to a household pot (subject to the `can_transfer` right if supervised). Withdrawing to one's own wallet follows the household's `pot_withdrawals` policy (owners only by default). An owner can pay out from the pot to a member.
+- **Disabling and deleting.** A disabled account cannot sign in and keeps all its data. Deleting erases its credentials, personal items, wishes, wallet and history; its past completions in shared items stay, anonymised, and what it gave to a pot stays.
+- **Feature toggles.** A household can hide or disable its pot, wishes, habits or tasks; an account has the same toggles for its personal space. A disabled feature is hidden in the UI and refused by the API (`feature_disabled`).
+
+### Still open
+
+- Whether a guardian may create a supervised local account for a child (a third creation path, so a super admin is not needed for every child). Proposed: yes, as an instance setting.
+- How an account created by a super admin is linked to a later OIDC sign-in. Proposed: by verified e-mail.
+- Whether a guardian may also withdraw from a pot on behalf of the ward. Proposed: no, the ward's own right `can_transfer` applies.
+
+### Order of work
+
+1. Rewrite the schema, the initial migration, the domain rights and the API for accounts, guardianship, multi-household, personal or shared items, wallets and pots. The 181 existing tests are the safety net and are adapted as they go.
+2. Web and mobile: supervision (guardians' panel, requests), household switching and personal or shared scopes, two balances and pots, profile settings, feature toggles.
+3. Admin panel (web and mobile) for super admins.
+
+## Data model (SQLite, implemented today)
 
 SQLite in WAL mode, a single file, schema managed by Drizzle ORM (better-sqlite3 driver) and its migrations. Everything carries a `household_id`. No balance is stored as truth: a balance = the sum of a wallet's entries.
 
@@ -276,9 +341,10 @@ Joining through Authentik: on web the join form's Authentik button carries the i
 
 We move to the next step when its criterion is met. Durations are estimated part-time.
 
-| Step                    | Content                                                                                | Exit criterion                                     |
-| ----------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| 1. Foundations (wk 1–2) | Monorepo, CI, Docker, SQLite schema and migrations, Authentik + local auth             | Sign-in works on web and mobile                    |
-| 2. Core (wk 3–4)        | Tested `domain` package, habits/tasks/completions API, coins, transfers, wishes, stats | 20 simultaneous completions give the right balance |
-| 3. Front ends (wk 5–7)  | The 4 screens on web and mobile, offline queue                                         | 1 week of personal use with no blocking bug        |
-| 4. Go live (wk 8)       | Tested restore, push and reminders, invited household                                  | The whole household uses it                        |
+| Step                          | Content                                                                                                 | Exit criterion                                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 1. Foundations (wk 1–2)       | Monorepo, CI, Docker, SQLite schema and migrations, Authentik + local auth                              | Sign-in works on web and mobile                                                                           |
+| 2. Core (wk 3–4)              | Tested `domain` package, habits/tasks/completions API, coins, transfers, wishes, stats                  | 20 simultaneous completions give the right balance                                                        |
+| 3. Front ends (wk 5–7)        | The 4 screens on web and mobile, offline queue                                                          | 1 week of personal use with no blocking bug                                                               |
+| 3b. Model v2 (before go-live) | Accounts, supervision, several households, personal or shared items, pots, Admin panel (see "Model v2") | Schema rewritten with all tests green; supervision, households and the Admin panel work on web and mobile |
+| 4. Go live (wk 8)             | Tested restore, push and reminders, invited household                                                   | The whole household uses it                                                                               |
