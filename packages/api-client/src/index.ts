@@ -85,6 +85,8 @@ export interface RequestOptions {
 }
 
 export interface ClientOptions {
+	/** Générateur de clés d'idempotence. Hermes (React Native) n'a pas `crypto.randomUUID` : l'appli fournit le sien. */
+	generateKey?: () => string;
 	/** Une fonction permet de changer de serveur à chaud (appli mobile). */
 	baseUrl: string | (() => string);
 	/** Jeton d'accès (mobile). Absent côté web : le cookie de session suffit. */
@@ -94,13 +96,14 @@ export interface ClientOptions {
 
 export function createClient(options: ClientOptions) {
 	const doFetch = options.fetch ?? fetch;
+	const newKey = options.generateKey ?? (() => globalThis.crypto.randomUUID());
 
 	async function request<T>(method: string, path: string, body?: unknown, opts: RequestOptions = {}): Promise<T> {
 		const headers: Record<string, string> = { accept: "application/json" };
 		const token = await options.getAccessToken?.();
 		if (token) headers.authorization = `Bearer ${token}`;
 		if (body !== undefined) headers["content-type"] = "application/json";
-		if (method !== "GET") headers["idempotency-key"] = opts.idempotencyKey ?? crypto.randomUUID();
+		if (method !== "GET") headers["idempotency-key"] = opts.idempotencyKey ?? newKey();
 
 		const base = typeof options.baseUrl === "function" ? options.baseUrl() : options.baseUrl;
 		const res = await doFetch(`${base}/api/v1${path}`, {

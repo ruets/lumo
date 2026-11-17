@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createClient, type TokenPair } from "@lumo/api-client";
+import { randomUUID } from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { currentServerUrl } from "./server";
 
@@ -36,7 +37,7 @@ export async function clearTokens(): Promise<void> {
 	await SecureStore.deleteItemAsync(KEY);
 }
 
-const bare = createClient({ baseUrl: currentServerUrl });
+const bare = createClient({ baseUrl: currentServerUrl, generateKey: randomUUID });
 
 /** Jeton d'accès valide ; le refresh token est roté (une seule requête de refresh à la fois). */
 async function getAccessToken(): Promise<string | null> {
@@ -59,4 +60,4 @@ async function getAccessToken(): Promise<string | null> {
 	return (await refreshing)?.accessToken ?? null;
 }
 
-export const api = createClient({ baseUrl: currentServerUrl, getAccessToken });
+export const api = createClient({ baseUrl: currentServerUrl, getAccessToken, generateKey: randomUUID });
