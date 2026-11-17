@@ -4,11 +4,11 @@ import type { Role } from "./roles.js";
 export interface Actor {
 	userId: string;
 	role: Role;
-	/** Un enfant peut-il créer ses propres éléments ? */
+	/** Can a child create their own items? */
 	canCreateItems: boolean;
 }
 
-/** Chaque action et la ressource dont sa décision dépend. */
+/** Each action and the resource its decision depends on. */
 export interface Abilities {
 	"item:create": { assigneeIds: readonly string[] };
 	"item:update": { createdBy: string };
@@ -29,7 +29,7 @@ export type Action = keyof Abilities;
 
 const isAdult = (a: Actor) => a.role === "owner" || a.role === "adult";
 
-/** Matrice des droits (docs/ARCHITECTURE.md). Vérifiée côté serveur, jamais côté client seul. */
+/** Rights matrix (docs/ARCHITECTURE.md). Checked on the server, never on the client alone. */
 export function can<A extends Action>(
 	actor: Actor,
 	action: A,

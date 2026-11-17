@@ -38,7 +38,7 @@ const toView = (r: RewardRow, assigneeIds: string[], remaining: number | null = 
 	remaining,
 });
 
-/** Échanges de l'acteur dans la période de limite courante (jours locaux du foyer). */
+/** The actor's redemptions in the current limit period (household local days). */
 function usedInPeriodOf(db: DbOrTx, actor: ActorCtx, reward: RewardRow, now: Date): number {
 	if (!reward.limitPeriod) return 0;
 	const start = periodStart(reward.limitPeriod, localDate(now, actor.timezone), actor.weekStart);
@@ -50,7 +50,7 @@ function usedInPeriodOf(db: DbOrTx, actor: ActorCtx, reward: RewardRow, now: Dat
 				eq(redemptions.rewardId, reward.id),
 				eq(redemptions.userId, actor.userId),
 				isNull(redemptions.undoneAt),
-				// marge d'un jour : le filtre exact se fait en jour local, fuseau du foyer compris
+				// one-day margin: the exact filter is done in local days, household time zone included
 				gte(redemptions.redeemedAt, new Date(now.getTime() - 400 * 86_400_000)),
 			),
 		)
@@ -65,7 +65,7 @@ function assertMembers(db: DbOrTx, actor: ActorCtx, ids: string[]) {
 		.from(memberships)
 		.where(and(eq(memberships.householdId, actor.householdId), inArray(memberships.userId, ids)))
 		.all();
-	if (found.length !== ids.length) throw errors.validation("assigneeIds : un assigné n'est pas membre du foyer");
+	if (found.length !== ids.length) throw errors.validation("assigneeIds: an assignee is not a member of the household");
 }
 
 function getRewardRow(db: DbOrTx, actor: ActorCtx, id: string, opts: { allowArchived?: boolean } = {}): RewardRow {
@@ -79,7 +79,7 @@ function getRewardRow(db: DbOrTx, actor: ActorCtx, id: string, opts: { allowArch
 }
 
 export function createReward(tx: Tx, actor: ActorCtx, input: z.output<typeof createRewardBody>, now: Date): RewardView {
-	if (!can(actor, "reward:manage")) throw errors.forbidden("Réservé aux adultes");
+	if (!can(actor, "reward:manage")) throw errors.forbidden("Adults only");
 	const assigneeIds = [...new Set(input.assigneeIds)];
 	assertMembers(tx, actor, assigneeIds);
 	const id = randomUUID();
@@ -104,7 +104,7 @@ export function createReward(tx: Tx, actor: ActorCtx, input: z.output<typeof cre
 	return toView(tx.select().from(rewards).where(eq(rewards.id, id)).get() as RewardRow, assigneeIds);
 }
 
-/** Adultes : toutes les envies actives. Enfants : celles qu'ils peuvent échanger. */
+/** Adults: all active wishes. Children: the ones they can redeem. */
 export function listRewards(db: DbOrTx, actor: ActorCtx, now: Date): RewardView[] {
 	const rows = db
 		.select()
@@ -137,13 +137,13 @@ export function updateReward(
 	input: z.output<typeof updateRewardBody>,
 	now: Date,
 ): RewardView {
-	if (!can(actor, "reward:manage")) throw errors.forbidden("Réservé aux adultes");
+	if (!can(actor, "reward:manage")) throw errors.forbidden("Adults only");
 	const row = getRewardRow(tx, actor, id, { allowArchived: true });
 
 	const limitCount = input.limitCount !== undefined ? input.limitCount : row.limitCount;
 	const limitPeriod = input.limitPeriod !== undefined ? input.limitPeriod : row.limitPeriod;
 	if ((limitCount === null) !== (limitPeriod === null))
-		throw errors.validation("limitCount et limitPeriod vont ensemble");
+		throw errors.validation("limitCount and limitPeriod go together");
 
 	if (input.assigneeIds) {
 		const ids = [...new Set(input.assigneeIds)];
@@ -170,14 +170,14 @@ export function updateReward(
 }
 
 /**
- * Échanger une envie : droits, limite par période, solde, puis écriture `−cost` et ligne d'échange,
- * le tout dans la transaction `BEGIN IMMEDIATE` de la requête (pas de solde négatif possible).
+ * Redeem a wish: rights, per-period limit, balance, then a `−cost` entry and a redemption row,
+ * all inside the request's `BEGIN IMMEDIATE` transaction (a negative balance is impossible).
  */
 export function redeemReward(tx: Tx, actor: ActorCtx, rewardId: string, now: Date) {
 	const reward = getRewardRow(tx, actor, rewardId);
 	const assigneeIds = assigneesOf(tx, [rewardId]).get(rewardId) ?? [];
 	if (!can(actor, "reward:redeem", { fundedFrom: reward.fundedFrom, assigneeIds })) {
-		throw errors.forbidden("Tu ne peux pas échanger cette envie");
+		throw errors.forbidden("You cannot redeem this wish");
 	}
 
 	const usedInPeriod = usedInPeriodOf(tx, actor, reward, now);
@@ -208,8 +208,8 @@ export function redeemReward(tx: Tx, actor: ActorCtx, rewardId: string, now: Dat
 }
 
 /**
- * Annuler un échange : `undone_at` + contre-écriture du montant exact payé, dans le porte-monnaie d'origine
- * (perso ou cagnotte). La limite d'usage de la période est libérée ; le journal n'est jamais modifié.
+ * Undo a redemption: `undone_at` + counter-entry of the exact amount paid, in the original wallet
+ * (personal or pot). The period's usage limit is freed; the ledger is never modified.
  */
 export function undoRedemption(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 	const row = tx
@@ -225,9 +225,9 @@ export function undoRedemption(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 	if (!row) throw notFound();
 	const { r, owner } = row;
 	if (!can(actor, "redemption:undo", { userId: r.userId, userRole: owner.role })) {
-		throw errors.forbidden("Annulation non autorisée");
+		throw errors.forbidden("Undo not allowed");
 	}
-	if (r.undoneAt) throw errors.conflict("already_undone", "Cet échange est déjà annulé");
+	if (r.undoneAt) throw errors.conflict("already_undone", "This redemption is already undone");
 
 	tx.update(redemptions).set({ undoneAt: now }).where(eq(redemptions.id, id)).run();
 	const original = tx.select().from(ledgerEntries).where(eq(ledgerEntries.id, r.ledgerEntryId)).get();

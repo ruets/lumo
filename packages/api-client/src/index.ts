@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Client HTTP de l'API Lumo. Les types des routes métier sont générés depuis la spec OpenAPI
- * (`pnpm --filter @lumo/api-client generate` après `pnpm --filter @lumo/api openapi:generate`) ;
- * les routes d'authentification, hors spec, sont typées à la main.
- * Aucune méthode n'accepte de montant : le serveur calcule les pièces.
+ * HTTP client of the Lumo API. The types of the business routes are generated from the OpenAPI spec
+ * (`pnpm --filter @lumo/api-client generate` after `pnpm --filter @lumo/api openapi:generate`);
+ * the authentication routes, outside the spec, are typed by hand.
+ * No method accepts an amount: the server computes the coins.
  */
 
 import type { paths } from "./generated/schema.js";
@@ -45,7 +45,7 @@ export type LedgerPage = Response<"/api/v1/ledger", "get", 200>;
 export type StatsResponse = Response<"/api/v1/stats", "get", 200>;
 
 export interface AuthConfig {
-	/** Marqueur d'identification : prouve qu'une adresse est un serveur Lumo. */
+	/** Identification marker: proves an address is a Lumo server. */
 	app: "lumo";
 	oidc: boolean;
 	oidcIssuer: string | null;
@@ -79,17 +79,17 @@ export class ApiError extends Error {
 	}
 }
 
-/** `idempotencyKey` : fixé par l'appelant pour rejouer une écriture sans la dupliquer (file hors ligne). */
+/** `idempotencyKey`: fixed by the caller to replay a write without duplicating it (offline queue). */
 export interface RequestOptions {
 	idempotencyKey?: string;
 }
 
 export interface ClientOptions {
-	/** Générateur de clés d'idempotence. Hermes (React Native) n'a pas `crypto.randomUUID` : l'appli fournit le sien. */
+	/** Idempotency key generator. Hermes (React Native) has no `crypto.randomUUID`: the app provides its own. */
 	generateKey?: () => string;
-	/** Une fonction permet de changer de serveur à chaud (appli mobile). */
+	/** A function allows switching server on the fly (mobile app). */
 	baseUrl: string | (() => string);
-	/** Jeton d'accès (mobile). Absent côté web : le cookie de session suffit. */
+	/** Access token (mobile). Absent on the web: the session cookie is enough. */
 	getAccessToken?: () => string | null | Promise<string | null>;
 	fetch?: typeof fetch;
 }
@@ -130,7 +130,7 @@ export function createClient(options: ClientOptions) {
 	};
 
 	return {
-		// --- Éléments et validations
+		// --- Items and completions
 		getToday: (date?: string) => request<TodayResponse>("GET", `/today${qs({ date })}`),
 		listItems: (includeArchived = false) =>
 			request<Response<"/api/v1/items", "get", 200>>("GET", `/items${qs({ includeArchived })}`),
@@ -145,7 +145,7 @@ export function createClient(options: ClientOptions) {
 		rejectCompletion: (id: string) => request<CompletionResult>("POST", `/completions/${id}/reject`),
 		listPendingCompletions: () =>
 			request<Response<"/api/v1/completions", "get", 200>>("GET", "/completions?status=pending"),
-		// --- Envies, pièces, progrès
+		// --- Wishes, coins, progress
 		listRewards: () => request<Response<"/api/v1/rewards", "get", 200>>("GET", "/rewards"),
 		createReward: (input: CreateRewardInput) => request<Reward>("POST", "/rewards", input),
 		updateReward: (id: string, input: UpdateRewardInput) => request<Reward>("PATCH", `/rewards/${id}`, input),

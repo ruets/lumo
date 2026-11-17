@@ -9,7 +9,7 @@ export const scheduleSchema = z.discriminatedUnion("type", [
 		days: z
 			.array(z.number().int().min(1).max(7))
 			.min(1)
-			.refine((days) => new Set(days).size === days.length, "jours en double"),
+			.refine((days) => new Set(days).size === days.length, "duplicate days"),
 	}),
 	z.object({ type: z.literal("timesPerWeek"), count: z.number().int().min(1).max(7) }),
 	z.object({ type: z.literal("monthly"), day: z.number().int().min(1).max(31) }),
@@ -17,7 +17,7 @@ export const scheduleSchema = z.discriminatedUnion("type", [
 
 export type Schedule = z.infer<typeof scheduleSchema>;
 
-/** L'élément apparaît-il ce jour-là ? (X fois par semaine : tous les jours, le membre choisit.) */
+/** Does the item show up that day? (X times a week: every day, the member chooses.) */
 export function isDue(schedule: Schedule, date: LocalDate): boolean {
 	switch (schedule.type) {
 		case "daily":
@@ -26,7 +26,7 @@ export function isDue(schedule: Schedule, date: LocalDate): boolean {
 		case "weekly":
 			return schedule.days.includes(isoWeekday(date));
 		case "monthly":
-			// Un 31 dans un mois de 30 jours tombe le dernier jour du mois.
+			// A 31st in a 30-day month falls on the last day of the month.
 			return dayOfMonth(date) === Math.min(schedule.day, daysInMonth(date));
 	}
 }

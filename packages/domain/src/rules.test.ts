@@ -22,7 +22,7 @@ const codeOf = (fn: () => unknown) => {
 };
 
 describe("planCompletion", () => {
-	it("crédite la récompense quand aucun accord n'est requis", () => {
+	it("credits the reward when no approval is required", () => {
 		expect(planCompletion({ actorRole: "adult", requiresApproval: false, reward: 5 })).toEqual({
 			status: "approved",
 			credit: 5,
@@ -33,14 +33,14 @@ describe("planCompletion", () => {
 		});
 	});
 
-	it("un enfant sur un élément à accord : en attente, aucune écriture", () => {
+	it("a child on an item needing approval: pending, no entry", () => {
 		expect(planCompletion({ actorRole: "child", requiresApproval: true, reward: 5 })).toEqual({
 			status: "pending",
 			credit: 0,
 		});
 	});
 
-	it("l'accord ne concerne que les enfants", () => {
+	it("approval only concerns children", () => {
 		expect(planCompletion({ actorRole: "adult", requiresApproval: true, reward: 5 })).toEqual({
 			status: "approved",
 			credit: 5,
@@ -51,13 +51,13 @@ describe("planCompletion", () => {
 		});
 	});
 
-	it("une récompense nulle ne crédite rien", () => {
+	it("a zero reward credits nothing", () => {
 		expect(planCompletion({ actorRole: "adult", requiresApproval: false, reward: 0 }).credit).toBe(0);
 	});
 });
 
 describe("assertUnderTarget", () => {
-	it("autorise jusqu'à l'objectif, refuse au-delà avec target_reached", () => {
+	it("allows up to the goal, rejects beyond it with target_reached", () => {
 		expect(codeOf(() => assertUnderTarget(0, 3))).toBeNull();
 		expect(codeOf(() => assertUnderTarget(2, 3))).toBeNull();
 		expect(codeOf(() => assertUnderTarget(3, 3))).toBe("target_reached");
@@ -67,20 +67,20 @@ describe("assertUnderTarget", () => {
 
 describe("checkCompletionDate", () => {
 	const base = { today: "2026-11-17", windowDays: 2 };
-	it("accepte aujourd'hui et la fenêtre de jours passés", () => {
+	it("accepts today and the past-days window", () => {
 		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-17", role: "child" }))).toBeNull();
 		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-15", role: "child" }))).toBeNull();
 	});
-	it("refuse le futur pour tout le monde, owner compris", () => {
+	it("rejects the future for everyone, owner included", () => {
 		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-18", role: "owner" }))).toBe("future_date");
 	});
-	it("au-delà de la fenêtre : seulement un owner", () => {
+	it("beyond the window: only an owner", () => {
 		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-14", role: "adult" }))).toBe(
 			"backdate_not_allowed",
 		);
 		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-14", role: "owner" }))).toBeNull();
 	});
-	it("fenêtre de 0 : aujourd'hui seulement", () => {
+	it("window of 0: today only", () => {
 		expect(
 			codeOf(() => checkCompletionDate({ today: "2026-11-17", date: "2026-11-16", windowDays: 0, role: "adult" })),
 		).toBe("backdate_not_allowed");
@@ -88,18 +88,18 @@ describe("checkCompletionDate", () => {
 });
 
 describe("planTransfer", () => {
-	it("produit deux écritures opposées", () => {
+	it("produces two opposite entries", () => {
 		expect(planTransfer({ balance: 10, amount: 4 })).toEqual([
 			{ wallet: "from", amount: -4 },
 			{ wallet: "to", amount: 4 },
 		]);
 	});
-	it("autorise de tout virer, refuse de dépasser le solde (insufficient_balance)", () => {
+	it("allows transferring everything, rejects exceeding the balance (insufficient_balance)", () => {
 		expect(codeOf(() => planTransfer({ balance: 10, amount: 10 }))).toBeNull();
 		expect(codeOf(() => planTransfer({ balance: 10, amount: 11 }))).toBe("insufficient_balance");
 		expect(codeOf(() => planTransfer({ balance: 0, amount: 1 }))).toBe("insufficient_balance");
 	});
-	it("refuse un montant nul, négatif ou non entier", () => {
+	it("rejects a zero, negative or non-integer amount", () => {
 		expect(codeOf(() => planTransfer({ balance: 10, amount: 0 }))).toBe("invalid_amount");
 		expect(codeOf(() => planTransfer({ balance: 10, amount: -3 }))).toBe("invalid_amount");
 		expect(codeOf(() => planTransfer({ balance: 10, amount: 1.5 }))).toBe("invalid_amount");
@@ -107,21 +107,21 @@ describe("planTransfer", () => {
 });
 
 describe("planRedemption", () => {
-	it("débite le coût", () => {
+	it("debits the cost", () => {
 		expect(planRedemption({ cost: 8, balance: 10, usedInPeriod: 0, limitCount: null })).toEqual({ amount: -8 });
 	});
-	it("solde insuffisant", () => {
+	it("insufficient balance", () => {
 		expect(codeOf(() => planRedemption({ cost: 8, balance: 7, usedInPeriod: 0, limitCount: null }))).toBe(
 			"insufficient_balance",
 		);
 	});
-	it("limite d'usage par période atteinte", () => {
+	it("per-period usage limit reached", () => {
 		expect(codeOf(() => planRedemption({ cost: 1, balance: 10, usedInPeriod: 2, limitCount: 2 }))).toBe(
 			"limit_reached",
 		);
 		expect(codeOf(() => planRedemption({ cost: 1, balance: 10, usedInPeriod: 1, limitCount: 2 }))).toBeNull();
 	});
-	it("la limite est vérifiée avant le solde", () => {
+	it("the limit is checked before the balance", () => {
 		expect(codeOf(() => planRedemption({ cost: 99, balance: 0, usedInPeriod: 1, limitCount: 1 }))).toBe(
 			"limit_reached",
 		);
@@ -129,7 +129,7 @@ describe("planRedemption", () => {
 });
 
 describe("periodStart", () => {
-	it("calcule le début de la période en jour local", () => {
+	it("computes the start of the period as a local day", () => {
 		expect(periodStart("day", "2026-11-17", 1)).toBe("2026-11-17");
 		expect(periodStart("week", "2026-11-17", 1)).toBe("2026-11-16");
 		expect(periodStart("week", "2026-11-17", 7)).toBe("2026-11-15");
@@ -139,7 +139,7 @@ describe("periodStart", () => {
 });
 
 describe("balanceOf", () => {
-	it("somme les écritures, un solde n'étant jamais stocké", () => {
+	it("sums the entries, a balance never being stored", () => {
 		expect(balanceOf([])).toBe(0);
 		expect(balanceOf([{ amount: 5 }, { amount: 5 }, { amount: -3 }])).toBe(7);
 	});

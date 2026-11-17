@@ -13,7 +13,7 @@ export function sharedWalletId(db: DbOrTx, householdId: string): string {
 		.from(wallets)
 		.where(and(eq(wallets.householdId, householdId), eq(wallets.kind, "shared")))
 		.get();
-	if (!row) throw new Error("cagnotte du foyer manquante");
+	if (!row) throw new Error("household pot missing");
 	return row.id;
 }
 
@@ -31,7 +31,7 @@ export function walletFor(db: DbOrTx, householdId: string, kind: "personal" | "s
 	return kind === "shared" ? sharedWalletId(db, householdId) : personalWalletId(db, householdId, userId);
 }
 
-/** Un solde n'est jamais stocké : somme des écritures du porte-monnaie. */
+/** A balance is never stored: sum of the wallet's entries. */
 export function walletBalance(db: DbOrTx, walletId: string): number {
 	const row = db
 		.select({ total: sql<number>`coalesce(sum(${ledgerEntries.amount}), 0)` })
@@ -48,7 +48,7 @@ export function balancesFor(db: DbOrTx, actor: ActorCtx): { personal: number; sh
 	};
 }
 
-/** Seule porte d'écriture dans le journal ; l'appelant la place dans la transaction de l'action causale. */
+/** The only way to write to the ledger; the caller puts it in the causing action's transaction. */
 export function addEntry(
 	tx: Tx,
 	entry: {

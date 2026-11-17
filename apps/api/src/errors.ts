@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/** Erreur métier renvoyée au client en `application/problem+json` (RFC 9457). */
+/** Business error returned to the client as `application/problem+json` (RFC 9457). */
 export class AppError extends Error {
 	constructor(
 		readonly status: number,
@@ -17,15 +17,14 @@ export const errors = {
 	unauthenticated: () => new AppError(401, "unauthenticated", "Authentification requise"),
 	invalidCredentials: () => new AppError(401, "invalid_credentials", "Identifiant ou mot de passe incorrect"),
 	forbidden: (detail?: string) => new AppError(403, "forbidden", "Action interdite", detail),
-	invitationRequired: () =>
-		new AppError(403, "invitation_required", "Une invitation est nécessaire pour créer un compte"),
-	invalidInvite: () => new AppError(400, "invalid_invite", "Invitation invalide, expirée ou déjà utilisée"),
-	localAuthDisabled: () => new AppError(404, "local_auth_disabled", "Les comptes locaux sont désactivés"),
-	oidcDisabled: () => new AppError(404, "oidc_disabled", "La connexion OIDC n'est pas configurée"),
-	oidcFailed: (detail?: string) => new AppError(400, "oidc_failed", "Échec de la connexion OIDC", detail),
-	setupDone: () => new AppError(409, "setup_done", "L'instance est déjà initialisée"),
+	invitationRequired: () => new AppError(403, "invitation_required", "An invitation is required to create an account"),
+	invalidInvite: () => new AppError(400, "invalid_invite", "Invitation invalid, expired or already used"),
+	localAuthDisabled: () => new AppError(404, "local_auth_disabled", "Local accounts are disabled"),
+	oidcDisabled: () => new AppError(404, "oidc_disabled", "OIDC sign-in is not configured"),
+	oidcFailed: (detail?: string) => new AppError(400, "oidc_failed", "OIDC sign-in failed", detail),
+	setupDone: () => new AppError(409, "setup_done", "This instance is already set up"),
 	conflict: (code: string, title: string) => new AppError(409, code, title),
-	validation: (detail: string) => new AppError(400, "validation_error", "Requête invalide", detail),
+	validation: (detail: string) => new AppError(400, "validation_error", "Invalid request", detail),
 };
 
 export function toProblem(err: AppError, instance?: string) {

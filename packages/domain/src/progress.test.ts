@@ -9,7 +9,7 @@ const days = (from: string, n: number, done: number, expected: number): HeatmapD
 	Array.from({ length: n }, (_, i) => ({ date: addDays(from, i), done, expected }));
 
 describe("summarizeProgress", () => {
-	it("semaine : jours futurs vides, taux jusqu'à aujourd'hui, tendance vs semaine précédente", () => {
+	it("week: empty future days, rate up to today, trend vs previous week", () => {
 		const heatmap = [...days("2026-11-09", 7, 4, 8), ...days("2026-11-16", 2, 6, 8)];
 		const s = summarizeProgress(heatmap, today, "week");
 		expect(s.from).toBe("2026-11-16");
@@ -23,7 +23,7 @@ describe("summarizeProgress", () => {
 		expect(s.trend).toBe(25);
 	});
 
-	it("mois : 4 semaines glissantes", () => {
+	it("month: 4 rolling weeks", () => {
 		const heatmap = days(addDays(today, -55), 56, 3, 4);
 		const s = summarizeProgress(heatmap, today, "month");
 		expect(s.bars).toHaveLength(4);
@@ -34,7 +34,7 @@ describe("summarizeProgress", () => {
 		expect(s.trend).toBe(0);
 	});
 
-	it("rien d'attendu : pas de taux ni de tendance", () => {
+	it("nothing expected: no rate and no trend", () => {
 		const s = summarizeProgress([], today, "week");
 		expect(s.rate).toBeNull();
 		expect(s.trend).toBeNull();

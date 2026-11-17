@@ -15,7 +15,7 @@ export type SessionKind = "web" | "mobile";
 
 const ttlFor = (kind: SessionKind) => (kind === "web" ? WEB_SESSION_TTL_MS : MOBILE_SESSION_TTL_MS);
 
-/** Crée une session ; renvoie le jeton en clair (cookie web ou refresh token mobile), non stocké. */
+/** Creates a session; returns the plain token (web cookie or mobile refresh token), not stored. */
 export function createSession(db: Db, input: { userId: string; kind: SessionKind; now?: Date }) {
 	const now = input.now ?? new Date();
 	const token = randomToken();
@@ -43,7 +43,7 @@ export function findWebSession(db: Db, token: string, now = new Date()) {
 	return row ?? null;
 }
 
-/** La session existe-t-elle encore (jeton d'accès non révoqué) ? */
+/** Does the session still exist (access token not revoked)? */
 export function isSessionActive(db: Db, sessionId: string, userId: string, now = new Date()): boolean {
 	return (
 		db
@@ -55,11 +55,11 @@ export function isSessionActive(db: Db, sessionId: string, userId: string, now =
 }
 
 /**
- * Rotation du refresh token mobile. Un jeton déjà roté qui revient (vol probable) révoque la session.
+ * Mobile refresh-token rotation. A token that was already rotated and comes back (likely theft) revokes the session.
  */
 export function rotateRefreshToken(db: Db, token: string, now = new Date()) {
 	const hash = hashToken(token);
-	// Le résultat « refusé » sort de la transaction : un `throw` à l'intérieur annulerait la révocation.
+	// The "refused" result leaves the transaction: a `throw` inside would roll back the revocation.
 	const result = writeTx(db, (tx) => {
 		const current = tx.select().from(sessions).where(eq(sessions.refreshTokenHash, hash)).get();
 		if (current) {

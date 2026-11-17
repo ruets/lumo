@@ -5,8 +5,8 @@ import type { Config } from "../config.js";
 import { openDatabase } from "../db/client.js";
 
 /**
- * Thread de test : sa propre connexion SQLite sur le même fichier, donc une vraie concurrence
- * entre écrivains (verrou `BEGIN IMMEDIATE`), contrairement à des requêtes dans un seul process.
+ * Test thread: its own SQLite connection on the same file, hence real concurrency
+ * between writers (`BEGIN IMMEDIATE` lock), unlike requests inside a single process.
  */
 const { dbPath, config, cookie, url, payload, count, now } = workerData as {
 	dbPath: string;
@@ -22,7 +22,7 @@ const { db, sqlite } = openDatabase(dbPath);
 const app = await buildApp({ config, db, oidc: null, clock: () => new Date(now) });
 await app.ready();
 
-// Tous les threads démarrent leurs rafales au même signal.
+// All threads start their bursts on the same signal.
 await new Promise<void>((resolve) => parentPort?.once("message", () => resolve()));
 
 const responses = await Promise.all(

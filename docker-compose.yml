@@ -1,5 +1,5 @@
-# Lumo : app (API + web + tâches) et sauvegarde Litestream.
-# Usage : cp .env.example .env && docker compose up -d
+# Lumo: app (API + web + scheduled jobs) and Litestream backup.
+# Usage: cp .env.example .env && docker compose up -d
 services:
   app:
     image: ghcr.io/${LUMO_IMAGE_OWNER:-OWNER}/lumo:${LUMO_VERSION:-latest}

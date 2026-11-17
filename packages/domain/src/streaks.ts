@@ -2,12 +2,12 @@
 import { addDays, compareDates, type LocalDate, startOfWeek, type Weekday } from "./dates.js";
 import { isDue, type Schedule } from "./schedule.js";
 
-/** Validations retenues par jour local (annulées et en attente exclues par l'appelant). */
+/** Completions kept per local day (undone and pending ones excluded by the caller). */
 export type DailyCounts = Readonly<Record<LocalDate, number>>;
 
 export interface PeriodInput {
 	schedule: Schedule;
-	/** Validations nécessaires par jour pour que le jour compte (`target_per_period`). */
+	/** Completions needed per day for the day to count (`target_per_period`). */
 	targetPerDay: number;
 	weekStart: Weekday;
 	counts: DailyCounts;
@@ -20,9 +20,9 @@ interface Period {
 }
 
 /**
- * Découpe [from, to] en périodes évaluables. Jour, jours fixes et mensuelle : une période par jour dû.
- * X fois par semaine : une période par semaine. Une période encore ouverte (aujourd'hui, ou la
- * semaine en cours) et pas encore réussie est « en attente » : ce n'est pas un échec.
+ * Splits [from, to] into evaluable periods. Daily, fixed days and monthly: one period per due day.
+ * X times a week: one period per week. A period that is still open (today, or the
+ * current week) and not yet successful is "pending": it is not a failure.
  */
 function evaluate(input: PeriodInput, from: LocalDate, to: LocalDate, today: LocalDate): Period[] {
 	const { schedule, targetPerDay, counts, weekStart } = input;
@@ -50,14 +50,14 @@ function evaluate(input: PeriodInput, from: LocalDate, to: LocalDate, today: Loc
 		} else if (compareDates(ws, today) <= 0 && compareDates(today, we) <= 0) {
 			periods.push({ outcome: "pending", done, expected: schedule.count });
 		} else if (compareDates(ws, from) >= 0) {
-			// Une première semaine entamée en cours de route ne compte pas comme un échec.
+			// A first week that started partway through does not count as a failure.
 			periods.push({ outcome: "fail", done, expected: schedule.count });
 		}
 	}
 	return periods;
 }
 
-/** Série actuelle et record : périodes consécutives réussies, en ne comptant que les jours dus. */
+/** Current and best streak: consecutive successful periods, counting only due days. */
 export function computeStreaks(input: PeriodInput & { from: LocalDate; today: LocalDate }): {
 	current: number;
 	best: number;
@@ -75,7 +75,7 @@ export function computeStreaks(input: PeriodInput & { from: LocalDate; today: Lo
 	return { current: run, best };
 }
 
-/** Taux de réussite sur [from, to] ; `rate` est null quand rien n'était attendu. */
+/** Success rate over [from, to]; `rate` is null when nothing was expected. */
 export function periodStats(input: PeriodInput & { from: LocalDate; to: LocalDate; today: LocalDate }): {
 	done: number;
 	expected: number;

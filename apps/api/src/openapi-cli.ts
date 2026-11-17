@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { buildOpenApi } from "./openapi.js";
 import { allRoutes } from "./routes/index.js";
 
-/** Régénère `apps/api/openapi.json` (versionné ; un test vérifie qu'il est à jour). */
+/** Regenerates `apps/api/openapi.json` (versioned; a test checks it is up to date). */
 const target = fileURLToPath(new URL("../openapi.json", import.meta.url));
 writeFileSync(target, `${JSON.stringify(buildOpenApi(allRoutes), null, "\t")}\n`);
-console.log(`spec écrite : ${target}`);
+console.log(`spec written: ${target}`);

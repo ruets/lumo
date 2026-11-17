@@ -13,7 +13,7 @@ import { type Db, openDatabase } from "../db/client.js";
 
 export const PUBLIC_URL = "https://lumo.test";
 
-/** Faux Authentik : `code` → claims ; vérifie le state et le nonce comme le ferait le vrai client. */
+/** Fake Authentik: `code` → claims; checks state and nonce like the real client would. */
 export class FakeOidc implements OidcProvider {
 	readonly claimsByCode = new Map<string, OidcClaims>();
 	lastExchange: { codeVerifier: string; expectedState: string | null; expectedNonce: string } | null = null;
@@ -47,7 +47,7 @@ export class FakeOidc implements OidcProvider {
 }
 
 export interface TestContext {
-	/** Horloge contrôlée : `ctx.clock.now = new Date(...)` avance le temps de l'application. */
+	/** Controlled clock: `ctx.clock.now = new Date(...)` moves the app's time forward. */
 	clock: { now: Date };
 	app: FastifyInstance;
 	db: Db;
@@ -58,7 +58,7 @@ export interface TestContext {
 	close: () => Promise<void>;
 }
 
-/** Application complète sur un fichier SQLite temporaire (un par test). */
+/** Full application on a temporary SQLite file (one per test). */
 export async function createTestContext(env: Record<string, string> = {}): Promise<TestContext> {
 	const dir = mkdtempSync(join(tmpdir(), "lumo-test-"));
 	const dbPath = join(dir, "lumo.db");
@@ -74,7 +74,7 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
 	});
 	const { db, sqlite } = openDatabase(dbPath);
 	const oidc = new FakeOidc();
-	// 17 nov. 2026, 11:00 à Paris (un mardi).
+	// Nov 17, 2026, 11:00 in Paris (a Tuesday).
 	const clock = { now: new Date("2026-11-17T10:00:00Z") };
 	const app = await buildApp({ config, db, oidc: config.oidcEnabled ? oidc : null, clock: () => clock.now });
 	await app.ready();
@@ -112,11 +112,11 @@ export const OWNER = {
 /** Initialise l'instance (compte local owner) et renvoie son cookie web. */
 export async function setupOwner(ctx: TestContext): Promise<string> {
 	const res = await ctx.app.inject({ method: "POST", url: "/api/v1/auth/setup", payload: OWNER });
-	if (res.statusCode !== 201) throw new Error(`setup a échoué : ${res.body}`);
+	if (res.statusCode !== 201) throw new Error(`setup failed : ${res.body}`);
 	return sessionCookie(res) as string;
 }
 
-/** Client HTTP authentifié par cookie : origine et `Idempotency-Key` (un UUID neuf par appel) ajoutés. */
+/** Cookie-authenticated HTTP client: origin and `Idempotency-Key` (a fresh UUID per call) added. */
 export interface Api {
 	get(url: string): Promise<LightMyRequestResponse>;
 	post(url: string, payload?: unknown, extra?: Record<string, string>): Promise<LightMyRequestResponse>;
@@ -145,7 +145,7 @@ export function api(ctx: { app: FastifyInstance }, cookie: string): Api {
 	};
 }
 
-/** Crée un membre (invitation + compte local) et renvoie son cookie et son id. */
+/** Creates a member (invitation + local account) and returns their cookie and id. */
 export interface Member {
 	cookie: string;
 	userId: string;
@@ -169,7 +169,7 @@ export async function addMember(
 		url: "/api/v1/auth/local/register",
 		payload: { invite: invite.json().token, displayName: username, username, password: "un-mot-de-passe-long" },
 	});
-	if (res.statusCode !== 201) throw new Error(`register a échoué : ${res.body}`);
+	if (res.statusCode !== 201) throw new Error(`register failed : ${res.body}`);
 	const cookie = sessionCookie(res) as string;
 	const me = await ctx.app.inject({ url: "/api/v1/me", headers: cookieHeader(cookie) });
 	return { cookie, userId: me.json().user.id as string, api: api(ctx, cookie) };
@@ -190,7 +190,7 @@ export async function balances(member: { api: Api }) {
 	return { personal: me.wallets.personal.balance as number, shared: me.wallets.shared.balance as number };
 }
 
-/** Habitude quotidienne par défaut, créée via l'API. */
+/** Default daily habit, created through the API. */
 export async function makeHabit(by: { api: Api }, over: Record<string, unknown> = {}) {
 	const res = await by.api.post("/items", {
 		kind: "habit",
@@ -199,6 +199,6 @@ export async function makeHabit(by: { api: Api }, over: Record<string, unknown> 
 		reward: 5,
 		...over,
 	});
-	if (res.statusCode !== 201) throw new Error(`création d'habitude refusée : ${res.body}`);
+	if (res.statusCode !== 201) throw new Error(`habit creation refused : ${res.body}`);
 	return res.json() as { id: string; assigneeIds: string[] };
 }

@@ -3,9 +3,9 @@ import { addDays, scheduleSchema } from "@lumo/domain";
 import { z } from "zod";
 
 /**
- * Schémas Zod des requêtes et réponses de l'API : ils valident les entrées, typent les handlers
- * et alimentent la spec OpenAPI. Les corps sont `strict` : un champ inconnu (par exemple un
- * `amount` envoyé par un client) est refusé, jamais ignoré.
+ * Zod schemas for the API requests and responses: they validate input, type the handlers
+ * and feed the OpenAPI spec. Bodies are `strict`: an unknown field (for example an
+ * `amount` sent by a client) is rejected, never ignored.
  */
 
 export const localDateSchema = z
@@ -25,7 +25,7 @@ const walletKind = z.enum(["personal", "shared"]);
 const text = (max: number) => z.string().trim().min(1).max(max);
 const assigneeIds = z.array(z.string().min(1).max(100)).min(1).max(30);
 
-// ---- Éléments ---------------------------------------------------------------------------
+// ---- Items -------------------------------------------------------------------------------
 
 const itemCommon = {
 	name: text(120),
@@ -50,7 +50,7 @@ export const createItemBody = z.discriminatedUnion("kind", [
 		.object({
 			kind: z.literal("task"),
 			dueAt: z.iso.datetime().nullish(),
-			/** Ignoré : une tâche se valide une seule fois. */
+			/** Ignored: a task is completed only once. */
 			targetPerPeriod: z.number().int().optional(),
 			...itemCommon,
 		})
@@ -97,9 +97,9 @@ export const itemView = z.object({
 	assigneeIds: z.array(z.string()),
 });
 
-// ---- Complétions ------------------------------------------------------------------------
+// ---- Completions ------------------------------------------------------------------------
 
-/** Jamais de montant : le serveur calcule les pièces. */
+/** Never an amount: the server computes the coins. */
 export const completeBody = z.object({ date: localDateSchema.optional() }).strict();
 
 export const pendingQuery = z.object({ status: z.literal("pending") });
@@ -127,7 +127,7 @@ const limitFields = {
 };
 const limitConsistent = (r: { limitCount?: number | null; limitPeriod?: string | null }) =>
 	(r.limitCount == null) === (r.limitPeriod == null);
-const LIMIT_MESSAGE = "limitCount et limitPeriod vont ensemble";
+const LIMIT_MESSAGE = "limitCount and limitPeriod go together";
 
 export const createRewardBody = z
 	.object({
@@ -168,7 +168,7 @@ export const rewardView = z.object({
 	link: z.string().nullable(),
 	archivedAt: z.string().nullable(),
 	assigneeIds: z.array(z.string()),
-	/** Échanges encore possibles dans la période (liste seulement) ; `null` : sans limite ou non calculé. */
+	/** Redemptions still possible in the period (list only); `null`: no limit or not computed. */
 	remaining: z.number().int().nullable(),
 });
 
@@ -184,18 +184,18 @@ export const redemptionResult = z.object({
 	balances: balancesView,
 });
 
-// ---- Pièces -----------------------------------------------------------------------------
+// ---- Coins ------------------------------------------------------------------------------
 
 export const transferBody = z.object({ amount: z.number() }).strict();
 
 export const adjustmentBody = z
 	.object({
-		/** `null` : ajuster la cagnotte du foyer. */
+		/** `null`: adjust the household pot. */
 		userId: z.string().min(1).max(100).nullable(),
 		amount: z
 			.number()
 			.int()
-			.refine((n) => n !== 0, "le montant ne peut pas être nul"),
+			.refine((n) => n !== 0, "the amount cannot be zero"),
 		note: text(500),
 	})
 	.strict();
@@ -216,11 +216,11 @@ export const ledgerEntryView = z.object({
 	note: z.string().nullable(),
 	createdBy: z.string(),
 	createdAt: z.string(),
-	/** Nom de l'habitude, tâche ou envie concernée (validations, annulations, échanges). */
+	/** Name of the habit, task or wish concerned (completions, undos, redemptions). */
 	label: z.string().nullable(),
 });
 
-// ---- Aujourd'hui et progrès -------------------------------------------------------------
+// ---- Today and progress -------------------------------------------------------------
 
 export const todayQuery = z.object({ date: localDateSchema.optional() });
 
@@ -233,7 +233,7 @@ export const todayView = z.object({
 			pending: z.number().int(),
 			target: z.number().int(),
 			done: z.boolean(),
-			/** Validations annulables de ce jour, pour `DELETE /completions/{id}`. */
+			/** Undoable completions of that day, for `DELETE /completions/{id}`. */
 			completionIds: z.array(z.string()),
 		}),
 	),
@@ -258,7 +258,7 @@ export const statsView = z.object({
 	heatmap: z.array(z.object({ date: localDateSchema, done: z.number().int(), expected: z.number().int() })),
 });
 
-// ---- Profil et foyer --------------------------------------------------------------------
+// ---- Profile and household --------------------------------------------------------------------
 
 export const meView = z.object({
 	user: z.object({ id: z.string(), displayName: z.string(), avatarUrl: z.string().nullable() }),

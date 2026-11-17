@@ -40,8 +40,8 @@ async function authenticate(req: FastifyRequest, db: Db, config: Config): Promis
 }
 
 /**
- * Garde d'authentification. Pour une session par cookie, toute requête qui modifie l'état doit
- * venir de l'origine du site (défense CSRF en plus de `SameSite=Lax`).
+ * Authentication guard. For a cookie session, any request that changes state must
+ * come from the site's origin (CSRF defence on top of `SameSite=Lax`).
  */
 export function createRequireAuth(db: Db, config: Config) {
 	const origin = new URL(config.PUBLIC_URL).origin;
@@ -49,7 +49,7 @@ export function createRequireAuth(db: Db, config: Config) {
 		const auth = await authenticate(req, db, config);
 		if (!auth) throw errors.unauthenticated();
 		if (auth.via === "cookie" && !SAFE_METHODS.has(req.method) && req.headers.origin !== origin) {
-			throw errors.forbidden("Origine de la requête non autorisée");
+			throw errors.forbidden("Request origin not allowed");
 		}
 		req.auth = auth;
 	};

@@ -15,12 +15,12 @@ const spec = buildOpenApi(allRoutes) as {
 };
 
 describe("spec OpenAPI", () => {
-	it("openapi.json est à jour (lancer `pnpm --filter @lumo/api openapi:generate` sinon)", () => {
+	it("openapi.json is up to date (run `pnpm --filter @lumo/api openapi:generate` otherwise)", () => {
 		const file = fileURLToPath(new URL("../openapi.json", import.meta.url));
 		expect(JSON.parse(readFileSync(file, "utf8"))).toEqual(JSON.parse(JSON.stringify(spec)));
 	});
 
-	it("décrit chaque route de l'étape 2", () => {
+	it("describes every step 2 route", () => {
 		expect(spec.openapi).toBe("3.1.0");
 		for (const [path, method] of [
 			["/api/v1/me", "get"],
@@ -43,14 +43,14 @@ describe("spec OpenAPI", () => {
 		}
 	});
 
-	it("exige Idempotency-Key sur les écritures de pièces, pas sur les lectures", () => {
+	it("requires Idempotency-Key on coin writes, not on reads", () => {
 		const names = (path: string, method: string) => spec.paths[path]?.[method]?.parameters?.map((p) => p.name) ?? [];
 		expect(names("/api/v1/items/{id}/completions", "post")).toContain("Idempotency-Key");
 		expect(names("/api/v1/transfers", "post")).toContain("Idempotency-Key");
 		expect(names("/api/v1/ledger", "get")).not.toContain("Idempotency-Key");
 	});
 
-	it("aucune route de validation n'accepte de montant", () => {
+	it("no completion route accepts an amount", () => {
 		const body = JSON.stringify(spec.paths["/api/v1/items/{id}/completions"]?.post?.requestBody);
 		expect(body).not.toContain("amount");
 		expect(body).toContain('"additionalProperties":false');
@@ -66,7 +66,7 @@ describe("GET /api/v1/openapi.json", () => {
 		await ctx.close();
 	});
 
-	it("sert la même spec à un membre connecté", async () => {
+	it("serves the same spec to a signed-in member", async () => {
 		const h = await createHousehold(ctx);
 		const res = await h.owner.api.get("/openapi.json");
 		expect(res.statusCode).toBe(200);

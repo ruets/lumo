@@ -3,7 +3,7 @@
 	"private": true,
 	"version": "0.0.0",
 	"license": "AGPL-3.0-or-later",
-	"description": "Suivi d'habitudes gamifié pour un foyer, self-hosted.",
+	"description": "Gamified habit tracker for a household, self-hosted.",
 	"engines": {
 		"node": ">=22"
 	},

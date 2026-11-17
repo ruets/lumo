@@ -11,7 +11,7 @@ export type DomainErrorCode =
 	| "backdate_not_allowed"
 	| "not_due";
 
-/** Règle métier violée ; l'API la traduit en réponse 4xx avec ce `code` stable. */
+/** Business rule violated; the API turns it into a 4xx response with this stable `code`. */
 export class DomainError extends Error {
 	constructor(
 		readonly code: DomainErrorCode,
@@ -23,8 +23,8 @@ export class DomainError extends Error {
 }
 
 /**
- * Valider un élément. Seul un enfant sur un élément « à accord » passe en attente (aucune écriture) ;
- * le serveur crédite ensuite `credit` pièces, jamais un montant venu du client.
+ * Complete an item. Only a child on an item that "needs approval" goes pending (no entry);
+ * the server then credits `credit` coins, never an amount coming from the client.
  */
 export function planCompletion(input: { actorRole: Role; requiresApproval: boolean; reward: number }): {
 	status: "approved" | "pending";
@@ -34,12 +34,12 @@ export function planCompletion(input: { actorRole: Role; requiresApproval: boole
 	return { status: "approved", credit: input.reward };
 }
 
-/** `existing` = validations déjà comptées ce jour-là (en attente comprises) ; au-delà : 409 target_reached. */
+/** `existing` = completions already counted that day (pending included); beyond that: 409 target_reached. */
 export function assertUnderTarget(existing: number, target: number): void {
-	if (existing >= target) throw new DomainError("target_reached", "L'objectif du jour est déjà atteint");
+	if (existing >= target) throw new DomainError("target_reached", "Today's goal is already reached");
 }
 
-/** Jour de la validation : pas dans le futur, et dans la fenêtre `backdate_days` sauf pour un owner. */
+/** Completion day: not in the future, and within the `backdate_days` window except for an owner. */
 export function checkCompletionDate(input: {
 	date: LocalDate;
 	today: LocalDate;
@@ -47,19 +47,19 @@ export function checkCompletionDate(input: {
 	role: Role;
 }): void {
 	const daysAgo = daysBetween(input.date, input.today);
-	if (daysAgo < 0) throw new DomainError("future_date", "Impossible de valider un jour futur");
+	if (daysAgo < 0) throw new DomainError("future_date", "Cannot complete a future day");
 	if (daysAgo > input.windowDays && input.role !== "owner") {
-		throw new DomainError("backdate_not_allowed", `Validation possible jusqu'à ${input.windowDays} jour(s) en arrière`);
+		throw new DomainError("backdate_not_allowed", `Completion allowed up to ${input.windowDays} day(s) back`);
 	}
 }
 
 function assertAmount(amount: number): void {
 	if (!Number.isSafeInteger(amount) || amount <= 0) {
-		throw new DomainError("invalid_amount", "Le montant doit être un entier positif");
+		throw new DomainError("invalid_amount", "The amount must be a positive integer");
 	}
 }
 
-/** Virement perso → cagnotte : deux écritures opposées, liées par un même `transfer_id` côté serveur. */
+/** Personal → pot transfer: two opposite entries, linked by one `transfer_id` on the server. */
 export function planTransfer(input: { balance: number; amount: number }) {
 	assertAmount(input.amount);
 	if (input.amount > input.balance) throw new DomainError("insufficient_balance", "Solde insuffisant");
@@ -69,7 +69,7 @@ export function planTransfer(input: { balance: number; amount: number }) {
 	] as const;
 }
 
-/** Échange d'une envie : limite par période d'abord, puis solde. */
+/** Wish redemption: per-period limit first, then balance. */
 export function planRedemption(input: {
 	cost: number;
 	balance: number;
@@ -77,7 +77,7 @@ export function planRedemption(input: {
 	limitCount: number | null;
 }): { amount: number } {
 	if (input.limitCount !== null && input.usedInPeriod >= input.limitCount) {
-		throw new DomainError("limit_reached", "Limite d'usage atteinte pour cette période");
+		throw new DomainError("limit_reached", "Usage limit reached for this period");
 	}
 	if (input.cost > input.balance) throw new DomainError("insufficient_balance", "Solde insuffisant");
 	return { amount: -input.cost };
@@ -85,7 +85,7 @@ export function planRedemption(input: {
 
 export type LimitPeriod = "day" | "week" | "month" | "year";
 
-/** Premier jour local de la période contenant `date`. */
+/** First local day of the period containing `date`. */
 export function periodStart(period: LimitPeriod, date: LocalDate, weekStart: Weekday): LocalDate {
 	switch (period) {
 		case "day":
@@ -99,7 +99,7 @@ export function periodStart(period: LimitPeriod, date: LocalDate, weekStart: Wee
 	}
 }
 
-/** Un solde n'est jamais stocké : c'est la somme des écritures du porte-monnaie. */
+/** A balance is never stored: it is the sum of the wallet's entries. */
 export function balanceOf(entries: readonly { amount: number }[]): number {
 	return entries.reduce((sum, e) => sum + e.amount, 0);
 }

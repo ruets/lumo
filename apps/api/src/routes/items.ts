@@ -28,8 +28,8 @@ export const itemRoutes = [
 	route({
 		method: "post",
 		url: "/items",
-		summary: "Créer une habitude ou une tâche",
-		tag: "Éléments",
+		summary: "Create a habit or a task",
+		tag: "Items",
 		body: createItemBody,
 		response: itemView,
 		status: 201,
@@ -38,8 +38,8 @@ export const itemRoutes = [
 	route({
 		method: "get",
 		url: "/items",
-		summary: "Lister les éléments visibles",
-		tag: "Éléments",
+		summary: "List the visible items",
+		tag: "Items",
 		query: listItemsQuery,
 		response: z.object({ items: z.array(itemView) }),
 		handler: ({ db, actor, query }) => ({ items: listItems(db, actor, query.includeArchived) }),
@@ -47,8 +47,8 @@ export const itemRoutes = [
 	route({
 		method: "patch",
 		url: "/items/:id",
-		summary: "Modifier un élément",
-		tag: "Éléments",
+		summary: "Update an item",
+		tag: "Items",
 		params: idParams,
 		body: updateItemBody,
 		response: itemView,
@@ -57,8 +57,8 @@ export const itemRoutes = [
 	route({
 		method: "delete",
 		url: "/items/:id",
-		summary: "Archiver un élément",
-		tag: "Éléments",
+		summary: "Archive an item",
+		tag: "Items",
 		params: idParams,
 		status: 204,
 		handler: ({ db, actor, params, now }) => archiveItem(db, actor, params.id, now),
@@ -66,8 +66,8 @@ export const itemRoutes = [
 	route({
 		method: "get",
 		url: "/today",
-		summary: "Éléments dus ce jour avec leur avancement",
-		tag: "Éléments",
+		summary: "Items due that day with their progress",
+		tag: "Items",
 		query: todayQuery,
 		response: todayView,
 		handler: ({ db, actor, query, now }) => getToday(db, actor, query.date, now),
@@ -75,7 +75,7 @@ export const itemRoutes = [
 	route({
 		method: "post",
 		url: "/items/:id/completions",
-		summary: "Valider un élément (les pièces sont calculées par le serveur)",
+		summary: "Complete an item (coins are computed by the server)",
 		tag: "Validations",
 		params: idParams,
 		body: completeBody,
@@ -95,7 +95,7 @@ export const itemRoutes = [
 	route({
 		method: "delete",
 		url: "/completions/:id",
-		summary: "Annuler une validation (contre-écriture au journal)",
+		summary: "Undo a completion (counter-entry in the ledger)",
 		tag: "Validations",
 		params: idParams,
 		response: completionResult,
@@ -104,7 +104,7 @@ export const itemRoutes = [
 	route({
 		method: "post",
 		url: "/completions/:id/approve",
-		summary: "Approuver la validation d'un enfant",
+		summary: "Approve a child's completion",
 		tag: "Validations",
 		params: idParams,
 		response: completionResult,
@@ -113,7 +113,7 @@ export const itemRoutes = [
 	route({
 		method: "post",
 		url: "/completions/:id/reject",
-		summary: "Rejeter la validation d'un enfant",
+		summary: "Reject a child's completion",
 		tag: "Validations",
 		params: idParams,
 		response: completionResult,

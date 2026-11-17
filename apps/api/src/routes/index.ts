@@ -3,5 +3,5 @@ import { itemRoutes } from "./items.js";
 import { meRoutes } from "./me.js";
 import { rewardRoutes, walletRoutes } from "./rewards.js";
 
-/** Toutes les routes déclaratives de l'API : source de la validation et de la spec OpenAPI. */
+/** All the API's declarative routes: source of validation and of the OpenAPI spec. */
 export const allRoutes = [...meRoutes, ...itemRoutes, ...rewardRoutes, ...walletRoutes];

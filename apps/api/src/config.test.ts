@@ -9,12 +9,12 @@ const base = {
 };
 
 describe("loadConfig", () => {
-	it("accepte une config minimale (comptes locaux seuls)", () => {
+	it("accepts a minimal config (local accounts only)", () => {
 		const c = loadConfig(base);
 		expect(c).toMatchObject({ PORT: 3000, LOCAL_AUTH_ENABLED: true, oidcEnabled: false, secureCookies: true });
 	});
 
-	it("active OIDC quand les trois variables sont fournies", () => {
+	it("enables OIDC when all three variables are provided", () => {
 		const c = loadConfig({
 			...base,
 			OIDC_ISSUER: "https://auth.example.org/application/o/lumo/",
@@ -24,20 +24,20 @@ describe("loadConfig", () => {
 		expect(c.oidcEnabled).toBe(true);
 	});
 
-	it("refuse une config OIDC partielle", () => {
+	it("rejects a partial OIDC config", () => {
 		expect(() => loadConfig({ ...base, OIDC_ISSUER: "https://auth.example.org/" })).toThrow(/vont ensemble/);
 	});
 
-	it("refuse de démarrer sans aucune méthode de connexion", () => {
-		expect(() => loadConfig({ ...base, LOCAL_AUTH_ENABLED: "false" })).toThrow(/Aucune méthode de connexion/);
+	it("refuses to start without any sign-in method", () => {
+		expect(() => loadConfig({ ...base, LOCAL_AUTH_ENABLED: "false" })).toThrow(/No sign-in method/);
 	});
 
-	it("refuse un secret de session trop court et une URL invalide", () => {
+	it("rejects a session secret that is too short and an invalid URL", () => {
 		expect(() => loadConfig({ ...base, SESSION_SECRET: "court" })).toThrow(/SESSION_SECRET/);
-		expect(() => loadConfig({ ...base, PUBLIC_URL: "pas-une-url" })).toThrow(/PUBLIC_URL/);
+		expect(() => loadConfig({ ...base, PUBLIC_URL: "not-a-url" })).toThrow(/PUBLIC_URL/);
 	});
 
-	it("n'impose pas Secure aux cookies en http local", () => {
+	it("does not force Secure cookies on local http", () => {
 		expect(loadConfig({ ...base, PUBLIC_URL: "http://localhost:3000" }).secureCookies).toBe(false);
 	});
 

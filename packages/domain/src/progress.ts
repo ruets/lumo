@@ -10,29 +10,29 @@ export interface HeatmapDay {
 export type ProgressPeriod = "week" | "month";
 
 export interface ProgressBar {
-	/** Premier jour couvert par la barre. */
+	/** First day covered by the bar. */
 	from: LocalDate;
 	to: LocalDate;
 	done: number;
 	expected: number;
-	/** Jour ou semaine en cours. */
+	/** Current day or week. */
 	current: boolean;
-	/** Entièrement dans le futur : rien à afficher. */
+	/** Entirely in the future: nothing to show. */
 	future: boolean;
 }
 
 export interface ProgressSummary {
 	period: ProgressPeriod;
 	from: LocalDate;
-	/** Fin de la période (peut dépasser aujourd'hui). */
+	/** End of the period (may be after today). */
 	to: LocalDate;
 	bars: ProgressBar[];
 	done: number;
 	expected: number;
-	/** `null` quand rien n'était attendu. Pourcentage entier, jusqu'à aujourd'hui. */
+	/** `null` when nothing was expected. Whole percentage, up to today. */
 	rate: number | null;
 	previousRate: number | null;
-	/** Écart en points de pourcentage avec la période précédente. */
+	/** Difference in percentage points with the previous period. */
 	trend: number | null;
 }
 
@@ -45,10 +45,10 @@ const pct = (s: { done: number; expected: number }) =>
 	s.expected === 0 ? null : Math.round((100 * s.done) / s.expected);
 
 /**
- * Résume la heatmap de `/stats` pour l'écran Progrès.
- * Semaine : la semaine calendaire en cours (jours futurs vides), comparée à la précédente.
- * Mois : les 4 dernières semaines glissantes (4 barres de 7 jours), comparées aux 4 d'avant.
- * Il faut une heatmap qui remonte à 56 jours avant `today`.
+ * Summarises the `/stats` heatmap for the Progress screen.
+ * Week: the current calendar week (future days empty), compared with the previous one.
+ * Month: the last 4 rolling weeks (4 bars of 7 days), compared with the 4 before.
+ * The heatmap must reach back 56 days before `today`.
  */
 export function summarizeProgress(
 	heatmap: HeatmapDay[],

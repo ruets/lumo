@@ -29,7 +29,7 @@ async function main() {
 		ping: () => sqlite.prepare("SELECT 1").get(),
 	});
 
-	// Nettoyage périodique (les tâches planifiées croner arrivent à l'étape 4).
+	// Periodic cleanup (cron jobs arrive in step 4).
 	const cleanup = setInterval(
 		() => {
 			purgeExpiredSessions(db);
@@ -40,7 +40,7 @@ async function main() {
 	cleanup.unref();
 
 	const shutdown = async (signal: string) => {
-		app.log.info({ signal }, "arrêt");
+		app.log.info({ signal }, "shutting down");
 		await app.close();
 		sqlite.close();
 		process.exit(0);
