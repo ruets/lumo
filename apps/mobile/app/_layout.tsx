@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from "@expo-google-fonts/manrope";
 import { Unbounded_500Medium, Unbounded_700Bold } from "@expo-google-fonts/unbounded";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
-import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -13,17 +10,19 @@ import { useEffect } from "react";
 import { AppState } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useMe } from "../src/hooks";
-import { bindQueryClient, flushQueue, loadQueue } from "../src/queue";
-
-const queryClient = new QueryClient({
-	defaultOptions: { queries: { staleTime: 10_000, retry: 1, gcTime: 24 * 3_600_000 } },
-});
-bindQueryClient(queryClient);
-const persister = createAsyncStoragePersister({ storage: AsyncStorage, key: "lumo.query-cache.v1" });
+import { persister, queryClient } from "../src/query";
+import { flushQueue, loadQueue } from "../src/queue";
+import { loadServer, useServer } from "../src/server";
 
 function Routes() {
-	const me = useMe();
-	const authed = Boolean(me.data);
+	const server = useServer();
+	const hasServer = server.url !== null;
+	const me = useMe(hasServer);
+	const authed = hasServer && Boolean(me.data);
+
+	useEffect(() => {
+		void loadServer();
+	}, []);
 
 	// File hors ligne : on l'envoie au démarrage, au retour au premier plan et au retour du réseau.
 	useEffect(() => {
@@ -37,14 +36,17 @@ function Routes() {
 		};
 	}, [authed]);
 
-	if (me.isPending) return null;
+	if (!server.loaded || (hasServer && me.isPending)) return null;
 	return (
 		<Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0E1220" } }}>
 			<Stack.Protected guard={authed}>
 				<Stack.Screen name="(tabs)" />
 			</Stack.Protected>
-			<Stack.Protected guard={!authed}>
+			<Stack.Protected guard={hasServer && !authed}>
 				<Stack.Screen name="login" />
+			</Stack.Protected>
+			<Stack.Protected guard={!hasServer}>
+				<Stack.Screen name="server" />
 			</Stack.Protected>
 		</Stack>
 	);

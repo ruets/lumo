@@ -45,7 +45,11 @@ export type LedgerPage = Response<"/api/v1/ledger", "get", 200>;
 export type StatsResponse = Response<"/api/v1/stats", "get", 200>;
 
 export interface AuthConfig {
+	/** Marqueur d'identification : prouve qu'une adresse est un serveur Lumo. */
+	app: "lumo";
 	oidc: boolean;
+	oidcIssuer: string | null;
+	oidcClientId: string | null;
 	local: boolean;
 	setupRequired: boolean;
 }
@@ -81,7 +85,8 @@ export interface RequestOptions {
 }
 
 export interface ClientOptions {
-	baseUrl: string;
+	/** Une fonction permet de changer de serveur à chaud (appli mobile). */
+	baseUrl: string | (() => string);
 	/** Jeton d'accès (mobile). Absent côté web : le cookie de session suffit. */
 	getAccessToken?: () => string | null | Promise<string | null>;
 	fetch?: typeof fetch;
@@ -97,7 +102,8 @@ export function createClient(options: ClientOptions) {
 		if (body !== undefined) headers["content-type"] = "application/json";
 		if (method !== "GET") headers["idempotency-key"] = opts.idempotencyKey ?? crypto.randomUUID();
 
-		const res = await doFetch(`${options.baseUrl}/api/v1${path}`, {
+		const base = typeof options.baseUrl === "function" ? options.baseUrl() : options.baseUrl;
+		const res = await doFetch(`${base}/api/v1${path}`, {
 			method,
 			headers,
 			credentials: "include",

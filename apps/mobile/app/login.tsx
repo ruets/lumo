@@ -9,23 +9,32 @@ import * as WebBrowser from "expo-web-browser";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { OIDC_CLIENT_ID, OIDC_ISSUER } from "../src/config";
+import { changeServer } from "../src/account";
 import { describeError, keys, useAuthConfig } from "../src/hooks";
+import { currentServerUrl } from "../src/server";
 import { api, saveTokens } from "../src/session";
 import { Button, Field, font, T } from "../src/ui";
 
 WebBrowser.maybeCompleteAuthSession();
 
 /** Bouton Authentik. Composant à part : les hooks OIDC exigent un issuer valide, on ne le monte que s'il est configuré. */
-function OidcButton({ onError }: { onError: (message: string) => void }) {
+function OidcButton({
+	issuer,
+	clientId,
+	onError,
+}: {
+	issuer: string;
+	clientId: string;
+	onError: (message: string) => void;
+}) {
 	const qc = useQueryClient();
 	// Authorization Code + PKCE conduit par expo-auth-session ; l'API échange ensuite le code.
-	const discovery = useAutoDiscovery(OIDC_ISSUER);
+	const discovery = useAutoDiscovery(issuer);
 	const nonce = useMemo(() => randomUUID(), []);
 	const redirectUri = makeRedirectUri({ scheme: "lumo", path: "auth" });
 	const [request, response, promptAsync] = useAuthRequest(
 		{
-			clientId: OIDC_CLIENT_ID,
+			clientId,
 			redirectUri,
 			scopes: ["openid", "profile", "email"],
 			usePKCE: true,
@@ -89,7 +98,9 @@ export default function Login() {
 					<T style={{ fontFamily: font.displayBold, fontSize: 32 }}>{t("app.name")}</T>
 					{error && <T style={{ color: colors.danger, fontFamily: font.semi }}>{error}</T>}
 					{config.isPending && <ActivityIndicator color={colors.primaryLink} />}
-					{config.data?.oidc && OIDC_ISSUER !== "" && !config.data.setupRequired && <OidcButton onError={setError} />}
+					{config.data?.oidc && config.data.oidcIssuer && config.data.oidcClientId && !config.data.setupRequired && (
+						<OidcButton issuer={config.data.oidcIssuer} clientId={config.data.oidcClientId} onError={setError} />
+					)}
 					{config.data?.local && (
 						<>
 							{config.data.setupRequired && (
@@ -115,6 +126,8 @@ export default function Login() {
 							<Button label={t("auth.submit")} onPress={() => void submit()} />
 						</>
 					)}
+					<T style={{ fontSize: 13, color: colors.muted }}>{t("server.current", { url: currentServerUrl() })}</T>
+					<Button label={t("server.change")} variant="ghost" onPress={() => void changeServer()} />
 				</View>
 			</KeyboardAvoidingView>
 		</SafeAreaView>

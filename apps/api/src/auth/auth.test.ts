@@ -32,7 +32,7 @@ async function ownerId() {
 
 describe("instance neuve", () => {
 	it("annonce qu'un setup est nécessaire, puis plus", async () => {
-		expect((await get("/auth/config")).json()).toEqual({ oidc: true, local: true, setupRequired: true });
+		expect((await get("/auth/config")).json()).toMatchObject({ oidc: true, local: true, setupRequired: true });
 		await setupOwner(ctx);
 		expect((await get("/auth/config")).json().setupRequired).toBe(false);
 	});
@@ -405,6 +405,20 @@ describe("OIDC web (Authentik)", () => {
 		const res = await callback(state, "code-inconnu");
 		expect(res.headers.location).toBe("https://lumo.test/?auth_error=oidc_failed");
 		expect(sessionCookie(res)).toBeNull();
+	});
+
+	it("GET /auth/config s'identifie comme Lumo et donne issuer et client_id, jamais le secret", async () => {
+		const res = await get("/auth/config");
+		expect(res.json()).toMatchObject({
+			app: "lumo",
+			oidc: true,
+			oidcIssuer: "https://idp.test/application/o/lumo/",
+			oidcClientId: "lumo",
+		});
+		expect(res.body).not.toContain("secret");
+		await ctx.close();
+		ctx = await createTestContext({ OIDC_ISSUER: "", OIDC_CLIENT_ID: "", OIDC_CLIENT_SECRET: "" });
+		expect((await get("/auth/config")).json()).toMatchObject({ oidc: false, oidcIssuer: null, oidcClientId: null });
 	});
 
 	it("est indisponible si OIDC n'est pas configuré", async () => {
