@@ -15,7 +15,7 @@ export class AppError extends Error {
 
 export const errors = {
 	unauthenticated: () => new AppError(401, "unauthenticated", "Authentification requise"),
-	invalidCredentials: () => new AppError(401, "invalid_credentials", "Identifiant ou mot de passe incorrect"),
+	invalidCredentials: () => new AppError(401, "invalid_credentials", "Incorrect username or password"),
 	forbidden: (detail?: string) => new AppError(403, "forbidden", "Action interdite", detail),
 	invitationRequired: () => new AppError(403, "invitation_required", "An invitation is required to create an account"),
 	invalidInvite: () => new AppError(400, "invalid_invite", "Invitation invalid, expired or already used"),

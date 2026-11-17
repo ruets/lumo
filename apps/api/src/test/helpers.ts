@@ -103,13 +103,13 @@ export function sessionCookie(res: { cookies: { name: string; value: string }[] 
 export const cookieHeader = (value: string) => ({ cookie: `${SESSION_COOKIE}=${value}` });
 
 export const OWNER = {
-	householdName: "Les Dupont",
+	householdName: "The Smiths",
 	displayName: "Alice",
 	username: "alice",
 	password: "correct-horse-battery",
 };
 
-/** Initialise l'instance (compte local owner) et renvoie son cookie web. */
+/** Sets up the instance (local owner account) and returns its web cookie. */
 export async function setupOwner(ctx: TestContext): Promise<string> {
 	const res = await ctx.app.inject({ method: "POST", url: "/api/v1/auth/setup", payload: OWNER });
 	if (res.statusCode !== 201) throw new Error(`setup failed : ${res.body}`);
@@ -167,7 +167,7 @@ export async function addMember(
 	const res = await ctx.app.inject({
 		method: "POST",
 		url: "/api/v1/auth/local/register",
-		payload: { invite: invite.json().token, displayName: username, username, password: "un-mot-de-passe-long" },
+		payload: { invite: invite.json().token, displayName: username, username, password: "a-long-password-here" },
 	});
 	if (res.statusCode !== 201) throw new Error(`register failed : ${res.body}`);
 	const cookie = sessionCookie(res) as string;
@@ -175,7 +175,7 @@ export async function addMember(
 	return { cookie, userId: me.json().user.id as string, api: api(ctx, cookie) };
 }
 
-/** Foyer de test : alice (owner), bob (adulte), kid (enfant). */
+/** Test household: alice (owner), bob (adult), kid (child). */
 export async function createHousehold(ctx: TestContext): Promise<{ owner: Member; adult: Member; kid: Member }> {
 	const ownerCookie = await setupOwner(ctx);
 	const meRes = await ctx.app.inject({ url: "/api/v1/me", headers: cookieHeader(ownerCookie) });
@@ -194,7 +194,7 @@ export async function balances(member: { api: Api }) {
 export async function makeHabit(by: { api: Api }, over: Record<string, unknown> = {}) {
 	const res = await by.api.post("/items", {
 		kind: "habit",
-		name: "Boire de l'eau",
+		name: "Drink water",
 		schedule: { type: "daily" },
 		reward: 5,
 		...over,

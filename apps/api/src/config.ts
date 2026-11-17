@@ -27,7 +27,7 @@ const envSchema = z
 		if (set !== 0 && set !== 3) {
 			ctx.addIssue({
 				code: "custom",
-				message: "OIDC_ISSUER, OIDC_CLIENT_ID et OIDC_CLIENT_SECRET vont ensemble",
+				message: "OIDC_ISSUER, OIDC_CLIENT_ID and OIDC_CLIENT_SECRET go together",
 			});
 		}
 		if (set === 0 && !env.LOCAL_AUTH_ENABLED) {

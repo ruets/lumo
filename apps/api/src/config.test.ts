@@ -25,7 +25,7 @@ describe("loadConfig", () => {
 	});
 
 	it("rejects a partial OIDC config", () => {
-		expect(() => loadConfig({ ...base, OIDC_ISSUER: "https://auth.example.org/" })).toThrow(/vont ensemble/);
+		expect(() => loadConfig({ ...base, OIDC_ISSUER: "https://auth.example.org/" })).toThrow(/go together/);
 	});
 
 	it("refuses to start without any sign-in method", () => {
@@ -33,7 +33,7 @@ describe("loadConfig", () => {
 	});
 
 	it("rejects a session secret that is too short and an invalid URL", () => {
-		expect(() => loadConfig({ ...base, SESSION_SECRET: "court" })).toThrow(/SESSION_SECRET/);
+		expect(() => loadConfig({ ...base, SESSION_SECRET: "short" })).toThrow(/SESSION_SECRET/);
 		expect(() => loadConfig({ ...base, PUBLIC_URL: "not-a-url" })).toThrow(/PUBLIC_URL/);
 	});
 

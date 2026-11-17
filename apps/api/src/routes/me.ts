@@ -13,7 +13,7 @@ export const meRoutes = [
 		method: "get",
 		url: "/me",
 		summary: "Profile, household, role and balances",
-		tag: "Profil",
+		tag: "Profile",
 		response: meView,
 		handler: ({ db, actor }) => {
 			const user = db.select().from(users).where(eq(users.id, actor.userId)).get();
@@ -40,7 +40,7 @@ export const meRoutes = [
 				.all();
 			const wallet = (kind: "personal" | "shared") => {
 				const w = own.find((x) => x.kind === kind);
-				if (!w) throw new Error(`porte-monnaie ${kind} manquant`);
+				if (!w) throw new Error(`${kind} wallet missing`);
 				return { id: w.id, balance: totals.find((t) => t.walletId === w.id)?.total ?? 0 };
 			};
 			return {
@@ -54,14 +54,14 @@ export const meRoutes = [
 	route({
 		method: "post",
 		url: "/household/invites",
-		summary: "Inviter un membre (owner)",
-		tag: "Foyer",
+		summary: "Invite a member (owner)",
+		tag: "Household",
 		body: inviteBody,
 		response: inviteView,
 		status: 201,
 		idempotent: false,
 		handler: ({ db, actor, body, now }) => {
-			if (!can(actor, "household:manage")) throw errors.forbidden("Seul un owner peut inviter");
+			if (!can(actor, "household:manage")) throw errors.forbidden("Only an owner can invite");
 			const invite = createInvite(db, {
 				householdId: actor.householdId,
 				role: body.role,

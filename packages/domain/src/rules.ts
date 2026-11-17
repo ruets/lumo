@@ -9,7 +9,8 @@ export type DomainErrorCode =
 	| "invalid_amount"
 	| "future_date"
 	| "backdate_not_allowed"
-	| "not_due";
+	| "not_due"
+	| "last_owner";
 
 /** Business rule violated; the API turns it into a 4xx response with this stable `code`. */
 export class DomainError extends Error {
@@ -62,7 +63,7 @@ function assertAmount(amount: number): void {
 /** Personal → pot transfer: two opposite entries, linked by one `transfer_id` on the server. */
 export function planTransfer(input: { balance: number; amount: number }) {
 	assertAmount(input.amount);
-	if (input.amount > input.balance) throw new DomainError("insufficient_balance", "Solde insuffisant");
+	if (input.amount > input.balance) throw new DomainError("insufficient_balance", "Insufficient balance");
 	return [
 		{ wallet: "from", amount: -input.amount },
 		{ wallet: "to", amount: input.amount },
@@ -79,7 +80,7 @@ export function planRedemption(input: {
 	if (input.limitCount !== null && input.usedInPeriod >= input.limitCount) {
 		throw new DomainError("limit_reached", "Usage limit reached for this period");
 	}
-	if (input.cost > input.balance) throw new DomainError("insufficient_balance", "Solde insuffisant");
+	if (input.cost > input.balance) throw new DomainError("insufficient_balance", "Insufficient balance");
 	return { amount: -input.cost };
 }
 

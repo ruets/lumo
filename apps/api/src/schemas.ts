@@ -272,3 +272,33 @@ export const meView = z.object({
 
 export const inviteBody = z.object({ role: z.enum(["adult", "child"]) }).strict();
 export const inviteView = z.object({ token: z.string(), expiresAt: z.string() });
+
+// ---- Household and members --------------------------------------------------------------
+
+const roleEnum = z.enum(["owner", "adult", "child"]);
+
+export const memberView = z.object({
+	userId: z.string(),
+	displayName: z.string(),
+	role: roleEnum,
+	canCreateItems: z.boolean(),
+});
+
+export const householdView = z.object({
+	household: z.object({
+		id: z.string(),
+		name: z.string(),
+		timezone: z.string(),
+		weekStart: z.number().int(),
+		backdateDays: z.number().int(),
+	}),
+	members: z.array(memberView),
+	/** Pending invitations (owner only; empty for everyone else). The token is shown only once, at creation. */
+	invites: z.array(z.object({ id: z.string(), role: roleEnum, expiresAt: z.string(), createdAt: z.string() })),
+});
+
+export const updateMemberBody = z
+	.object({ role: roleEnum, canCreateItems: z.boolean() })
+	.partial()
+	.strict()
+	.refine((b) => b.role !== undefined || b.canCreateItems !== undefined, "provide role and/or canCreateItems");

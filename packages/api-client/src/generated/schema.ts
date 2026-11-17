@@ -30,9 +30,60 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Inviter un membre (owner) */
+        /** Invite a member (owner) */
         post: operations["postApiV1HouseholdInvites"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/household": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The household, its members and (owner only) pending invitations */
+        get: operations["getApiV1Household"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change a member's role or permission to create items (owner) */
+        patch: operations["patchApiV1MembersId"];
+        trace?: never;
+    };
+    "/api/v1/household/invites/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a pending invitation (owner) */
+        delete: operations["deleteApiV1HouseholdInvitesId"];
         options?: never;
         head?: never;
         patch?: never;
@@ -115,7 +166,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Validations en attente d'accord (owner et adultes) */
+        /** Completions waiting for approval (owner and adults) */
         get: operations["getApiV1Completions"];
         put?: never;
         post?: never;
@@ -411,6 +462,158 @@ export interface operations {
                         expiresAt: string;
                     };
                 };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1Household: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        household: {
+                            id: string;
+                            name: string;
+                            timezone: string;
+                            weekStart: number;
+                            backdateDays: number;
+                        };
+                        members: {
+                            userId: string;
+                            displayName: string;
+                            /** @enum {string} */
+                            role: "owner" | "adult" | "child";
+                            canCreateItems: boolean;
+                        }[];
+                        invites: {
+                            id: string;
+                            /** @enum {string} */
+                            role: "owner" | "adult" | "child";
+                            expiresAt: string;
+                            createdAt: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    patchApiV1MembersId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    role?: "owner" | "adult" | "child";
+                    canCreateItems?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        userId: string;
+                        displayName: string;
+                        /** @enum {string} */
+                        role: "owner" | "adult" | "child";
+                        canCreateItems: boolean;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1HouseholdInvitesId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Error (RFC 9457) with a stable `code` */
             default: {

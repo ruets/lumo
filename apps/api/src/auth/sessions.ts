@@ -33,7 +33,7 @@ export function createSession(db: Db, input: { userId: string; kind: SessionKind
 	return { sessionId: id, token, expiresAt: new Date(now.getTime() + ttlFor(input.kind)) };
 }
 
-/** Session web valide correspondant au cookie, ou null. */
+/** Valid web session matching the cookie, or null. */
 export function findWebSession(db: Db, token: string, now = new Date()) {
 	const row = db
 		.select()

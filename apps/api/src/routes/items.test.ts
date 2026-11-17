@@ -18,7 +18,7 @@ describe("creation", () => {
 	it("a daily habit, assigned to its creator by default", async () => {
 		const res = await h.owner.api.post("/items", {
 			kind: "habit",
-			name: "Boire de l'eau",
+			name: "Drink water",
 			schedule: { type: "daily" },
 			targetPerPeriod: 3,
 			reward: 2,
@@ -27,7 +27,7 @@ describe("creation", () => {
 		expect(res.statusCode).toBe(201);
 		expect(res.json()).toMatchObject({
 			kind: "habit",
-			name: "Boire de l'eau",
+			name: "Drink water",
 			schedule: { type: "daily" },
 			targetPerPeriod: 3,
 			reward: 2,
@@ -105,8 +105,8 @@ describe("creation rights", () => {
 
 describe("lecture, modification, archivage", () => {
 	it("a child only sees what is assigned to them or what they created; an adult sees everything", async () => {
-		const mine = await makeHabit(h.adult, { name: "Pour l'enfant", assigneeIds: [h.kid.userId] });
-		await makeHabit(h.adult, { name: "Pour l'adulte" });
+		const mine = await makeHabit(h.adult, { name: "For the child", assigneeIds: [h.kid.userId] });
+		await makeHabit(h.adult, { name: "For the adult" });
 		const kidItems = (await h.kid.api.get("/items")).json().items;
 		expect(kidItems.map((i: { id: string }) => i.id)).toEqual([mine.id]);
 		expect((await h.adult.api.get("/items")).json().items).toHaveLength(2);

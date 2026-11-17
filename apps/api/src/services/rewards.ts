@@ -13,7 +13,7 @@ import type { DbOrTx, Tx } from "./members.js";
 type RewardRow = typeof rewards.$inferSelect;
 type RewardView = z.input<typeof rewardView>;
 
-const notFound = () => new AppError(404, "not_found", "Envie introuvable");
+const notFound = () => new AppError(404, "not_found", "Wish not found");
 
 function assigneesOf(db: DbOrTx, ids: string[]): Map<string, string[]> {
 	const map = new Map<string, string[]>();

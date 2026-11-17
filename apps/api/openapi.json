@@ -18,7 +18,7 @@
 		"/api/v1/me": {
 			"get": {
 				"summary": "Profile, household, role and balances",
-				"tags": ["Profil"],
+				"tags": ["Profile"],
 				"operationId": "getApiV1Me",
 				"responses": {
 					"200": {
@@ -152,8 +152,8 @@
 		},
 		"/api/v1/household/invites": {
 			"post": {
-				"summary": "Inviter un membre (owner)",
-				"tags": ["Foyer"],
+				"summary": "Invite a member (owner)",
+				"tags": ["Household"],
 				"operationId": "postApiV1HouseholdInvites",
 				"requestBody": {
 					"required": true,
@@ -193,6 +193,330 @@
 								}
 							}
 						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/household": {
+			"get": {
+				"summary": "The household, its members and (owner only) pending invitations",
+				"tags": ["Household"],
+				"operationId": "getApiV1Household",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"household": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"name": {
+													"type": "string"
+												},
+												"timezone": {
+													"type": "string"
+												},
+												"weekStart": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"backdateDays": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												}
+											},
+											"required": ["id", "name", "timezone", "weekStart", "backdateDays"],
+											"additionalProperties": false
+										},
+										"members": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"userId": {
+														"type": "string"
+													},
+													"displayName": {
+														"type": "string"
+													},
+													"role": {
+														"type": "string",
+														"enum": ["owner", "adult", "child"]
+													},
+													"canCreateItems": {
+														"type": "boolean"
+													}
+												},
+												"required": ["userId", "displayName", "role", "canCreateItems"],
+												"additionalProperties": false
+											}
+										},
+										"invites": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"role": {
+														"type": "string",
+														"enum": ["owner", "adult", "child"]
+													},
+													"expiresAt": {
+														"type": "string"
+													},
+													"createdAt": {
+														"type": "string"
+													}
+												},
+												"required": ["id", "role", "expiresAt", "createdAt"],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["household", "members", "invites"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/members/{id}": {
+			"patch": {
+				"summary": "Change a member's role or permission to create items (owner)",
+				"tags": ["Household"],
+				"operationId": "patchApiV1MembersId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"role": {
+										"type": "string",
+										"enum": ["owner", "adult", "child"]
+									},
+									"canCreateItems": {
+										"type": "boolean"
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"userId": {
+											"type": "string"
+										},
+										"displayName": {
+											"type": "string"
+										},
+										"role": {
+											"type": "string",
+											"enum": ["owner", "adult", "child"]
+										},
+										"canCreateItems": {
+											"type": "boolean"
+										}
+									},
+									"required": ["userId", "displayName", "role", "canCreateItems"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/household/invites/{id}": {
+			"delete": {
+				"summary": "Revoke a pending invitation (owner)",
+				"tags": ["Household"],
+				"operationId": "deleteApiV1HouseholdInvitesId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "No content"
 					},
 					"default": {
 						"description": "Error (RFC 9457) with a stable `code`",
@@ -1718,7 +2042,7 @@
 		},
 		"/api/v1/completions": {
 			"get": {
-				"summary": "Validations en attente d'accord (owner et adultes)",
+				"summary": "Completions waiting for approval (owner and adults)",
 				"tags": ["Validations"],
 				"operationId": "getApiV1Completions",
 				"parameters": [

@@ -23,7 +23,7 @@ export function personalWalletId(db: DbOrTx, householdId: string, userId: string
 		.from(wallets)
 		.where(and(eq(wallets.householdId, householdId), eq(wallets.userId, userId)))
 		.get();
-	if (!row) throw new Error("porte-monnaie manquant");
+	if (!row) throw new Error("wallet missing");
 	return row.id;
 }
 
