@@ -11,7 +11,9 @@ export type DomainErrorCode =
 	| "backdate_not_allowed"
 	| "not_due"
 	| "last_owner"
-	| "cannot_remove_self";
+	| "cannot_remove_self"
+	| "cannot_target_self"
+	| "last_super_admin";
 
 /** Business rule violated; the API turns it into a 4xx response with this stable `code`. */
 export class DomainError extends Error {

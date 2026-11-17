@@ -59,6 +59,12 @@ export const users = sqliteTable(
 		email: text("email"),
 		/** Argon2id hash; null for an OIDC-only account. */
 		passwordHash: text("password_hash"),
+		/** Instance-level role: manages accounts and households, sees no content. */
+		isSuperAdmin: integer("is_super_admin", { mode: "boolean" }).notNull().default(false),
+		/** A disabled account cannot sign in; its data is kept. */
+		disabledAt: ts("disabled_at"),
+		/** A deleted account has no credentials left; the row stays so history keeps a name. */
+		deletedAt: ts("deleted_at"),
 		createdAt: createdAt(),
 	},
 	(t) => [
@@ -375,3 +381,9 @@ export const oidcStates = sqliteTable(
 	},
 	(t) => [index("oidc_states_expires_idx").on(t.expiresAt)],
 );
+
+/** Instance-wide settings edited by super admins (key/value). */
+export const instanceSettings = sqliteTable("instance_settings", {
+	key: text("key").primaryKey(),
+	value: text("value").notNull(),
+});

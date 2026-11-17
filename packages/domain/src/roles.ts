@@ -13,12 +13,3 @@ export function isRole(value: unknown): value is Role {
 export function highestRole(a: Role, b: Role): Role {
 	return RANK[a] >= RANK[b] ? a : b;
 }
-
-/**
- * Role of a member at OIDC sign-in: membership of the admin group
- * (e.g. `lumo-admins`) promotes to `owner`; it never demotes.
- */
-export function roleAfterOidcLogin(current: Role, groups: readonly string[], adminGroup: string | null): Role {
-	if (adminGroup && groups.includes(adminGroup)) return "owner";
-	return current;
-}

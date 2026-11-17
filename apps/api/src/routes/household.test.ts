@@ -132,21 +132,21 @@ describe("DELETE /household/invites/:id", () => {
 });
 
 describe("DELETE /members/:id", () => {
-	it("the owner removes a member, who immediately loses access", async () => {
+	it("the owner removes a member, who loses the household but keeps the account", async () => {
 		expect((await h.kid.api.get("/me")).statusCode).toBe(200);
 		expect((await h.owner.api.del(`/members/${h.kid.userId}`)).statusCode).toBe(204);
 		const members = (await h.owner.api.get("/household")).json().members;
 		expect(members.map((m: { userId: string }) => m.userId).sort()).toEqual([h.owner.userId, h.adult.userId].sort());
-		expect((await h.kid.api.get("/me")).statusCode).toBe(401); // the old session is gone
+		expect((await h.kid.api.get("/me")).statusCode).toBe(403); // no household any more
 		const login = await ctx.app.inject({
 			method: "POST",
 			url: "/api/v1/auth/local/login",
 			payload: { username: "kid", password: "a-long-password-here" },
 		});
-		expect(login.statusCode).toBe(401); // credentials are erased
+		expect(login.statusCode).toBe(200); // the account and its credentials stay
 	});
 
-	it("frees the username and keeps the history", async () => {
+	it("keeps the account, the credentials and the history", async () => {
 		const item = await makeHabit(h.adult, { reward: 5, assigneeIds: [h.kid.userId] });
 		await h.kid.api.post(`/items/${item.id}/completions`);
 		expect((await balances(h.kid)).personal).toBe(5);
@@ -156,12 +156,9 @@ describe("DELETE /members/:id", () => {
 		expect(ctx.db.select().from(ledgerEntries).all()).toHaveLength(entriesBefore); // the ledger is untouched
 		expect(ctx.db.select().from(users).where(eq(users.id, h.kid.userId)).get()).toMatchObject({
 			displayName: "kid",
-			username: null,
-			passwordHash: null,
+			username: "kid",
 		});
-
-		const invite = (await h.owner.api.post("/household/invites", { role: "child" })).json();
-		expect((await register(invite.token, "kid")).statusCode).toBe(201); // the username is free again
+		expect(ctx.db.select().from(users).where(eq(users.id, h.kid.userId)).get()?.passwordHash).not.toBeNull();
 	});
 
 	it("unassigns the member from items and drops their pending approvals", async () => {
@@ -174,12 +171,12 @@ describe("DELETE /members/:id", () => {
 		expect((await h.adult.api.get("/completions?status=pending")).json().completions).toEqual([]);
 	});
 
-	it("a removed OIDC member needs a new invitation to come back", async () => {
+	it("a removed OIDC member can still sign in, and an invitation brings them back", async () => {
 		const invite = (await h.owner.api.post("/household/invites", { role: "adult" })).json();
 		const claims = { sub: "sub-zoe", name: "Zoe", email: null, picture: null, groups: [] };
 		const { userId } = resolveOidcLogin(ctx.db, ctx.config, claims, invite.token);
 		await h.owner.api.del(`/members/${userId}`);
-		expect(() => resolveOidcLogin(ctx.db, ctx.config, claims, null)).toThrow(/invitation/i);
+		expect(() => resolveOidcLogin(ctx.db, ctx.config, claims, null)).not.toThrow();
 		const again = (await h.owner.api.post("/household/invites", { role: "adult" })).json();
 		expect(() => resolveOidcLogin(ctx.db, ctx.config, claims, again.token)).not.toThrow();
 	});

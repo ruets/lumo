@@ -373,25 +373,25 @@ describe("OIDC web (Authentik)", () => {
 		expect(sessionCookie(again)).toBeTruthy();
 	});
 
-	it("lumo-admins group: promotes to owner, never demotes", async () => {
+	it("lumo-admins group: makes a super admin, never demotes", async () => {
 		const owner = await setupOwner(ctx);
 		const token = (await post("/household/invites", { role: "adult" }, { ...cookieHeader(owner), ...ORIGIN })).json()
 			.token;
 		ctx.oidc.grant("c1", { sub: "sub-bob" });
 		await callback((await startLogin(token)).state, "c1");
-		const role = () => ctx.db.select().from(memberships).where(eq(memberships.role, "owner")).all().length;
-		expect(role()).toBe(1);
+		const admins = () => ctx.db.select().from(users).where(eq(users.isSuperAdmin, true)).all().length;
+		expect(admins()).toBe(1);
 
 		ctx.oidc.grant("c2", { sub: "sub-bob", groups: ["lumo-admins"] });
 		await callback((await startLogin()).state, "c2");
-		expect(role()).toBe(2);
+		expect(admins()).toBe(2);
 
 		ctx.oidc.grant("c3", { sub: "sub-bob", groups: [] });
 		await callback((await startLogin()).state, "c3");
-		expect(role()).toBe(2);
+		expect(admins()).toBe(2);
 	});
 
-	it("without OIDC_ADMIN_GROUP nobody is promoted, whatever groups they have", async () => {
+	it("without OIDC_ADMIN_GROUP nobody becomes super admin from their groups", async () => {
 		await ctx.close();
 		ctx = await createTestContext({ OIDC_ADMIN_GROUP: "" });
 		const owner = await setupOwner(ctx);
@@ -401,7 +401,7 @@ describe("OIDC web (Authentik)", () => {
 		await callback((await startLogin(token)).state, "c1");
 		ctx.oidc.grant("c2", { sub: "sub-bob", groups: ["lumo-admins"] });
 		await callback((await startLogin()).state, "c2");
-		expect(ctx.db.select().from(memberships).where(eq(memberships.role, "owner")).all()).toHaveLength(1);
+		expect(ctx.db.select().from(users).where(eq(users.isSuperAdmin, true)).all()).toHaveLength(1);
 	});
 
 	it("the state is single-use and mandatory", async () => {

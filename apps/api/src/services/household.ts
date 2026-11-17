@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { assertCanRemoveMember, assertRoleChange, can } from "@lumo/domain";
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { assertCanLeaveHousehold, assertCanRemoveMember, assertRoleChange, can } from "@lumo/domain";
+import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import type { z } from "zod";
+import { findValidInvite, markInviteUsed } from "../auth/invites.js";
 import {
 	completions,
-	devices,
 	households,
 	invites,
 	itemAssignees,
+	items,
 	memberships,
 	rewardAssignees,
-	sessions,
+	rewards,
 	users,
 } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { householdView, memberView, updateHouseholdBody, updateMemberBody } from "../schemas.js";
-import type { ActorCtx } from "./context.js";
-import type { DbOrTx, Tx } from "./members.js";
+import type { AccountCtx, ActorCtx } from "./context.js";
+import { createHousehold, type DbOrTx, joinHousehold, type Tx } from "./members.js";
 
 type MemberView = z.input<typeof memberView>;
 type HouseholdView = z.input<typeof householdView>;
@@ -140,10 +141,41 @@ export function updateHousehold(
 }
 
 /**
- * Owner only. The member leaves the household and loses every way in (sessions, devices, credentials),
- * but their history stays: completions, ledger entries and their wallet are kept, and the user row remains
- * so old entries still show a name. Their credentials are erased, which frees the username and means an
- * OIDC member has to be invited again to come back. Pending approvals are rejected and assignments dropped.
+ * Takes an account out of a household and drops what only made sense inside it: assignments to its items and
+ * wishes, and approvals still waiting there (rejected). The account itself, its sessions and credentials stay, and
+ * so does its personal wallet, kept as it is for if the person comes back.
+ */
+export function detachFromHousehold(tx: Tx, householdId: string, userId: string): void {
+	const itemIds = tx.select({ id: items.id }).from(items).where(eq(items.householdId, householdId));
+	const rewardIds = tx.select({ id: rewards.id }).from(rewards).where(eq(rewards.householdId, householdId));
+	tx.update(completions)
+		.set({ status: "rejected" })
+		.where(and(eq(completions.userId, userId), eq(completions.status, "pending"), inArray(completions.itemId, itemIds)))
+		.run();
+	tx.delete(itemAssignees)
+		.where(and(eq(itemAssignees.userId, userId), inArray(itemAssignees.itemId, itemIds)))
+		.run();
+	tx.delete(rewardAssignees)
+		.where(and(eq(rewardAssignees.userId, userId), inArray(rewardAssignees.rewardId, rewardIds)))
+		.run();
+	tx.delete(memberships)
+		.where(and(eq(memberships.householdId, householdId), eq(memberships.userId, userId)))
+		.run();
+}
+
+function ownerCountOf(tx: Tx, householdId: string): number {
+	return (
+		tx
+			.select({ n: sql<number>`count(*)` })
+			.from(memberships)
+			.where(and(eq(memberships.householdId, householdId), eq(memberships.role, "owner")))
+			.get()?.n ?? 0
+	);
+}
+
+/**
+ * Owner only. The member leaves the household but keeps their account: they can sign in, keep their coins and join
+ * another household. Never yourself, never the last owner (domain rules).
  */
 export function removeMember(tx: Tx, actor: ActorCtx, userId: string): void {
 	if (!can(actor, "household:manage")) throw errors.forbidden("Only an owner can remove members");
@@ -153,25 +185,33 @@ export function removeMember(tx: Tx, actor: ActorCtx, userId: string): void {
 		.where(and(eq(memberships.householdId, actor.householdId), eq(memberships.userId, userId)))
 		.get();
 	if (!target) throw notFound("Member");
-	const ownerCount =
-		tx
-			.select({ n: sql<number>`count(*)` })
-			.from(memberships)
-			.where(and(eq(memberships.householdId, actor.householdId), eq(memberships.role, "owner")))
-			.get()?.n ?? 0;
-	assertCanRemoveMember({ actorId: actor.userId, targetId: userId, targetRole: target.role, ownerCount });
+	assertCanRemoveMember({
+		actorId: actor.userId,
+		targetId: userId,
+		targetRole: target.role,
+		ownerCount: ownerCountOf(tx, actor.householdId),
+	});
+	detachFromHousehold(tx, actor.householdId, userId);
+}
 
-	tx.update(completions)
-		.set({ status: "rejected" })
-		.where(and(eq(completions.userId, userId), eq(completions.status, "pending")))
-		.run();
-	tx.delete(itemAssignees).where(eq(itemAssignees.userId, userId)).run();
-	tx.delete(rewardAssignees).where(eq(rewardAssignees.userId, userId)).run();
-	tx.delete(sessions).where(eq(sessions.userId, userId)).run();
-	tx.delete(devices).where(eq(devices.userId, userId)).run();
-	tx.delete(memberships).where(eq(memberships.userId, userId)).run();
-	tx.update(users)
-		.set({ oidcSubject: null, username: null, email: null, passwordHash: null })
-		.where(eq(users.id, userId))
-		.run();
+/** Leaving on your own: allowed for everybody except the last owner. */
+export function leaveHousehold(tx: Tx, actor: ActorCtx): void {
+	assertCanLeaveHousehold({ role: actor.role, ownerCount: ownerCountOf(tx, actor.householdId) });
+	detachFromHousehold(tx, actor.householdId, actor.userId);
+}
+
+/** An account without a household joins one with an invitation code. */
+export function joinWithCode(tx: Tx, account: AccountCtx, code: string, now: Date): void {
+	if (account.household) throw errors.alreadyInHousehold();
+	const invite = findValidInvite(tx, code, now);
+	joinHousehold(tx, { householdId: invite.householdId, userId: account.userId, role: invite.role });
+	markInviteUsed(tx, invite.id, account.userId, now);
+}
+
+/** Creating a household yourself: allowed to everybody unless the instance restricts it to super admins. */
+export function createOwnHousehold(tx: Tx, account: AccountCtx, name: string, creationOpen: boolean): void {
+	if (account.household) throw errors.alreadyInHousehold();
+	if (!creationOpen && !account.isSuperAdmin) throw errors.forbidden("Only super admins can create households");
+	const householdId = createHousehold(tx, { name });
+	joinHousehold(tx, { householdId, userId: account.userId, role: "owner" });
 }

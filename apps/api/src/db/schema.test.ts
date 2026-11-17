@@ -24,7 +24,7 @@ function seed() {
 }
 
 describe("migrations", () => {
-	it("creates the schema's 16 tables", () => {
+	it("creates the schema's 17 tables", () => {
 		const names = ctx.sqlite
 			.prepare(
 				"SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '\\_\\_%' ESCAPE '\\' AND name NOT LIKE 'sqlite_%'",
@@ -37,6 +37,7 @@ describe("migrations", () => {
 				"devices",
 				"households",
 				"idempotency_keys",
+				"instance_settings",
 				"invites",
 				"item_assignees",
 				"items",
