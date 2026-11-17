@@ -1,0 +1,4186 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "Lumo API",
+		"version": "1.0.0",
+		"license": {
+			"name": "AGPL-3.0-or-later",
+			"identifier": "AGPL-3.0-or-later"
+		},
+		"description": "API de Lumo. Le serveur est seul juge des pièces : aucun client n'envoie de montant. Les écritures portent un `Idempotency-Key`."
+	},
+	"servers": [
+		{
+			"url": "/"
+		}
+	],
+	"paths": {
+		"/api/v1/me": {
+			"get": {
+				"summary": "Profil, foyer, rôle et soldes",
+				"tags": [
+					"Profil"
+				],
+				"operationId": "getApiV1Me",
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"user": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"displayName": {
+													"type": "string"
+												},
+												"avatarUrl": {
+													"type": [
+														"string",
+														"null"
+													]
+												}
+											},
+											"required": [
+												"id",
+												"displayName",
+												"avatarUrl"
+											],
+											"additionalProperties": false
+										},
+										"household": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"name": {
+													"type": "string"
+												},
+												"timezone": {
+													"type": "string"
+												}
+											},
+											"required": [
+												"id",
+												"name",
+												"timezone"
+											],
+											"additionalProperties": false
+										},
+										"role": {
+											"type": "string",
+											"enum": [
+												"owner",
+												"adult",
+												"child"
+											]
+										},
+										"wallets": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "object",
+													"properties": {
+														"id": {
+															"type": "string"
+														},
+														"balance": {
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														}
+													},
+													"required": [
+														"id",
+														"balance"
+													],
+													"additionalProperties": false
+												},
+												"shared": {
+													"type": "object",
+													"properties": {
+														"id": {
+															"type": "string"
+														},
+														"balance": {
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														}
+													},
+													"required": [
+														"id",
+														"balance"
+													],
+													"additionalProperties": false
+												}
+											},
+											"required": [
+												"personal",
+												"shared"
+											],
+											"additionalProperties": false
+										}
+									},
+									"required": [
+										"user",
+										"household",
+										"role",
+										"wallets"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/household/invites": {
+			"post": {
+				"summary": "Inviter un membre (owner)",
+				"tags": [
+					"Foyer"
+				],
+				"operationId": "postApiV1HouseholdInvites",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"role": {
+										"type": "string",
+										"enum": [
+											"adult",
+											"child"
+										]
+									}
+								},
+								"required": [
+									"role"
+								],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"token": {
+											"type": "string"
+										},
+										"expiresAt": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"token",
+										"expiresAt"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/items": {
+			"post": {
+				"summary": "Créer une habitude ou une tâche",
+				"tags": [
+					"Éléments"
+				],
+				"operationId": "postApiV1Items",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"oneOf": [
+									{
+										"type": "object",
+										"properties": {
+											"kind": {
+												"type": "string",
+												"const": "habit"
+											},
+											"schedule": {
+												"oneOf": [
+													{
+														"type": "object",
+														"properties": {
+															"type": {
+																"type": "string",
+																"const": "daily"
+															}
+														},
+														"required": [
+															"type"
+														]
+													},
+													{
+														"type": "object",
+														"properties": {
+															"type": {
+																"type": "string",
+																"const": "weekly"
+															},
+															"days": {
+																"minItems": 1,
+																"type": "array",
+																"items": {
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 7
+																}
+															}
+														},
+														"required": [
+															"type",
+															"days"
+														]
+													},
+													{
+														"type": "object",
+														"properties": {
+															"type": {
+																"type": "string",
+																"const": "timesPerWeek"
+															},
+															"count": {
+																"type": "integer",
+																"minimum": 1,
+																"maximum": 7
+															}
+														},
+														"required": [
+															"type",
+															"count"
+														]
+													},
+													{
+														"type": "object",
+														"properties": {
+															"type": {
+																"type": "string",
+																"const": "monthly"
+															},
+															"day": {
+																"type": "integer",
+																"minimum": 1,
+																"maximum": 31
+															}
+														},
+														"required": [
+															"type",
+															"day"
+														]
+													}
+												]
+											},
+											"targetPerPeriod": {
+												"default": 1,
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 100
+											},
+											"name": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 120
+											},
+											"description": {
+												"anyOf": [
+													{
+														"type": "string",
+														"maxLength": 1000
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"reward": {
+												"default": 0,
+												"type": "integer",
+												"minimum": 0,
+												"maximum": 100000
+											},
+											"creditsTo": {
+												"default": "personal",
+												"type": "string",
+												"enum": [
+													"personal",
+													"shared"
+												]
+											},
+											"pinned": {
+												"default": false,
+												"type": "boolean"
+											},
+											"requiresApproval": {
+												"default": false,
+												"type": "boolean"
+											},
+											"assigneeIds": {
+												"minItems": 1,
+												"maxItems": 30,
+												"type": "array",
+												"items": {
+													"type": "string",
+													"minLength": 1,
+													"maxLength": 100
+												}
+											}
+										},
+										"required": [
+											"kind",
+											"schedule",
+											"name"
+										],
+										"additionalProperties": false
+									},
+									{
+										"type": "object",
+										"properties": {
+											"kind": {
+												"type": "string",
+												"const": "task"
+											},
+											"dueAt": {
+												"anyOf": [
+													{
+														"type": "string",
+														"format": "date-time",
+														"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"targetPerPeriod": {
+												"type": "integer",
+												"minimum": -9007199254740991,
+												"maximum": 9007199254740991
+											},
+											"name": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 120
+											},
+											"description": {
+												"anyOf": [
+													{
+														"type": "string",
+														"maxLength": 1000
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"reward": {
+												"default": 0,
+												"type": "integer",
+												"minimum": 0,
+												"maximum": 100000
+											},
+											"creditsTo": {
+												"default": "personal",
+												"type": "string",
+												"enum": [
+													"personal",
+													"shared"
+												]
+											},
+											"pinned": {
+												"default": false,
+												"type": "boolean"
+											},
+											"requiresApproval": {
+												"default": false,
+												"type": "boolean"
+											},
+											"assigneeIds": {
+												"minItems": 1,
+												"maxItems": 30,
+												"type": "array",
+												"items": {
+													"type": "string",
+													"minLength": 1,
+													"maxLength": 100
+												}
+											}
+										},
+										"required": [
+											"kind",
+											"name"
+										],
+										"additionalProperties": false
+									}
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"kind": {
+											"type": "string",
+											"enum": [
+												"habit",
+												"task"
+											]
+										},
+										"name": {
+											"type": "string"
+										},
+										"description": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"schedule": {
+											"anyOf": [
+												{
+													"oneOf": [
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "daily"
+																}
+															},
+															"required": [
+																"type"
+															],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "weekly"
+																},
+																"days": {
+																	"minItems": 1,
+																	"type": "array",
+																	"items": {
+																		"type": "integer",
+																		"minimum": 1,
+																		"maximum": 7
+																	}
+																}
+															},
+															"required": [
+																"type",
+																"days"
+															],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "timesPerWeek"
+																},
+																"count": {
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 7
+																}
+															},
+															"required": [
+																"type",
+																"count"
+															],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "monthly"
+																},
+																"day": {
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 31
+																}
+															},
+															"required": [
+																"type",
+																"day"
+															],
+															"additionalProperties": false
+														}
+													]
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"targetPerPeriod": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"reward": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"creditsTo": {
+											"type": "string",
+											"enum": [
+												"personal",
+												"shared"
+											]
+										},
+										"dueAt": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"pinned": {
+											"type": "boolean"
+										},
+										"requiresApproval": {
+											"type": "boolean"
+										},
+										"archivedAt": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"createdBy": {
+											"type": "string"
+										},
+										"assigneeIds": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										}
+									},
+									"required": [
+										"id",
+										"kind",
+										"name",
+										"description",
+										"schedule",
+										"targetPerPeriod",
+										"reward",
+										"creditsTo",
+										"dueAt",
+										"pinned",
+										"requiresApproval",
+										"archivedAt",
+										"createdBy",
+										"assigneeIds"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"get": {
+				"summary": "Lister les éléments visibles",
+				"tags": [
+					"Éléments"
+				],
+				"operationId": "getApiV1Items",
+				"parameters": [
+					{
+						"name": "includeArchived",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"default": "false",
+							"type": "string",
+							"enum": [
+								"true",
+								"false"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"items": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"kind": {
+														"type": "string",
+														"enum": [
+															"habit",
+															"task"
+														]
+													},
+													"name": {
+														"type": "string"
+													},
+													"description": {
+														"type": [
+															"string",
+															"null"
+														]
+													},
+													"schedule": {
+														"anyOf": [
+															{
+																"oneOf": [
+																	{
+																		"type": "object",
+																		"properties": {
+																			"type": {
+																				"type": "string",
+																				"const": "daily"
+																			}
+																		},
+																		"required": [
+																			"type"
+																		],
+																		"additionalProperties": false
+																	},
+																	{
+																		"type": "object",
+																		"properties": {
+																			"type": {
+																				"type": "string",
+																				"const": "weekly"
+																			},
+																			"days": {
+																				"minItems": 1,
+																				"type": "array",
+																				"items": {
+																					"type": "integer",
+																					"minimum": 1,
+																					"maximum": 7
+																				}
+																			}
+																		},
+																		"required": [
+																			"type",
+																			"days"
+																		],
+																		"additionalProperties": false
+																	},
+																	{
+																		"type": "object",
+																		"properties": {
+																			"type": {
+																				"type": "string",
+																				"const": "timesPerWeek"
+																			},
+																			"count": {
+																				"type": "integer",
+																				"minimum": 1,
+																				"maximum": 7
+																			}
+																		},
+																		"required": [
+																			"type",
+																			"count"
+																		],
+																		"additionalProperties": false
+																	},
+																	{
+																		"type": "object",
+																		"properties": {
+																			"type": {
+																				"type": "string",
+																				"const": "monthly"
+																			},
+																			"day": {
+																				"type": "integer",
+																				"minimum": 1,
+																				"maximum": 31
+																			}
+																		},
+																		"required": [
+																			"type",
+																			"day"
+																		],
+																		"additionalProperties": false
+																	}
+																]
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"targetPerPeriod": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"reward": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"creditsTo": {
+														"type": "string",
+														"enum": [
+															"personal",
+															"shared"
+														]
+													},
+													"dueAt": {
+														"type": [
+															"string",
+															"null"
+														]
+													},
+													"pinned": {
+														"type": "boolean"
+													},
+													"requiresApproval": {
+														"type": "boolean"
+													},
+													"archivedAt": {
+														"type": [
+															"string",
+															"null"
+														]
+													},
+													"createdBy": {
+														"type": "string"
+													},
+													"assigneeIds": {
+														"type": "array",
+														"items": {
+															"type": "string"
+														}
+													}
+												},
+												"required": [
+													"id",
+													"kind",
+													"name",
+													"description",
+													"schedule",
+													"targetPerPeriod",
+													"reward",
+													"creditsTo",
+													"dueAt",
+													"pinned",
+													"requiresApproval",
+													"archivedAt",
+													"createdBy",
+													"assigneeIds"
+												],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": [
+										"items"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/items/{id}": {
+			"patch": {
+				"summary": "Modifier un élément",
+				"tags": [
+					"Éléments"
+				],
+				"operationId": "patchApiV1ItemsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 120
+									},
+									"description": {
+										"anyOf": [
+											{
+												"type": "string",
+												"maxLength": 1000
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"schedule": {
+										"oneOf": [
+											{
+												"type": "object",
+												"properties": {
+													"type": {
+														"type": "string",
+														"const": "daily"
+													}
+												},
+												"required": [
+													"type"
+												]
+											},
+											{
+												"type": "object",
+												"properties": {
+													"type": {
+														"type": "string",
+														"const": "weekly"
+													},
+													"days": {
+														"minItems": 1,
+														"type": "array",
+														"items": {
+															"type": "integer",
+															"minimum": 1,
+															"maximum": 7
+														}
+													}
+												},
+												"required": [
+													"type",
+													"days"
+												]
+											},
+											{
+												"type": "object",
+												"properties": {
+													"type": {
+														"type": "string",
+														"const": "timesPerWeek"
+													},
+													"count": {
+														"type": "integer",
+														"minimum": 1,
+														"maximum": 7
+													}
+												},
+												"required": [
+													"type",
+													"count"
+												]
+											},
+											{
+												"type": "object",
+												"properties": {
+													"type": {
+														"type": "string",
+														"const": "monthly"
+													},
+													"day": {
+														"type": "integer",
+														"minimum": 1,
+														"maximum": 31
+													}
+												},
+												"required": [
+													"type",
+													"day"
+												]
+											}
+										]
+									},
+									"targetPerPeriod": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 100
+									},
+									"reward": {
+										"type": "integer",
+										"minimum": 0,
+										"maximum": 100000
+									},
+									"creditsTo": {
+										"type": "string",
+										"enum": [
+											"personal",
+											"shared"
+										]
+									},
+									"dueAt": {
+										"anyOf": [
+											{
+												"type": "string",
+												"format": "date-time",
+												"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"pinned": {
+										"type": "boolean"
+									},
+									"requiresApproval": {
+										"type": "boolean"
+									},
+									"assigneeIds": {
+										"minItems": 1,
+										"maxItems": 30,
+										"type": "array",
+										"items": {
+											"type": "string",
+											"minLength": 1,
+											"maxLength": 100
+										}
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"kind": {
+											"type": "string",
+											"enum": [
+												"habit",
+												"task"
+											]
+										},
+										"name": {
+											"type": "string"
+										},
+										"description": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"schedule": {
+											"anyOf": [
+												{
+													"oneOf": [
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "daily"
+																}
+															},
+															"required": [
+																"type"
+															],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "weekly"
+																},
+																"days": {
+																	"minItems": 1,
+																	"type": "array",
+																	"items": {
+																		"type": "integer",
+																		"minimum": 1,
+																		"maximum": 7
+																	}
+																}
+															},
+															"required": [
+																"type",
+																"days"
+															],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "timesPerWeek"
+																},
+																"count": {
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 7
+																}
+															},
+															"required": [
+																"type",
+																"count"
+															],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "monthly"
+																},
+																"day": {
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 31
+																}
+															},
+															"required": [
+																"type",
+																"day"
+															],
+															"additionalProperties": false
+														}
+													]
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"targetPerPeriod": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"reward": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"creditsTo": {
+											"type": "string",
+											"enum": [
+												"personal",
+												"shared"
+											]
+										},
+										"dueAt": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"pinned": {
+											"type": "boolean"
+										},
+										"requiresApproval": {
+											"type": "boolean"
+										},
+										"archivedAt": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"createdBy": {
+											"type": "string"
+										},
+										"assigneeIds": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										}
+									},
+									"required": [
+										"id",
+										"kind",
+										"name",
+										"description",
+										"schedule",
+										"targetPerPeriod",
+										"reward",
+										"creditsTo",
+										"dueAt",
+										"pinned",
+										"requiresApproval",
+										"archivedAt",
+										"createdBy",
+										"assigneeIds"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"delete": {
+				"summary": "Archiver un élément",
+				"tags": [
+					"Éléments"
+				],
+				"operationId": "deleteApiV1ItemsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Aucun contenu"
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/today": {
+			"get": {
+				"summary": "Éléments dus ce jour avec leur avancement",
+				"tags": [
+					"Éléments"
+				],
+				"operationId": "getApiV1Today",
+				"parameters": [
+					{
+						"name": "date",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"date": {
+											"type": "string",
+											"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+										},
+										"items": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"item": {
+														"type": "object",
+														"properties": {
+															"id": {
+																"type": "string"
+															},
+															"kind": {
+																"type": "string",
+																"enum": [
+																	"habit",
+																	"task"
+																]
+															},
+															"name": {
+																"type": "string"
+															},
+															"description": {
+																"type": [
+																	"string",
+																	"null"
+																]
+															},
+															"schedule": {
+																"anyOf": [
+																	{
+																		"oneOf": [
+																			{
+																				"type": "object",
+																				"properties": {
+																					"type": {
+																						"type": "string",
+																						"const": "daily"
+																					}
+																				},
+																				"required": [
+																					"type"
+																				],
+																				"additionalProperties": false
+																			},
+																			{
+																				"type": "object",
+																				"properties": {
+																					"type": {
+																						"type": "string",
+																						"const": "weekly"
+																					},
+																					"days": {
+																						"minItems": 1,
+																						"type": "array",
+																						"items": {
+																							"type": "integer",
+																							"minimum": 1,
+																							"maximum": 7
+																						}
+																					}
+																				},
+																				"required": [
+																					"type",
+																					"days"
+																				],
+																				"additionalProperties": false
+																			},
+																			{
+																				"type": "object",
+																				"properties": {
+																					"type": {
+																						"type": "string",
+																						"const": "timesPerWeek"
+																					},
+																					"count": {
+																						"type": "integer",
+																						"minimum": 1,
+																						"maximum": 7
+																					}
+																				},
+																				"required": [
+																					"type",
+																					"count"
+																				],
+																				"additionalProperties": false
+																			},
+																			{
+																				"type": "object",
+																				"properties": {
+																					"type": {
+																						"type": "string",
+																						"const": "monthly"
+																					},
+																					"day": {
+																						"type": "integer",
+																						"minimum": 1,
+																						"maximum": 31
+																					}
+																				},
+																				"required": [
+																					"type",
+																					"day"
+																				],
+																				"additionalProperties": false
+																			}
+																		]
+																	},
+																	{
+																		"type": "null"
+																	}
+																]
+															},
+															"targetPerPeriod": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"reward": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"creditsTo": {
+																"type": "string",
+																"enum": [
+																	"personal",
+																	"shared"
+																]
+															},
+															"dueAt": {
+																"type": [
+																	"string",
+																	"null"
+																]
+															},
+															"pinned": {
+																"type": "boolean"
+															},
+															"requiresApproval": {
+																"type": "boolean"
+															},
+															"archivedAt": {
+																"type": [
+																	"string",
+																	"null"
+																]
+															},
+															"createdBy": {
+																"type": "string"
+															},
+															"assigneeIds": {
+																"type": "array",
+																"items": {
+																	"type": "string"
+																}
+															}
+														},
+														"required": [
+															"id",
+															"kind",
+															"name",
+															"description",
+															"schedule",
+															"targetPerPeriod",
+															"reward",
+															"creditsTo",
+															"dueAt",
+															"pinned",
+															"requiresApproval",
+															"archivedAt",
+															"createdBy",
+															"assigneeIds"
+														],
+														"additionalProperties": false
+													},
+													"approved": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"pending": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"target": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"done": {
+														"type": "boolean"
+													}
+												},
+												"required": [
+													"item",
+													"approved",
+													"pending",
+													"target",
+													"done"
+												],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": [
+										"date",
+										"items"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/items/{id}/completions": {
+			"post": {
+				"summary": "Valider un élément (les pièces sont calculées par le serveur)",
+				"tags": [
+					"Validations"
+				],
+				"operationId": "postApiV1ItemsIdCompletions",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"date": {
+										"type": "string",
+										"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"completion": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"itemId": {
+													"type": "string"
+												},
+												"userId": {
+													"type": "string"
+												},
+												"localDate": {
+													"type": "string",
+													"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+												},
+												"status": {
+													"type": "string",
+													"enum": [
+														"pending",
+														"approved",
+														"rejected"
+													]
+												},
+												"approvedBy": {
+													"type": [
+														"string",
+														"null"
+													]
+												},
+												"completedAt": {
+													"type": "string"
+												},
+												"undoneAt": {
+													"type": [
+														"string",
+														"null"
+													]
+												}
+											},
+											"required": [
+												"id",
+												"itemId",
+												"userId",
+												"localDate",
+												"status",
+												"approvedBy",
+												"completedAt",
+												"undoneAt"
+											],
+											"additionalProperties": false
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												}
+											},
+											"required": [
+												"personal",
+												"shared"
+											],
+											"additionalProperties": false
+										}
+									},
+									"required": [
+										"completion",
+										"balances"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/completions": {
+			"get": {
+				"summary": "Validations en attente d'accord (owner et adultes)",
+				"tags": [
+					"Validations"
+				],
+				"operationId": "getApiV1Completions",
+				"parameters": [
+					{
+						"name": "status",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"const": "pending"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"completions": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"itemId": {
+														"type": "string"
+													},
+													"userId": {
+														"type": "string"
+													},
+													"localDate": {
+														"type": "string",
+														"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+													},
+													"status": {
+														"type": "string",
+														"enum": [
+															"pending",
+															"approved",
+															"rejected"
+														]
+													},
+													"approvedBy": {
+														"type": [
+															"string",
+															"null"
+														]
+													},
+													"completedAt": {
+														"type": "string"
+													},
+													"undoneAt": {
+														"type": [
+															"string",
+															"null"
+														]
+													}
+												},
+												"required": [
+													"id",
+													"itemId",
+													"userId",
+													"localDate",
+													"status",
+													"approvedBy",
+													"completedAt",
+													"undoneAt"
+												],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": [
+										"completions"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/completions/{id}": {
+			"delete": {
+				"summary": "Annuler une validation (contre-écriture au journal)",
+				"tags": [
+					"Validations"
+				],
+				"operationId": "deleteApiV1CompletionsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"completion": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"itemId": {
+													"type": "string"
+												},
+												"userId": {
+													"type": "string"
+												},
+												"localDate": {
+													"type": "string",
+													"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+												},
+												"status": {
+													"type": "string",
+													"enum": [
+														"pending",
+														"approved",
+														"rejected"
+													]
+												},
+												"approvedBy": {
+													"type": [
+														"string",
+														"null"
+													]
+												},
+												"completedAt": {
+													"type": "string"
+												},
+												"undoneAt": {
+													"type": [
+														"string",
+														"null"
+													]
+												}
+											},
+											"required": [
+												"id",
+												"itemId",
+												"userId",
+												"localDate",
+												"status",
+												"approvedBy",
+												"completedAt",
+												"undoneAt"
+											],
+											"additionalProperties": false
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												}
+											},
+											"required": [
+												"personal",
+												"shared"
+											],
+											"additionalProperties": false
+										}
+									},
+									"required": [
+										"completion",
+										"balances"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/completions/{id}/approve": {
+			"post": {
+				"summary": "Approuver la validation d'un enfant",
+				"tags": [
+					"Validations"
+				],
+				"operationId": "postApiV1CompletionsIdApprove",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"completion": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"itemId": {
+													"type": "string"
+												},
+												"userId": {
+													"type": "string"
+												},
+												"localDate": {
+													"type": "string",
+													"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+												},
+												"status": {
+													"type": "string",
+													"enum": [
+														"pending",
+														"approved",
+														"rejected"
+													]
+												},
+												"approvedBy": {
+													"type": [
+														"string",
+														"null"
+													]
+												},
+												"completedAt": {
+													"type": "string"
+												},
+												"undoneAt": {
+													"type": [
+														"string",
+														"null"
+													]
+												}
+											},
+											"required": [
+												"id",
+												"itemId",
+												"userId",
+												"localDate",
+												"status",
+												"approvedBy",
+												"completedAt",
+												"undoneAt"
+											],
+											"additionalProperties": false
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												}
+											},
+											"required": [
+												"personal",
+												"shared"
+											],
+											"additionalProperties": false
+										}
+									},
+									"required": [
+										"completion",
+										"balances"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/completions/{id}/reject": {
+			"post": {
+				"summary": "Rejeter la validation d'un enfant",
+				"tags": [
+					"Validations"
+				],
+				"operationId": "postApiV1CompletionsIdReject",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"completion": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"itemId": {
+													"type": "string"
+												},
+												"userId": {
+													"type": "string"
+												},
+												"localDate": {
+													"type": "string",
+													"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+												},
+												"status": {
+													"type": "string",
+													"enum": [
+														"pending",
+														"approved",
+														"rejected"
+													]
+												},
+												"approvedBy": {
+													"type": [
+														"string",
+														"null"
+													]
+												},
+												"completedAt": {
+													"type": "string"
+												},
+												"undoneAt": {
+													"type": [
+														"string",
+														"null"
+													]
+												}
+											},
+											"required": [
+												"id",
+												"itemId",
+												"userId",
+												"localDate",
+												"status",
+												"approvedBy",
+												"completedAt",
+												"undoneAt"
+											],
+											"additionalProperties": false
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												}
+											},
+											"required": [
+												"personal",
+												"shared"
+											],
+											"additionalProperties": false
+										}
+									},
+									"required": [
+										"completion",
+										"balances"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/rewards": {
+			"get": {
+				"summary": "Lister les envies",
+				"tags": [
+					"Envies"
+				],
+				"operationId": "getApiV1Rewards",
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"rewards": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"description": {
+														"type": [
+															"string",
+															"null"
+														]
+													},
+													"cost": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"fundedFrom": {
+														"type": "string",
+														"enum": [
+															"personal",
+															"shared"
+														]
+													},
+													"limitCount": {
+														"anyOf": [
+															{
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"limitPeriod": {
+														"anyOf": [
+															{
+																"type": "string",
+																"enum": [
+																	"day",
+																	"week",
+																	"month",
+																	"year"
+																]
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"link": {
+														"type": [
+															"string",
+															"null"
+														]
+													},
+													"archivedAt": {
+														"type": [
+															"string",
+															"null"
+														]
+													},
+													"assigneeIds": {
+														"type": "array",
+														"items": {
+															"type": "string"
+														}
+													}
+												},
+												"required": [
+													"id",
+													"name",
+													"description",
+													"cost",
+													"fundedFrom",
+													"limitCount",
+													"limitPeriod",
+													"link",
+													"archivedAt",
+													"assigneeIds"
+												],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": [
+										"rewards"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"post": {
+				"summary": "Créer une envie (owner et adultes)",
+				"tags": [
+					"Envies"
+				],
+				"operationId": "postApiV1Rewards",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 120
+									},
+									"description": {
+										"anyOf": [
+											{
+												"type": "string",
+												"maxLength": 1000
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"cost": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 1000000
+									},
+									"fundedFrom": {
+										"default": "personal",
+										"type": "string",
+										"enum": [
+											"personal",
+											"shared"
+										]
+									},
+									"link": {
+										"anyOf": [
+											{
+												"type": "string",
+												"maxLength": 500,
+												"format": "uri"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"assigneeIds": {
+										"default": [],
+										"maxItems": 30,
+										"type": "array",
+										"items": {
+											"type": "string",
+											"minLength": 1,
+											"maxLength": 100
+										}
+									},
+									"limitCount": {
+										"anyOf": [
+											{
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 1000
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"limitPeriod": {
+										"anyOf": [
+											{
+												"type": "string",
+												"enum": [
+													"day",
+													"week",
+													"month",
+													"year"
+												]
+											},
+											{
+												"type": "null"
+											}
+										]
+									}
+								},
+								"required": [
+									"name",
+									"cost"
+								],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"description": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"cost": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"fundedFrom": {
+											"type": "string",
+											"enum": [
+												"personal",
+												"shared"
+											]
+										},
+										"limitCount": {
+											"anyOf": [
+												{
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"limitPeriod": {
+											"anyOf": [
+												{
+													"type": "string",
+													"enum": [
+														"day",
+														"week",
+														"month",
+														"year"
+													]
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"link": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"archivedAt": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"assigneeIds": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										}
+									},
+									"required": [
+										"id",
+										"name",
+										"description",
+										"cost",
+										"fundedFrom",
+										"limitCount",
+										"limitPeriod",
+										"link",
+										"archivedAt",
+										"assigneeIds"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/rewards/{id}": {
+			"patch": {
+				"summary": "Modifier ou archiver une envie",
+				"tags": [
+					"Envies"
+				],
+				"operationId": "patchApiV1RewardsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 120
+									},
+									"description": {
+										"anyOf": [
+											{
+												"type": "string",
+												"maxLength": 1000
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"cost": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 1000000
+									},
+									"fundedFrom": {
+										"type": "string",
+										"enum": [
+											"personal",
+											"shared"
+										]
+									},
+									"link": {
+										"anyOf": [
+											{
+												"type": "string",
+												"maxLength": 500,
+												"format": "uri"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"assigneeIds": {
+										"maxItems": 30,
+										"type": "array",
+										"items": {
+											"type": "string",
+											"minLength": 1,
+											"maxLength": 100
+										}
+									},
+									"limitCount": {
+										"anyOf": [
+											{
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 1000
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"limitPeriod": {
+										"anyOf": [
+											{
+												"type": "string",
+												"enum": [
+													"day",
+													"week",
+													"month",
+													"year"
+												]
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"archived": {
+										"type": "boolean"
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"description": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"cost": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"fundedFrom": {
+											"type": "string",
+											"enum": [
+												"personal",
+												"shared"
+											]
+										},
+										"limitCount": {
+											"anyOf": [
+												{
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"limitPeriod": {
+											"anyOf": [
+												{
+													"type": "string",
+													"enum": [
+														"day",
+														"week",
+														"month",
+														"year"
+													]
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"link": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"archivedAt": {
+											"type": [
+												"string",
+												"null"
+											]
+										},
+										"assigneeIds": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										}
+									},
+									"required": [
+										"id",
+										"name",
+										"description",
+										"cost",
+										"fundedFrom",
+										"limitCount",
+										"limitPeriod",
+										"link",
+										"archivedAt",
+										"assigneeIds"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/rewards/{id}/redemptions": {
+			"post": {
+				"summary": "Échanger une envie contre des pièces",
+				"tags": [
+					"Envies"
+				],
+				"operationId": "postApiV1RewardsIdRedemptions",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"201": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"redemption": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"rewardId": {
+													"type": "string"
+												},
+												"userId": {
+													"type": "string"
+												},
+												"walletId": {
+													"type": "string"
+												},
+												"redeemedAt": {
+													"type": "string"
+												}
+											},
+											"required": [
+												"id",
+												"rewardId",
+												"userId",
+												"walletId",
+												"redeemedAt"
+											],
+											"additionalProperties": false
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												}
+											},
+											"required": [
+												"personal",
+												"shared"
+											],
+											"additionalProperties": false
+										}
+									},
+									"required": [
+										"redemption",
+										"balances"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/transfers": {
+			"post": {
+				"summary": "Virer des pièces de son porte-monnaie vers la cagnotte",
+				"tags": [
+					"Pièces"
+				],
+				"operationId": "postApiV1Transfers",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"amount": {
+										"type": "number"
+									}
+								},
+								"required": [
+									"amount"
+								],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"transferId": {
+											"type": "string"
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												}
+											},
+											"required": [
+												"personal",
+												"shared"
+											],
+											"additionalProperties": false
+										}
+									},
+									"required": [
+										"transferId",
+										"balances"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/ledger": {
+			"get": {
+				"summary": "Historique d'un porte-monnaie, paginé par curseur",
+				"tags": [
+					"Pièces"
+				],
+				"operationId": "getApiV1Ledger",
+				"parameters": [
+					{
+						"name": "wallet",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"default": "personal",
+							"type": "string",
+							"enum": [
+								"personal",
+								"shared"
+							]
+						}
+					},
+					{
+						"name": "cursor",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"default": 50,
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 200
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"wallet": {
+											"type": "string",
+											"enum": [
+												"personal",
+												"shared"
+											]
+										},
+										"walletId": {
+											"type": "string"
+										},
+										"balance": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"entries": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"walletId": {
+														"type": "string"
+													},
+													"amount": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"reason": {
+														"type": "string",
+														"enum": [
+															"completion",
+															"undo",
+															"redemption",
+															"transfer",
+															"adjustment"
+														]
+													},
+													"refId": {
+														"type": [
+															"string",
+															"null"
+														]
+													},
+													"transferId": {
+														"type": [
+															"string",
+															"null"
+														]
+													},
+													"note": {
+														"type": [
+															"string",
+															"null"
+														]
+													},
+													"createdBy": {
+														"type": "string"
+													},
+													"createdAt": {
+														"type": "string"
+													}
+												},
+												"required": [
+													"id",
+													"walletId",
+													"amount",
+													"reason",
+													"refId",
+													"transferId",
+													"note",
+													"createdBy",
+													"createdAt"
+												],
+												"additionalProperties": false
+											}
+										},
+										"nextCursor": {
+											"type": [
+												"string",
+												"null"
+											]
+										}
+									},
+									"required": [
+										"wallet",
+										"walletId",
+										"balance",
+										"entries",
+										"nextCursor"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/ledger/adjustments": {
+			"post": {
+				"summary": "Ajustement manuel de pièces (owner)",
+				"tags": [
+					"Pièces"
+				],
+				"operationId": "postApiV1LedgerAdjustments",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "UUID unique par requête ; un doublon renvoie la réponse déjà enregistrée.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"userId": {
+										"anyOf": [
+											{
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 100
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"amount": {
+										"type": "integer",
+										"minimum": -9007199254740991,
+										"maximum": 9007199254740991
+									},
+									"note": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 500
+									}
+								},
+								"required": [
+									"userId",
+									"amount",
+									"note"
+								],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"entry": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"walletId": {
+													"type": "string"
+												},
+												"amount": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"reason": {
+													"type": "string",
+													"enum": [
+														"completion",
+														"undo",
+														"redemption",
+														"transfer",
+														"adjustment"
+													]
+												},
+												"refId": {
+													"type": [
+														"string",
+														"null"
+													]
+												},
+												"transferId": {
+													"type": [
+														"string",
+														"null"
+													]
+												},
+												"note": {
+													"type": [
+														"string",
+														"null"
+													]
+												},
+												"createdBy": {
+													"type": "string"
+												},
+												"createdAt": {
+													"type": "string"
+												}
+											},
+											"required": [
+												"id",
+												"walletId",
+												"amount",
+												"reason",
+												"refId",
+												"transferId",
+												"note",
+												"createdBy",
+												"createdAt"
+											],
+											"additionalProperties": false
+										}
+									},
+									"required": [
+										"entry"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/stats": {
+			"get": {
+				"summary": "Séries, taux de réussite et heatmap",
+				"tags": [
+					"Progrès"
+				],
+				"operationId": "getApiV1Stats",
+				"parameters": [
+					{
+						"name": "from",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+						}
+					},
+					{
+						"name": "to",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Succès",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"from": {
+											"type": "string",
+											"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+										},
+										"to": {
+											"type": "string",
+											"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+										},
+										"habits": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"itemId": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"streak": {
+														"type": "object",
+														"properties": {
+															"current": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"best": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															}
+														},
+														"required": [
+															"current",
+															"best"
+														],
+														"additionalProperties": false
+													},
+													"week": {
+														"type": "object",
+														"properties": {
+															"done": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"expected": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"rate": {
+																"type": [
+																	"number",
+																	"null"
+																]
+															}
+														},
+														"required": [
+															"done",
+															"expected",
+															"rate"
+														],
+														"additionalProperties": false
+													},
+													"month": {
+														"type": "object",
+														"properties": {
+															"done": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"expected": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"rate": {
+																"type": [
+																	"number",
+																	"null"
+																]
+															}
+														},
+														"required": [
+															"done",
+															"expected",
+															"rate"
+														],
+														"additionalProperties": false
+													}
+												},
+												"required": [
+													"itemId",
+													"name",
+													"streak",
+													"week",
+													"month"
+												],
+												"additionalProperties": false
+											}
+										},
+										"heatmap": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"date": {
+														"type": "string",
+														"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+													},
+													"done": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"expected": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													}
+												},
+												"required": [
+													"date",
+													"done",
+													"expected"
+												],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": [
+										"from",
+										"to",
+										"habits",
+										"heatmap"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Erreur (RFC 9457), avec un `code` stable",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": [
+										"type",
+										"title",
+										"status",
+										"code"
+									],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		}
+	},
+	"components": {
+		"securitySchemes": {
+			"session": {
+				"type": "apiKey",
+				"in": "cookie",
+				"name": "lumo_session"
+			},
+			"bearer": {
+				"type": "http",
+				"scheme": "bearer",
+				"bearerFormat": "JWT"
+			}
+		}
+	}
+}
