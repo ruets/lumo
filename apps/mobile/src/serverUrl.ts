@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/** Adresses où le HTTP en clair reste acceptable : machine locale et réseau privé. */
+/** Addresses where plain HTTP remains acceptable: local machine and private network. */
 export function isLocalHost(host: string): boolean {
 	const h = host.toLowerCase().replace(/^\[|\]$/g, "");
 	if (h === "localhost" || h === "::1" || h.endsWith(".local") || h.endsWith(".localhost")) return true;
@@ -14,8 +14,8 @@ export function isLocalHost(host: string): boolean {
 export type ServerUrlResult = { ok: true; url: string } | { ok: false; reason: "empty" | "invalid" | "insecure" };
 
 /**
- * Normalise ce que tape l'utilisateur : `lumo.example.org` devient `https://lumo.example.org`.
- * HTTPS obligatoire, sauf pour une adresse locale. Les slashs finaux, la requête et l'ancre sont retirés.
+ * Normalises what the user types: `lumo.example.org` becomes `https://lumo.example.org`.
+ * HTTPS required, except for a local address. Trailing slashes, query and hash are removed.
  */
 export function normalizeServerUrl(input: string): ServerUrlResult {
 	const raw = input.trim();

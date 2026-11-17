@@ -11,7 +11,7 @@ import { showToast } from "../lib/toast";
 function entryLabel(e: LedgerEntry): string {
 	if (e.label) {
 		if (e.reason !== "undo") return e.label;
-		// Le remboursement d'un échange est positif ; l'annulation d'une validation est négative.
+		// A redemption refund is positive; an undone completion is negative.
 		return `${e.amount > 0 ? t("ledger.undoRedemption") : t("ledger.undo")} · ${e.label}`;
 	}
 	if (e.note) return e.note;
@@ -34,11 +34,11 @@ export function ProgressPage({ me }: { me: MeResponse }) {
 	const maxExpected = Math.max(1, ...s.bars.map((b) => b.expected));
 	const streak = Math.max(0, ...stats.data.habits.map((h) => h.streak.current));
 	const entries = ledger.data?.entries ?? [];
-	// Un échange est annulable tant qu'aucun remboursement ne le référence (le remboursement est plus récent, donc listé).
+	// A redemption can be undone until a refund references it (the refund is newer, so it is listed).
 	const refunded = new Set(entries.filter((e) => e.reason === "undo" && e.amount > 0).map((e) => e.refId));
 	const cancel = (e: LedgerEntry) => {
-		if (!e.refId || !window.confirm(t("ledger.undoConfirm", { amount: Math.abs(e.amount) }))) return;
-		undoRedemption.mutate(e.refId, { onSuccess: () => showToast(t("ledger.undone", { amount: Math.abs(e.amount) })) });
+		if (!e.refId || !window.confirm(t("ledger.undoConfirm", { count: Math.abs(e.amount) }))) return;
+		undoRedemption.mutate(e.refId, { onSuccess: () => showToast(t("ledger.undone", { count: Math.abs(e.amount) })) });
 	};
 	const earned = entries
 		.filter((e) => e.createdAt.slice(0, 10) >= s.from && e.createdAt.slice(0, 10) <= s.to)
@@ -49,7 +49,7 @@ export function ProgressPage({ me }: { me: MeResponse }) {
 			<header className="flex items-center justify-between gap-4">
 				<PageTitle>{t("progress.title")}</PageTitle>
 				<Segmented
-					label="Période"
+					label={t("progress.period")}
 					value={period}
 					onChange={setPeriod}
 					options={[
@@ -78,7 +78,7 @@ export function ProgressPage({ me }: { me: MeResponse }) {
 					</div>
 					<div
 						role="img"
-						aria-label={`${s.done} sur ${s.expected} validées, ${s.rate ?? 0} %`}
+						aria-label={t("progress.chartLabel", { done: s.done, expected: s.expected, rate: s.rate ?? 0 })}
 						className="flex h-40 items-end gap-2.5"
 					>
 						{s.bars.map((b) => (
@@ -114,7 +114,7 @@ export function ProgressPage({ me }: { me: MeResponse }) {
 			<section className="grid gap-2.5">
 				<div className="flex items-center justify-between">
 					<h2 className="m-0 text-[15px] font-bold text-muted">{t("progress.lastCoins")}</h2>
-					<Link to="/envies" className="py-2.5 text-sm font-bold text-link no-underline">
+					<Link to="/wishes" className="py-2.5 text-sm font-bold text-link no-underline">
 						{t("progress.balance", { amount: me.wallets.personal.balance })}
 					</Link>
 				</div>

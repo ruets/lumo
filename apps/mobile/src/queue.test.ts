@@ -13,7 +13,7 @@ vi.mock("expo-crypto", () => ({ randomUUID: () => `key-${++seq}` }));
 const complete = vi.fn();
 vi.mock("./session", () => ({ api: { complete: (...a: unknown[]) => complete(...a) } }));
 
-/** Module neuf à chaque test (état de la file remis à zéro) ; `ApiError` doit venir du même graphe de modules. */
+/** Fresh module for each test (queue state reset); `ApiError` must come from the same module graph. */
 async function fresh() {
 	vi.resetModules();
 	const [queue, client] = await Promise.all([import("./queue.js"), import("@lumo/api-client")]);
@@ -27,7 +27,7 @@ beforeEach(() => {
 });
 
 describe("file hors ligne", () => {
-	it("envoie dans l'ordre, avec une clé d'idempotence fixée à la création, puis se vide", async () => {
+	it("sends in order, with an idempotency key fixed at creation, then empties", async () => {
 		complete.mockResolvedValue({});
 		const q = await fresh();
 		await q.enqueueCompletion("a", "2026-11-17");
@@ -40,7 +40,7 @@ describe("file hors ligne", () => {
 		expect(JSON.parse(storage.get("lumo.queue.v1") ?? "[]")).toEqual([]);
 	});
 
-	it("réseau coupé : garde tout, et rejoue avec les MÊMES clés au retour (pas de double crédit)", async () => {
+	it("network down: keeps everything, and replays with the SAME keys on return (no double credit)", async () => {
 		complete.mockRejectedValue(new TypeError("Network request failed"));
 		const q = await fresh();
 		await q.enqueueCompletion("a", "2026-11-17");
@@ -48,7 +48,7 @@ describe("file hors ligne", () => {
 		await q.flushQueue();
 		expect(JSON.parse(storage.get("lumo.queue.v1") ?? "[]")).toHaveLength(2);
 
-		// Redémarrage de l'appli : la file est relue depuis le stockage.
+		// App restart: the queue is read back from storage.
 		complete.mockReset();
 		complete.mockResolvedValue({});
 		const q2 = await fresh();
@@ -57,7 +57,7 @@ describe("file hors ligne", () => {
 		expect(complete.mock.calls.map((c) => c[2])).toEqual([{ idempotencyKey: "key-1" }, { idempotencyKey: "key-2" }]);
 	});
 
-	it("s'arrête au premier échec réseau pour garder l'ordre", async () => {
+	it("stops at the first network failure to keep the order", async () => {
 		complete.mockResolvedValueOnce({}).mockRejectedValue(new TypeError("offline"));
 		const q = await fresh();
 		await q.enqueueCompletion("a", "2026-11-17");
@@ -70,7 +70,7 @@ describe("file hors ligne", () => {
 		expect(q.queuedFor("c", "2026-11-17")).toHaveLength(1);
 	});
 
-	it("un refus du serveur (409) abandonne l'entrée sans bloquer les suivantes", async () => {
+	it("a server refusal (409) drops the entry without blocking the next ones", async () => {
 		const q = await fresh();
 		complete.mockRejectedValueOnce(new q.ApiError(409, "target_reached", "Objectif atteint")).mockResolvedValueOnce({});
 		await q.enqueueCompletion("a", "2026-11-17");
@@ -80,7 +80,7 @@ describe("file hors ligne", () => {
 		expect(JSON.parse(storage.get("lumo.queue.v1") ?? "[]")).toEqual([]);
 	});
 
-	it("une erreur 5xx ou 401 est réessayée plus tard", async () => {
+	it("a 5xx or 401 error is retried later", async () => {
 		const q = await fresh();
 		complete.mockRejectedValue(new q.ApiError(503, "unavailable", "x"));
 		await q.enqueueCompletion("a", "2026-11-17");
@@ -88,7 +88,7 @@ describe("file hors ligne", () => {
 		expect(q.queuedFor("a", "2026-11-17")).toHaveLength(1);
 	});
 
-	it("la date de validation est celle du jour de la saisie, même rejouée le lendemain", async () => {
+	it("the completion date is the day of entry, even when replayed the next day", async () => {
 		complete.mockResolvedValue({});
 		const q = await fresh();
 		await q.enqueueCompletion("a", "2026-11-17");
@@ -98,7 +98,7 @@ describe("file hors ligne", () => {
 		vi.useRealTimers();
 	});
 
-	it("annuler une validation encore en file la retire sans rien envoyer", async () => {
+	it("undoing a still-queued completion removes it without sending anything", async () => {
 		complete.mockRejectedValue(new TypeError("offline"));
 		const q = await fresh();
 		await q.enqueueCompletion("a", "2026-11-17");

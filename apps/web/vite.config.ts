@@ -7,7 +7,7 @@ export default defineConfig({
 	plugins: [react(), tailwindcss()],
 	server: {
 		port: 5173,
-		// En développement, l'API tourne sur :3000 ; le cookie de session reste same-origin.
+		// In development the API runs on :3000; the session cookie stays same-origin.
 		proxy: { "/api": { target: "http://localhost:3000", changeOrigin: false } },
 	},
 });

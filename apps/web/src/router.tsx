@@ -9,7 +9,7 @@ import { ProgressPage } from "./routes/Progress";
 import { TodayPage } from "./routes/Today";
 import { WishesPage } from "./routes/Wishes";
 
-/** Porte d'entrée : charge le profil, affiche la connexion ou la coque de l'appli. */
+/** Entry point: loads the profile, shows the sign-in or the app shell. */
 function Root() {
 	const me = useMe();
 	const config = useAuthConfig();
@@ -32,7 +32,7 @@ function Root() {
 
 const rootRoute = createRootRoute({ component: Root });
 
-/** Les pages lisent le profil déjà chargé par la racine. */
+/** Pages read the profile already loaded by the root. */
 function page<P extends string>(
 	path: P,
 	Component: (p: { me: NonNullable<ReturnType<typeof useMe>["data"]> }) => React.ReactNode,
@@ -49,9 +49,9 @@ function page<P extends string>(
 
 const routeTree = rootRoute.addChildren([
 	page("/", TodayPage),
-	page("/habitudes", HabitsPage),
-	page("/progres", ProgressPage),
-	page("/envies", WishesPage),
+	page("/habits", HabitsPage),
+	page("/progress", ProgressPage),
+	page("/wishes", WishesPage),
 ]);
 
 export const router = createRouter({ routeTree });

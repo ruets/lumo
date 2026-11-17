@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { flushQueue } from "./queue";
 
-/** Tirer pour rafraîchir : envoie la file hors ligne puis recharge toutes les requêtes. */
+/** Pull to refresh: sends the offline queue then reloads every query. */
 export function useRefresh() {
 	const qc = useQueryClient();
 	const [busy, setBusy] = useState(false);

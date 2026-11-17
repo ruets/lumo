@@ -6,7 +6,7 @@
 @import "@fontsource/manrope/600.css";
 @import "@fontsource/manrope/700.css";
 
-/* Miroir de packages/tokens (la source de vérité pour le mobile). */
+/* Mirror of packages/tokens (the source of truth for mobile). */
 @theme {
 	--color-bg: #0e1220;
 	--color-surface: #1b2032;
@@ -49,7 +49,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
 	* {
-		/* biome-ignore lint/complexity/noImportantStyles: coupe aussi les animations posées par les utilitaires */
+		/* biome-ignore lint/complexity/noImportantStyles: also cuts animations set by utilities */
 		transition: none !important;
 		/* biome-ignore lint/complexity/noImportantStyles: idem */
 		animation: none !important;

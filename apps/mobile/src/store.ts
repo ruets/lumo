@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSyncExternalStore } from "react";
 
-/** Petit store observable : `subscribe` + instantané immuable, compatible `useSyncExternalStore`. */
+/** Small observable store: `subscribe` + immutable snapshot, compatible with `useSyncExternalStore`. */
 export function createStore<T>(initial: T) {
 	let value = initial;
 	const listeners = new Set<() => void>();

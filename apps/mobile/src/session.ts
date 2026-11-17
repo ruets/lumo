@@ -9,7 +9,7 @@ const KEY = "lumo.tokens";
 interface Stored {
 	accessToken: string;
 	refreshToken: string;
-	/** Ms Unix d'expiration du jeton d'accès. */
+	/** Unix ms expiry of the access token. */
 	expiresAt: number;
 }
 
@@ -39,7 +39,7 @@ export async function clearTokens(): Promise<void> {
 
 const bare = createClient({ baseUrl: currentServerUrl, generateKey: randomUUID });
 
-/** Jeton d'accès valide ; le refresh token est roté (une seule requête de refresh à la fois). */
+/** Valid access token; the refresh token is rotated (one refresh request at a time). */
 async function getAccessToken(): Promise<string | null> {
 	const stored = await load();
 	if (!stored) return null;

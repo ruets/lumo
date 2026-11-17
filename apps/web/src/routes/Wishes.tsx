@@ -39,8 +39,8 @@ export function WishesPage({ me }: { me: MeResponse }) {
 					</p>
 					<p aria-live="polite" className="m-0 text-sm font-semibold">
 						{last
-							? t("wishes.redeemed", { name: last.name.toLowerCase(), cost: last.cost })
-							: t("today.earned", { amount: earnedToday })}
+							? t("wishes.redeemed", { name: last.name, cost: last.cost })
+							: t("today.earned", { count: earnedToday })}
 					</p>
 				</div>
 				<p className="m-0 text-sm font-semibold">{t("wishes.sharedBalance", { amount: me.wallets.shared.balance })}</p>
@@ -62,7 +62,7 @@ export function WishesPage({ me }: { me: MeResponse }) {
 								{canBuy ? (
 									<button
 										type="button"
-										aria-label={t("wishes.redeem", { name: r.name, cost: r.cost })}
+										aria-label={t("wishes.redeem", { name: r.name, count: r.cost })}
 										disabled={redeem.isPending}
 										onClick={() => redeem.mutate(r.id, { onSuccess: () => setLast(r) })}
 										className="flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-coin px-4 font-body text-sm font-bold text-bg"
@@ -81,7 +81,7 @@ export function WishesPage({ me }: { me: MeResponse }) {
 								<div className="grid gap-1.5">
 									<Bar pct={exhausted ? 100 : (100 * wallet) / r.cost} color="bg-primary-soft" />
 									<span className="text-[13px] text-muted">
-										{exhausted ? "Revient bientôt" : t("today.missing", { amount: r.cost - wallet })}
+										{exhausted ? t("wishes.comesBack") : t("today.missing", { count: r.cost - wallet })}
 									</span>
 								</div>
 							)}

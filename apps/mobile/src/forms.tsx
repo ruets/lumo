@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { CreateItemInput } from "@lumo/api-client";
-import { t } from "@lumo/i18n";
+import { t, weekdayShort } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -11,7 +11,6 @@ import { Button, Field, font, Sheet, T } from "./ui";
 
 type Freq = "daily" | "timesPerWeek" | "weekly" | "monthly";
 const FREQS: Freq[] = ["daily", "timesPerWeek", "weekly", "monthly"];
-const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
 	return (
@@ -107,14 +106,12 @@ export function ItemSheet({
 					)}
 					{freq === "weekly" && (
 						<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-							{WEEKDAYS.map((d, i) => (
+							{[1, 2, 3, 4, 5, 6, 7].map((iso) => (
 								<Chip
-									key={d}
-									label={d}
-									on={days.includes(i + 1)}
-									onPress={() =>
-										setDays(days.includes(i + 1) ? days.filter((x) => x !== i + 1) : [...days, i + 1].sort())
-									}
+									key={iso}
+									label={weekdayShort(iso)}
+									on={days.includes(iso)}
+									onPress={() => setDays(days.includes(iso) ? days.filter((x) => x !== iso) : [...days, iso].sort())}
 								/>
 							))}
 						</View>
@@ -175,12 +172,7 @@ export function RewardSheet({ visible, onClose }: { visible: boolean; onClose: (
 					/>
 					<View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
 						{(["day", "week", "month", "year"] as const).map((p) => (
-							<Chip
-								key={p}
-								label={{ day: "jour", week: "semaine", month: "mois", year: "an" }[p]}
-								on={period === p}
-								onPress={() => setPeriod(p)}
-							/>
+							<Chip key={p} label={t(`form.limitUnit.${p}` as const)} on={period === p} onPress={() => setPeriod(p)} />
 						))}
 					</View>
 				</>

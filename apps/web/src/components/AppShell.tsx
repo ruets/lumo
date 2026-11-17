@@ -6,6 +6,7 @@ import { Link, Outlet } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { api } from "../lib/api";
 import { keys } from "../lib/hooks";
+import { LanguageSelect } from "../lib/locale";
 import { useToast } from "../lib/toast";
 import { CoinIcon } from "./ui";
 
@@ -36,9 +37,9 @@ const icons: Record<string, ReactNode> = {
 
 const nav = [
 	{ to: "/", key: "today", label: () => t("nav.today") },
-	{ to: "/habitudes", key: "habits", label: () => t("nav.habits") },
-	{ to: "/progres", key: "progress", label: () => t("nav.progress") },
-	{ to: "/envies", key: "wishes", label: () => t("nav.wishes") },
+	{ to: "/habits", key: "habits", label: () => t("nav.habits") },
+	{ to: "/progress", key: "progress", label: () => t("nav.progress") },
+	{ to: "/wishes", key: "wishes", label: () => t("nav.wishes") },
 ] as const;
 
 function NavIcon({ name }: { name: string }) {
@@ -61,7 +62,7 @@ function NavIcon({ name }: { name: string }) {
 
 export const BalanceChip = ({ balance }: { balance: number }) => (
 	<Link
-		to="/envies"
+		to="/wishes"
 		aria-label={t("progress.balance", { amount: balance })}
 		className="flex min-h-11 items-center gap-1.5 rounded-full bg-raised px-3.5 font-display text-[15px] font-bold text-coin no-underline"
 	>
@@ -103,6 +104,7 @@ export function AppShell({ me }: { me: MeResponse }) {
 					<p className="m-0 text-xs text-muted">
 						{me.user.displayName} · {me.household.name}
 					</p>
+					<LanguageSelect />
 					<button
 						type="button"
 						onClick={() => void logout()}
@@ -115,6 +117,17 @@ export function AppShell({ me }: { me: MeResponse }) {
 
 			<main className="mx-auto w-full max-w-5xl px-5 pb-28 pt-12 md:px-10 md:pb-12">
 				<Outlet />
+				{/* The sidebar is hidden on small screens: language and sign-out live at the bottom of the page. */}
+				<footer className="mt-10 grid gap-3 md:hidden">
+					<LanguageSelect />
+					<button
+						type="button"
+						onClick={() => void logout()}
+						className="min-h-11 cursor-pointer rounded-xl border border-edge bg-transparent font-body text-sm font-semibold text-soft"
+					>
+						{t("auth.logout")}
+					</button>
+				</footer>
 			</main>
 
 			<nav
