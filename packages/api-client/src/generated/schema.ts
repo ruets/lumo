@@ -38,6 +38,199 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in account, with or without a household */
+        get: operations["getApiV1Account"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a household and become its owner (when the instance allows it) */
+        post: operations["postApiV1Households"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/household/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Join a household with an invitation code (accounts without a household) */
+        post: operations["postApiV1HouseholdJoin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/household/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Leave the household and keep the account (never the last owner) */
+        post: operations["postApiV1HouseholdLeave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** All accounts with their household and status */
+        get: operations["getApiV1AdminUsers"];
+        put?: never;
+        /** Create a local account without a household */
+        post: operations["postApiV1AdminUsers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete an account (credentials erased, history kept) */
+        delete: operations["deleteApiV1AdminUsersId"];
+        options?: never;
+        head?: never;
+        /** Grant or remove the super admin role, disable or enable an account */
+        patch: operations["patchApiV1AdminUsersId"];
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/household": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Put an account without a household into one */
+        post: operations["postApiV1AdminUsersIdHousehold"];
+        /** Take an account out of its household, keeping the account */
+        delete: operations["deleteApiV1AdminUsersIdHousehold"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/households": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** All households with their member count */
+        get: operations["getApiV1AdminHouseholds"];
+        put?: never;
+        /** Create an empty household */
+        post: operations["postApiV1AdminHouseholds"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/households/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete an empty household */
+        delete: operations["deleteApiV1AdminHouseholdsId"];
+        options?: never;
+        head?: never;
+        /** Rename a household */
+        patch: operations["patchApiV1AdminHouseholdsId"];
+        trace?: never;
+    };
+    "/api/v1/admin/households/{id}/pot/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Adjust a household pot with an explanatory note */
+        post: operations["postApiV1AdminHouseholdsIdPotAdjustments"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Instance settings */
+        get: operations["getApiV1AdminSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change the instance settings */
+        patch: operations["patchApiV1AdminSettings"];
+        trace?: never;
+    };
     "/api/v1/household": {
         parameters: {
             query?: never;
@@ -462,6 +655,817 @@ export interface operations {
                     "application/json": {
                         token: string;
                         expiresAt: string;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1Account: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            id: string;
+                            displayName: string;
+                            avatarUrl: string | null;
+                        };
+                        isSuperAdmin: boolean;
+                        household: {
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            role: "owner" | "adult" | "child";
+                        } | null;
+                        canCreateHousehold: boolean;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1Households: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1HouseholdJoin: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1HouseholdLeave: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1AdminUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        users: {
+                            id: string;
+                            displayName: string;
+                            username: string | null;
+                            oidc: boolean;
+                            isSuperAdmin: boolean;
+                            disabled: boolean;
+                            household: {
+                                id: string;
+                                name: string;
+                                /** @enum {string} */
+                                role: "owner" | "adult" | "child";
+                            } | null;
+                            createdAt: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1AdminUsers: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    displayName: string;
+                    username: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        displayName: string;
+                        username: string | null;
+                        oidc: boolean;
+                        isSuperAdmin: boolean;
+                        disabled: boolean;
+                        household: {
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            role: "owner" | "adult" | "child";
+                        } | null;
+                        createdAt: string;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1AdminUsersId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    patchApiV1AdminUsersId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    isSuperAdmin?: boolean;
+                    disabled?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        displayName: string;
+                        username: string | null;
+                        oidc: boolean;
+                        isSuperAdmin: boolean;
+                        disabled: boolean;
+                        household: {
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            role: "owner" | "adult" | "child";
+                        } | null;
+                        createdAt: string;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1AdminUsersIdHousehold: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    householdId: string;
+                    /** @enum {string} */
+                    role: "owner" | "adult" | "child";
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        displayName: string;
+                        username: string | null;
+                        oidc: boolean;
+                        isSuperAdmin: boolean;
+                        disabled: boolean;
+                        household: {
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            role: "owner" | "adult" | "child";
+                        } | null;
+                        createdAt: string;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1AdminUsersIdHousehold: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1AdminHouseholds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        households: {
+                            id: string;
+                            name: string;
+                            memberCount: number;
+                            createdAt: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1AdminHouseholds: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        memberCount: number;
+                        createdAt: string;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1AdminHouseholdsId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    patchApiV1AdminHouseholdsId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        memberCount: number;
+                        createdAt: string;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1AdminHouseholdsIdPotAdjustments: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    amount: number;
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        balance: number;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1AdminSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        householdCreation: "anyone" | "admins";
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    patchApiV1AdminSettings: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    householdCreation?: "anyone" | "admins";
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        householdCreation: "anyone" | "admins";
                     };
                 };
             };

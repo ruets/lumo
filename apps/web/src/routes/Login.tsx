@@ -46,7 +46,7 @@ export function Login({ config }: { config: AuthConfig }) {
 				await api.loginLocal({ username: v("username"), password: String(form.get("password") ?? ""), client: "web" });
 			}
 			window.history.replaceState(null, "", "/");
-			await qc.invalidateQueries({ queryKey: keys.me });
+			await qc.invalidateQueries({ queryKey: keys.account });
 		} catch (err) {
 			setError(err instanceof ApiError ? describeError(err) : t("auth.error"));
 		} finally {

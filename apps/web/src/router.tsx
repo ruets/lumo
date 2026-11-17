@@ -2,34 +2,34 @@
 import { t } from "@lumo/i18n";
 import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { AppShell } from "./components/AppShell";
-import { useAuthConfig, useMe } from "./lib/hooks";
+import { useAccount, useAuthConfig, useMe } from "./lib/hooks";
+import { AdminPage } from "./routes/Admin";
 import { HabitsPage } from "./routes/Habits";
 import { HouseholdPage } from "./routes/Household";
 import { Login } from "./routes/Login";
+import { NoHousehold } from "./routes/NoHousehold";
 import { ProgressPage } from "./routes/Progress";
 import { SettingsPage } from "./routes/Settings";
 import { TodayPage } from "./routes/Today";
 import { WishesPage } from "./routes/Wishes";
 
-/** Entry point: loads the profile, shows the sign-in or the app shell. */
+/** Entry point: loads the account, shows the sign-in, the no-household screen or the app shell. */
 function Root() {
-	const me = useMe();
+	const account = useAccount();
 	const config = useAuthConfig();
-	if (me.isPending) return <p className="p-8 text-center text-muted">{t("common.loading")}</p>;
-	if (me.isError)
+	const inHousehold = Boolean(account.data?.household);
+	const me = useMe(inHousehold);
+	const loading = <p className="p-8 text-center text-muted">{t("common.loading")}</p>;
+	if (account.isPending) return loading;
+	if (account.isError || me.isError)
 		return (
 			<p role="alert" className="p-8 text-center text-bad">
 				{t("common.error")}
 			</p>
 		);
-	if (me.data === null) {
-		return config.data ? (
-			<Login config={config.data} />
-		) : (
-			<p className="p-8 text-center text-muted">{t("common.loading")}</p>
-		);
-	}
-	return <AppShell me={me.data} />;
+	if (account.data === null) return config.data ? <Login config={config.data} /> : loading;
+	if (!account.data.household) return <NoHousehold account={account.data} />;
+	return me.data ? <AppShell me={me.data} /> : loading;
 }
 
 const rootRoute = createRootRoute({ component: Root });
@@ -56,6 +56,7 @@ const routeTree = rootRoute.addChildren([
 	page("/wishes", WishesPage),
 	page("/settings", SettingsPage),
 	page("/household", HouseholdPage),
+	page("/admin", () => <AdminPage />),
 ]);
 
 export const router = createRouter({ routeTree });

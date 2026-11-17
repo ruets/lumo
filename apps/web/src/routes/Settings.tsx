@@ -4,7 +4,7 @@ import { t } from "@lumo/i18n";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { PageTitle } from "../components/ui";
-import { useLogout } from "../lib/hooks";
+import { useAccount, useLeaveHousehold, useLogout } from "../lib/hooks";
 import { LanguageSelect } from "../lib/locale";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -18,6 +18,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export function SettingsPage({ me }: { me: MeResponse }) {
 	const logout = useLogout();
+	const leave = useLeaveHousehold();
+	const isSuperAdmin = useAccount().data?.isSuperAdmin ?? false;
 	return (
 		<div className="grid max-w-xl gap-5">
 			<PageTitle>{t("settings.title")}</PageTitle>
@@ -33,6 +35,14 @@ export function SettingsPage({ me }: { me: MeResponse }) {
 				>
 					{t("auth.logout")}
 				</button>
+				<button
+					type="button"
+					disabled={leave.isPending}
+					onClick={() => window.confirm(t("household.leaveConfirm", { name: me.household.name })) && leave.mutate()}
+					className="min-h-11 cursor-pointer rounded-xl border border-edge bg-transparent font-body text-sm font-semibold text-bad hover:bg-raised"
+				>
+					{t("household.leave")}
+				</button>
 			</Section>
 			<Link
 				to="/household"
@@ -41,6 +51,15 @@ export function SettingsPage({ me }: { me: MeResponse }) {
 				{t("household.open")}
 				<span aria-hidden="true">›</span>
 			</Link>
+			{isSuperAdmin && (
+				<Link
+					to="/admin"
+					className="flex min-h-12 items-center justify-between rounded-[20px] bg-surface px-4 font-semibold text-ink no-underline hover:bg-raised"
+				>
+					{t("admin.open")}
+					<span aria-hidden="true">›</span>
+				</Link>
+			)}
 			<Section title={t("language.title")}>
 				<LanguageSelect />
 			</Section>

@@ -9,6 +9,10 @@ import { showToast } from "./toast";
 export const keys = {
 	authConfig: ["auth-config"] as const,
 	me: ["me"] as const,
+	account: ["account"] as const,
+	adminUsers: ["admin", "users"] as const,
+	adminHouseholds: ["admin", "households"] as const,
+	adminSettings: ["admin", "settings"] as const,
 	today: (date?: string) => ["today", date ?? "now"] as const,
 	items: ["items"] as const,
 	rewards: ["rewards"] as const,
@@ -24,19 +28,35 @@ export function describeError(err: unknown): string {
 
 export const useAuthConfig = () => useQuery({ queryKey: keys.authConfig, queryFn: () => api.getAuthConfig() });
 
-/** `null` = not signed in (401). */
-export const useMe = () =>
+/** The signed-in account, with or without a household. `null` = not signed in (401). */
+export const useAccount = () =>
 	useQuery({
-		queryKey: keys.me,
+		queryKey: keys.account,
 		queryFn: async () => {
 			try {
-				return await api.getMe();
+				return await api.getAccount();
 			} catch (err) {
 				if (err instanceof ApiError && err.status === 401) return null;
 				throw err;
 			}
 		},
 		staleTime: 30_000,
+	});
+
+/** Profile inside the household. `null` = not signed in, or not (any more) in a household. */
+export const useMe = (enabled = true) =>
+	useQuery({
+		queryKey: keys.me,
+		queryFn: async () => {
+			try {
+				return await api.getMe();
+			} catch (err) {
+				if (err instanceof ApiError && (err.status === 401 || err.code === "no_household")) return null;
+				throw err;
+			}
+		},
+		staleTime: 30_000,
+		enabled,
 	});
 
 export const useToday = (date?: string) => useQuery({ queryKey: keys.today(date), queryFn: () => api.getToday(date) });
@@ -157,7 +177,7 @@ export function useLogout() {
 	return async () => {
 		await api.logout().catch(() => undefined);
 		qc.clear();
-		qc.setQueryData(keys.me, null);
+		qc.setQueryData(keys.account, null);
 	};
 }
 
@@ -185,6 +205,35 @@ export function useUpdateHousehold() {
 	const qc = useQueryClient();
 	return useMutation({
 		mutationFn: (input: Parameters<typeof api.updateHousehold>[0]) => api.updateHousehold(input),
+		onError: (err) => showToast(describeError(err)),
+		onSettled: () => void qc.invalidateQueries(),
+	});
+}
+
+/** Changes who is in which household: everything the app shows may change. */
+function useEverythingWrite<V, R>(fn: (v: V) => Promise<R>) {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: fn,
+		onError: (err) => showToast(describeError(err)),
+		onSettled: () => void qc.invalidateQueries(),
+	});
+}
+
+export const useLeaveHousehold = () => useEverythingWrite(() => api.leaveHousehold());
+export const useJoinHousehold = () => useEverythingWrite((code: string) => api.joinHousehold(code));
+export const useCreateOwnHousehold = () => useEverythingWrite((name: string) => api.createHousehold(name));
+
+export const useAdminUsers = () => useQuery({ queryKey: keys.adminUsers, queryFn: () => api.adminListUsers() });
+export const useAdminHouseholds = () =>
+	useQuery({ queryKey: keys.adminHouseholds, queryFn: () => api.adminListHouseholds() });
+export const useAdminSettings = () => useQuery({ queryKey: keys.adminSettings, queryFn: () => api.adminGetSettings() });
+
+/** Admin writes refresh the admin lists and the caller's own account (they may have changed themselves). */
+export function useAdminWrite<V, R>(fn: (v: V) => Promise<R>) {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: fn,
 		onError: (err) => showToast(describeError(err)),
 		onSettled: () => void qc.invalidateQueries(),
 	});
