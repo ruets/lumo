@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { MeResponse } from "@lumo/api-client";
 import { t } from "@lumo/i18n";
-import { useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { api } from "../lib/api";
-import { keys } from "../lib/hooks";
-import { LanguageSelect } from "../lib/locale";
 import { useToast } from "../lib/toast";
 import { CoinIcon } from "./ui";
 
@@ -60,6 +56,26 @@ function NavIcon({ name }: { name: string }) {
 	);
 }
 
+/** Round button with the member's initial; opens the settings page. */
+export const Avatar = ({ name }: { name: string }) => (
+	<span
+		aria-hidden="true"
+		className="grid size-11 shrink-0 place-items-center rounded-full border-2 border-ok bg-raised font-display text-[17px] font-bold"
+	>
+		{name.trim().charAt(0).toUpperCase()}
+	</span>
+);
+
+/** Balance and profile shortcuts shown in page headers on small screens (the sidebar has them on large ones). */
+export const HeaderActions = ({ balance, name }: { balance: number; name: string }) => (
+	<div className="flex items-center gap-2.5 md:hidden">
+		<BalanceChip balance={balance} />
+		<Link to="/settings" aria-label={t("settings.open")} className="no-underline">
+			<Avatar name={name} />
+		</Link>
+	</div>
+);
+
 export const BalanceChip = ({ balance }: { balance: number }) => (
 	<Link
 		to="/wishes"
@@ -72,14 +88,7 @@ export const BalanceChip = ({ balance }: { balance: number }) => (
 );
 
 export function AppShell({ me }: { me: MeResponse }) {
-	const qc = useQueryClient();
 	const toast = useToast();
-
-	async function logout() {
-		await api.logout().catch(() => undefined);
-		qc.clear();
-		qc.setQueryData(keys.me, null);
-	}
 
 	return (
 		<div className="min-h-screen md:grid md:grid-cols-[240px_1fr]">
@@ -101,33 +110,22 @@ export function AppShell({ me }: { me: MeResponse }) {
 				</nav>
 				<div className="mt-auto grid gap-3">
 					<BalanceChip balance={me.wallets.personal.balance} />
-					<p className="m-0 text-xs text-muted">
-						{me.user.displayName} · {me.household.name}
-					</p>
-					<LanguageSelect />
-					<button
-						type="button"
-						onClick={() => void logout()}
-						className="min-h-11 cursor-pointer rounded-xl border border-edge bg-transparent font-body text-sm font-semibold text-soft hover:bg-raised"
+					<Link
+						to="/settings"
+						aria-label={t("settings.open")}
+						className="flex min-h-11 items-center gap-3 rounded-xl px-2 text-sm font-semibold text-soft no-underline hover:bg-raised data-[status=active]:bg-raised"
 					>
-						{t("auth.logout")}
-					</button>
+						<Avatar name={me.user.displayName} />
+						<span className="grid min-w-0">
+							<span className="truncate">{me.user.displayName}</span>
+							<span className="truncate text-xs font-normal text-muted">{me.household.name}</span>
+						</span>
+					</Link>
 				</div>
 			</aside>
 
 			<main className="mx-auto w-full max-w-5xl px-5 pb-28 pt-12 md:px-10 md:pb-12">
 				<Outlet />
-				{/* The sidebar is hidden on small screens: language and sign-out live at the bottom of the page. */}
-				<footer className="mt-10 grid gap-3 md:hidden">
-					<LanguageSelect />
-					<button
-						type="button"
-						onClick={() => void logout()}
-						className="min-h-11 cursor-pointer rounded-xl border border-edge bg-transparent font-body text-sm font-semibold text-soft"
-					>
-						{t("auth.logout")}
-					</button>
-				</footer>
 			</main>
 
 			<nav

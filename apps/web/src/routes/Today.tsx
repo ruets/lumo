@@ -2,7 +2,7 @@
 import type { MeResponse, TodayItem } from "@lumo/api-client";
 import { longDate, t } from "@lumo/i18n";
 import { Link } from "@tanstack/react-router";
-import { BalanceChip } from "../components/AppShell";
+import { HeaderActions } from "../components/AppShell";
 import { awaitingReview, itemMeta } from "../components/itemMeta";
 import { Bar, CoinIcon, PageTitle, Reward, Ring } from "../components/ui";
 import {
@@ -106,9 +106,7 @@ export function TodayPage({ me }: { me: MeResponse }) {
 					<p className="m-0 text-sm font-semibold text-muted">{longDate(today.data.date)}</p>
 					<PageTitle>{t("today.title", { name: me.user.displayName })}</PageTitle>
 				</div>
-				<div className="md:hidden">
-					<BalanceChip balance={balance} />
-				</div>
+				<HeaderActions balance={me.wallets.personal.balance} name={me.user.displayName} />
 			</header>
 
 			<div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">

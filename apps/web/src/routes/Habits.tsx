@@ -3,7 +3,7 @@ import type { MeResponse, TodayItem } from "@lumo/api-client";
 import { addDays, startOfWeek } from "@lumo/domain";
 import { dayNumber, longDate, shortDate, t, weekdayShort } from "@lumo/i18n";
 import { useState } from "react";
-import { BalanceChip } from "../components/AppShell";
+import { HeaderActions } from "../components/AppShell";
 import { ItemDialog } from "../components/forms";
 import { itemMeta } from "../components/itemMeta";
 import { AddButton, PageTitle, Reward, Segmented } from "../components/ui";
@@ -99,9 +99,7 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 					</p>
 					<PageTitle>{t("nav.habits")}</PageTitle>
 				</div>
-				<div className="md:hidden">
-					<BalanceChip balance={me.wallets.personal.balance} />
-				</div>
+				<HeaderActions balance={me.wallets.personal.balance} name={me.user.displayName} />
 			</header>
 
 			<Segmented

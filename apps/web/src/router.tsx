@@ -6,6 +6,7 @@ import { useAuthConfig, useMe } from "./lib/hooks";
 import { HabitsPage } from "./routes/Habits";
 import { Login } from "./routes/Login";
 import { ProgressPage } from "./routes/Progress";
+import { SettingsPage } from "./routes/Settings";
 import { TodayPage } from "./routes/Today";
 import { WishesPage } from "./routes/Wishes";
 
@@ -52,6 +53,7 @@ const routeTree = rootRoute.addChildren([
 	page("/habits", HabitsPage),
 	page("/progress", ProgressPage),
 	page("/wishes", WishesPage),
+	page("/settings", SettingsPage),
 ]);
 
 export const router = createRouter({ routeTree });

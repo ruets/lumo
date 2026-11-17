@@ -4,7 +4,6 @@ import { longDate, t } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useRouter } from "expo-router";
 import { Pressable, View } from "react-native";
-import { changeServer, logout } from "../../src/account";
 import {
 	statsWindow,
 	useBalance,
@@ -17,11 +16,9 @@ import {
 	useToday,
 } from "../../src/hooks";
 import { awaitingReview, itemMeta } from "../../src/itemMeta";
-import { LanguagePicker } from "../../src/locale";
 import { enqueueCompletion, useQueue } from "../../src/queue";
 import { useRefresh } from "../../src/refresh";
-import { currentServerUrl } from "../../src/server";
-import { BalanceChip, Bar, Button, CoinIcon, font, Reward, Ring, Screen, T, Title } from "../../src/ui";
+import { Avatar, BalanceChip, Bar, Button, CoinIcon, font, Reward, Ring, Screen, T, Title } from "../../src/ui";
 
 function RemainingRow({ e, onTap }: { e: TodayItem; onTap: () => void }) {
 	const waiting = awaitingReview(e);
@@ -142,7 +139,10 @@ export default function TodayScreen() {
 					</T>
 					<Title>{t("today.title", { name: me.user.displayName })}</Title>
 				</View>
-				<BalanceChip balance={balance} onPress={() => router.navigate("/wishes")} />
+				<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+					<BalanceChip balance={balance} onPress={() => router.navigate("/wishes")} />
+					<Avatar name={me.user.displayName} onPress={() => router.push("/settings")} />
+				</View>
 			</View>
 
 			{queue.length > 0 && (
@@ -227,15 +227,6 @@ export default function TodayScreen() {
 					</T>
 				</Pressable>
 			)}
-
-			<View style={{ gap: 8, marginTop: 8 }}>
-				<LanguagePicker />
-				<T style={{ fontSize: 12, color: colors.muted }}>{t("server.current", { url: currentServerUrl() })}</T>
-				<View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-					<Button label={t("auth.logout")} variant="ghost" onPress={() => void logout()} />
-					<Button label={t("server.change")} variant="ghost" onPress={() => void changeServer()} />
-				</View>
-			</View>
 		</Screen>
 	);
 }

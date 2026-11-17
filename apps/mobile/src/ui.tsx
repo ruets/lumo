@@ -64,6 +64,28 @@ export function BalanceChip({ balance, onPress }: { balance: number; onPress?: (
 	);
 }
 
+export function Avatar({ name, onPress }: { name: string; onPress: () => void }) {
+	return (
+		<Pressable
+			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={t("settings.open")}
+			style={{
+				width: 44,
+				height: 44,
+				borderRadius: 22,
+				borderWidth: 2,
+				borderColor: colors.success,
+				backgroundColor: colors.surfaceRaised,
+				alignItems: "center",
+				justifyContent: "center",
+			}}
+		>
+			<T style={{ fontFamily: font.displayBold, fontSize: 17 }}>{name.trim().charAt(0).toUpperCase()}</T>
+		</Pressable>
+	);
+}
+
 export function Ring({ pct, label }: { pct: number; label: string }) {
 	const c = 226.2;
 	return (
@@ -106,13 +128,16 @@ export function Screen({
 	children,
 	onRefresh,
 	refreshing = false,
+	topInset = true,
 }: {
 	children: ReactNode;
 	onRefresh?: () => void;
 	refreshing?: boolean;
+	/** Set to false under a native header, which already accounts for the status bar. */
+	topInset?: boolean;
 }) {
 	return (
-		<SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: colors.background }}>
+		<SafeAreaView edges={topInset ? ["top"] : []} style={{ flex: 1, backgroundColor: colors.background }}>
 			<ScrollView
 				contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.md, paddingBottom: 40, gap: 20 }}
 				refreshControl={
