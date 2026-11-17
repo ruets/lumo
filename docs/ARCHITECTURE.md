@@ -190,9 +190,30 @@ Deux applis séparées (React pour le web, React Native/Expo pour le mobile). El
 | Framework    | React 19 + Vite, SPA           | Expo, Expo Router                                   |
 | Navigation   | TanStack Router                | Onglets : Aujourd'hui, Habitudes, Progrès, Envies   |
 | Données      | TanStack Query + client généré | TanStack Query, cache persisté                      |
-| Styles       | Tailwind v4 + tokens           | NativeWind + tokens                                 |
-| Hors ligne   | PWA en lecture                 | File des validations rejouée avec `Idempotency-Key` |
+| Styles       | Tailwind v4 + tokens           | `StyleSheet` + tokens (NativeWind écarté, voir ci-dessous) |
+| Hors ligne   | PWA en lecture (à faire)       | File des validations rejouée avec `Idempotency-Key` |
 | Distribution | Servi par l'API                | APK Android via EAS Build (iOS plus tard)           |
+
+### Implémentation (étape 3)
+
+Maquette de référence : le canvas « Lumo — maquette de l'appli » (thème sombre, polices Unbounded et Manrope, violet `#6B4BF2`, pièces en `#FFC857`). Les couleurs vivent dans `packages/tokens` ; le web les recopie dans le `@theme` Tailwind de `apps/web/src/styles.css` (à garder synchrone).
+
+- **Écrans** (identiques sur web et mobile) : Aujourd'hui (anneau de la journée, reste à faire, accords en attente pour les adultes, prochaine envie), Habitudes (semaine, onglets Habitudes/Tâches, valider ou annuler, création), Progrès (taux semaine ou mois, barres, séries, dernières pièces), Envies (solde, échange, création). Le web ajoute, à partir de 768 px, une barre latérale et des grilles à deux colonnes ; en dessous, la même barre d'onglets que le mobile.
+- **Web** : routes TanStack Router en code (pas de génération de fichiers), TanStack Query, cookie de session, mises à jour optimistes avec retour arrière si le serveur refuse. Polices servies par `@fontsource` (pas de CDN : l'instance reste autonome).
+- **Mobile** : Expo Router (`Stack.Protected` pour la connexion, onglets), TanStack Query avec cache persisté dans AsyncStorage (24 h). **NativeWind n'est pas utilisé** : `StyleSheet` et les tokens suffisent, sans dépendance de plus sur la chaîne Metro/Tailwind.
+- **Logique partagée** : `domain/progress` (`summarizeProgress` : barres, taux, tendance), `i18n/format` (dates en français, libellés de récurrence, messages d'erreur par code).
+
+**File hors ligne (mobile).** Valider passe toujours par la file : l'entrée (`itemId`, jour local, clé d'idempotence) est écrite dans AsyncStorage, affichée tout de suite par-dessus les données du serveur, puis envoyée dans l'ordre.
+- La clé d'idempotence est fixée à la création : un rejeu après une réponse perdue ne crédite jamais deux fois.
+- Le jour local est fixé à la saisie : une validation rejouée le lendemain garde son jour.
+- Coupure réseau, 5xx ou 401 : l'entrée reste et on s'arrête (l'ordre est conservé). Refus du serveur (objectif atteint, jour trop ancien…) : l'entrée est abandonnée avec un message, les suivantes continuent.
+- Envoi au démarrage, au retour au premier plan, au retour du réseau, à chaque saisie et au tirer-pour-rafraîchir.
+- Annuler une validation encore en file la retire localement ; annuler une validation déjà envoyée exige le réseau.
+- Échanger une envie, approuver et créer exigent aussi le réseau (le serveur doit juger le solde).
+
+**Ajouts à l'API pour les fronts** : `GET /today` renvoie `completionIds` (validations annulables du jour) ; `GET /rewards` renvoie `remaining` (échanges encore possibles dans la période de limite) ; `GET /ledger` renvoie `label` (nom de l'habitude, tâche ou envie à l'origine de l'écriture). Progrès : la semaine est la semaine calendaire (jours futurs vides), le mois est les 4 dernières semaines glissantes, chacun comparé à la période précédente (fenêtre de 56 jours demandée à `/stats`).
+
+**Pas encore fait** : PWA en lecture seule, Playwright et Maestro, gestion des membres et du foyer dans l'interface, avatars, notifications.
 
 ## Déploiement
 
