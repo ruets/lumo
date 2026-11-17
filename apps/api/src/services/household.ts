@@ -52,7 +52,13 @@ export function getHousehold(db: DbOrTx, actor: ActorCtx, now: Date): HouseholdV
 				.all()
 		: [];
 	return {
-		household: { id: h.id, name: h.name, timezone: h.timezone, weekStart: h.weekStart, backdateDays: h.backdateDays },
+		household: {
+			id: h.id,
+			name: h.name,
+			timezone: h.timezone,
+			weekStart: h.weekStart,
+			backdateDays: h.backdateUnlimited ? null : h.backdateDays,
+		},
 		members: membersOf(db, actor.householdId),
 		invites: pending.map((i) => ({
 			id: i.id,
@@ -124,7 +130,9 @@ export function updateHousehold(
 			...(input.name !== undefined ? { name: input.name } : {}),
 			...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
 			...(input.weekStart !== undefined ? { weekStart: input.weekStart } : {}),
-			...(input.backdateDays !== undefined ? { backdateDays: input.backdateDays } : {}),
+			// null turns the limit off but keeps the last number, so turning it back on starts from there.
+			...(input.backdateDays === null ? { backdateUnlimited: true } : {}),
+			...(typeof input.backdateDays === "number" ? { backdateDays: input.backdateDays, backdateUnlimited: false } : {}),
 		})
 		.where(eq(households.id, actor.householdId))
 		.run();

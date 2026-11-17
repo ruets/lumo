@@ -9,6 +9,7 @@ export interface ActorCtx extends Actor {
 	householdId: string;
 	timezone: string;
 	weekStart: Weekday;
+	/** Days back allowed; `Number.POSITIVE_INFINITY` when the household has no limit. */
 	backdateDays: number;
 }
 
@@ -27,6 +28,6 @@ export function loadActor(db: DbOrTx, userId: string): ActorCtx | null {
 		householdId: row.h.id,
 		timezone: row.h.timezone,
 		weekStart: row.h.weekStart as Weekday,
-		backdateDays: row.h.backdateDays,
+		backdateDays: row.h.backdateUnlimited ? Number.POSITIVE_INFINITY : row.h.backdateDays,
 	};
 }

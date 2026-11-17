@@ -68,6 +68,7 @@ export const fr: Record<MessageId, string> = {
 	"household.settings.timezoneHint": "Par exemple Europe/Paris. Les jours sont comptés dans ce fuseau.",
 	"household.settings.weekStart": "La semaine commence le",
 	"household.settings.backdate": "Jours en arrière autorisés",
+	"household.settings.backdateUnlimited": "Sans limite",
 	"household.settings.backdateHint":
 		"Jusqu’où tout le monde peut valider un jour passé. Un propriétaire peut toujours aller plus loin.",
 	"household.settings.save": "Enregistrer les réglages",

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { Member, MeResponse } from "@lumo/api-client";
-import { shortDate, t, weekdayLong } from "@lumo/i18n";
+import type { HouseholdResponse, Member, MeResponse } from "@lumo/api-client";
+import { shortDate, t, weekdayLong, weekdayNarrow } from "@lumo/i18n";
 import { useState } from "react";
 import { Avatar } from "../components/AppShell";
 import { Field, fieldClass, PageTitle, PrimaryButton } from "../components/ui";
@@ -13,6 +13,8 @@ import {
 	useUpdateMember,
 } from "../lib/hooks";
 import { showToast } from "../lib/toast";
+
+type Household = HouseholdResponse["household"];
 
 const ROLES = ["owner", "adult", "child"] as const;
 
@@ -90,9 +92,15 @@ function MemberRow({ member, isYou, canManage }: { member: Member; isYou: boolea
 
 function SettingsSection() {
 	const household = useHousehold();
-	const update = useUpdateHousehold();
 	const h = household.data?.household;
-	if (!h) return null;
+	// Keyed on the saved values so the form resets to what the server now holds.
+	return h ? <SettingsForm key={JSON.stringify(h)} h={h} /> : null;
+}
+
+function SettingsForm({ h }: { h: Household }) {
+	const update = useUpdateHousehold();
+	const [weekStart, setWeekStart] = useState(h.weekStart);
+	const [unlimited, setUnlimited] = useState(h.backdateDays === null);
 	const zones = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
 
 	function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -102,8 +110,8 @@ function SettingsSection() {
 			{
 				name: String(f.get("name") ?? "").trim(),
 				timezone: String(f.get("timezone") ?? "").trim(),
-				weekStart: Number(f.get("weekStart")),
-				backdateDays: Number(f.get("backdateDays")),
+				weekStart,
+				backdateDays: unlimited ? null : Number(f.get("backdateDays")),
 			},
 			{ onSuccess: () => showToast(t("household.saved"), 1500) },
 		);
@@ -112,7 +120,7 @@ function SettingsSection() {
 	return (
 		<section className="grid gap-2.5">
 			<h2 className="m-0 text-[15px] font-bold text-muted">{t("household.settings.title")}</h2>
-			<form key={JSON.stringify(h)} onSubmit={submit} className="grid gap-3 rounded-[20px] bg-surface p-4">
+			<form onSubmit={submit} className="grid gap-3 rounded-[20px] bg-surface p-4">
 				<Field label={t("household.settings.name")}>
 					<input name="name" defaultValue={h.name} required maxLength={80} className={fieldClass} />
 				</Field>
@@ -132,26 +140,49 @@ function SettingsSection() {
 					))}
 				</datalist>
 				<p className="m-0 -mt-2 text-xs text-muted">{t("household.settings.timezoneHint")}</p>
-				<Field label={t("household.settings.weekStart")}>
-					<select name="weekStart" defaultValue={h.weekStart} className={fieldClass}>
+
+				<fieldset className="m-0 grid min-w-0 gap-1.5 border-0 p-0">
+					<legend className="mb-1.5 p-0 text-sm font-semibold text-muted">{t("household.settings.weekStart")}</legend>
+					<div className="flex gap-1.5">
 						{[1, 2, 3, 4, 5, 6, 7].map((d) => (
-							<option key={d} value={d}>
-								{weekdayLong(d)}
-							</option>
+							<button
+								key={d}
+								type="button"
+								aria-pressed={weekStart === d}
+								aria-label={weekdayLong(d)}
+								title={weekdayLong(d)}
+								onClick={() => setWeekStart(d)}
+								className={`grid size-11 cursor-pointer place-items-center rounded-full border-0 font-body text-sm font-bold ${
+									weekStart === d ? "bg-primary text-white" : "bg-raised text-soft hover:bg-edge"
+								}`}
+							>
+								{weekdayNarrow(d)}
+							</button>
 						))}
-					</select>
-				</Field>
+					</div>
+				</fieldset>
+
 				<Field label={t("household.settings.backdate")}>
 					<input
 						name="backdateDays"
 						type="number"
 						min={0}
 						max={30}
-						defaultValue={h.backdateDays}
-						required
-						className={fieldClass}
+						defaultValue={h.backdateDays ?? 2}
+						disabled={unlimited}
+						required={!unlimited}
+						className={`${fieldClass} disabled:opacity-40`}
 					/>
 				</Field>
+				<label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-soft">
+					<input
+						type="checkbox"
+						checked={unlimited}
+						onChange={(e) => setUnlimited(e.target.checked)}
+						className="size-5"
+					/>
+					{t("household.settings.backdateUnlimited")}
+				</label>
 				<p className="m-0 -mt-2 text-xs text-muted">{t("household.settings.backdateHint")}</p>
 				<div>
 					<PrimaryButton type="submit" disabled={update.isPending}>

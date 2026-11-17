@@ -80,6 +80,11 @@ describe("checkCompletionDate", () => {
 		);
 		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-14", role: "owner" }))).toBeNull();
 	});
+	it("no limit (Infinity): any past day, but still never the future", () => {
+		const open = { today: "2026-11-17", windowDays: Number.POSITIVE_INFINITY };
+		expect(codeOf(() => checkCompletionDate({ ...open, date: "2020-01-01", role: "child" }))).toBeNull();
+		expect(codeOf(() => checkCompletionDate({ ...open, date: "2026-11-18", role: "child" }))).toBe("future_date");
+	});
 	it("window of 0: today only", () => {
 		expect(
 			codeOf(() => checkCompletionDate({ today: "2026-11-17", date: "2026-11-16", windowDays: 0, role: "adult" })),

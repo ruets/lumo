@@ -290,7 +290,8 @@ export const householdView = z.object({
 		name: z.string(),
 		timezone: z.string(),
 		weekStart: z.number().int(),
-		backdateDays: z.number().int(),
+		/** `null` = no limit. */
+		backdateDays: z.number().int().nullable(),
 	}),
 	members: z.array(memberView),
 	/** Pending invitations (owner only; empty for everyone else). The token is shown only once, at creation. */
@@ -312,8 +313,8 @@ export const updateHouseholdBody = z
 		timezone: z.string().min(1).max(64).refine(isTimeZone, "unknown time zone"),
 		/** ISO weekday the week starts on: 1 = Monday … 7 = Sunday. */
 		weekStart: z.number().int().min(1).max(7),
-		/** How many days back anyone may complete something (an owner can always go further). */
-		backdateDays: z.number().int().min(0).max(30),
+		/** How many days back anyone may complete something (an owner can always go further); `null` = no limit. */
+		backdateDays: z.number().int().min(0).max(30).nullable(),
 	})
 	.partial()
 	.strict()

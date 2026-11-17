@@ -27,6 +27,10 @@ const weekdayDate = (isoWeekday: number) => new Date(Date.UTC(2024, 0, isoWeekda
 export const weekdayShort = (isoWeekday: number, locale: Locale = getLocale()): string =>
 	format(locale, { weekday: "short" }, weekdayDate(isoWeekday)).replace(/\.$/, "");
 
+/** One-letter weekday: "M" / "L" (for compact pickers; pair it with `weekdayLong` for screen readers). */
+export const weekdayNarrow = (isoWeekday: number, locale: Locale = getLocale()): string =>
+	format(locale, { weekday: "narrow" }, weekdayDate(isoWeekday));
+
 /** "Monday" / "lundi" */
 export const weekdayLong = (isoWeekday: number, locale: Locale = getLocale()): string =>
 	format(locale, { weekday: "long" }, weekdayDate(isoWeekday));

@@ -36,6 +36,8 @@ export const households = sqliteTable(
 		/** ISO weekday the week starts on: 1 = Monday … 7 = Sunday. */
 		weekStart: integer("week_start").notNull().default(1),
 		backdateDays: integer("backdate_days").notNull().default(2),
+		/** When true there is no backdate limit (`backdate_days` keeps its last value, for when it is turned back on). */
+		backdateUnlimited: integer("backdate_unlimited", { mode: "boolean" }).notNull().default(false),
 		createdAt: createdAt(),
 	},
 	(t) => [

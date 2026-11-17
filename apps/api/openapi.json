@@ -267,9 +267,16 @@
 													"maximum": 9007199254740991
 												},
 												"backdateDays": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
 												}
 											},
 											"required": ["id", "name", "timezone", "weekStart", "backdateDays"],
@@ -408,9 +415,16 @@
 										"maximum": 7
 									},
 									"backdateDays": {
-										"type": "integer",
-										"minimum": 0,
-										"maximum": 30
+										"anyOf": [
+											{
+												"type": "integer",
+												"minimum": 0,
+												"maximum": 30
+											},
+											{
+												"type": "null"
+											}
+										]
 									}
 								},
 								"additionalProperties": false
@@ -444,9 +458,16 @@
 													"maximum": 9007199254740991
 												},
 												"backdateDays": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
 												}
 											},
 											"required": ["id", "name", "timezone", "weekStart", "backdateDays"],
