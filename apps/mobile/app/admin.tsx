@@ -1,0 +1,309 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import type { AdminHousehold, AdminUser } from "@lumo/api-client";
+import { t } from "@lumo/i18n";
+import { colors, radii, spacing } from "@lumo/tokens";
+import { Stack } from "expo-router";
+import { useState } from "react";
+import { Alert, View } from "react-native";
+import { useAdminHouseholds, useAdminSettings, useAdminUsers, useAdminWrite } from "../src/hooks";
+import { api } from "../src/session";
+import { showToast } from "../src/store";
+import { Button, Chip, Field, font, Screen, T } from "../src/ui";
+
+const saved = () => showToast(t("admin.saved"), 1500);
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+	return (
+		<View style={{ gap: 10 }}>
+			<T style={{ fontFamily: font.bold, fontSize: 15, color: colors.muted }}>{title}</T>
+			<View style={{ backgroundColor: colors.surface, borderRadius: radii.md, padding: spacing.md, gap: 14 }}>
+				{children}
+			</View>
+		</View>
+	);
+}
+
+const confirm = (title: string, message: string, onOk: () => void) =>
+	Alert.alert(title, message, [
+		{ text: t("common.cancel"), style: "cancel" },
+		{ text: title, style: "destructive", onPress: onOk },
+	]);
+
+function UserRow({ user, households }: { user: AdminUser; households: AdminHousehold[] }) {
+	const update = useAdminWrite((input: Parameters<typeof api.adminUpdateUser>[1]) =>
+		api.adminUpdateUser(user.id, input),
+	);
+	const remove = useAdminWrite(() => api.adminDeleteUser(user.id));
+	const takeOut = useAdminWrite(() => api.adminRemoveFromHousehold(user.id));
+	const assign = useAdminWrite((householdId: string) =>
+		api.adminAssignHousehold(user.id, { householdId, role: "adult" }),
+	);
+	const [picking, setPicking] = useState(false);
+	return (
+		<View style={{ gap: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
+			<T style={{ fontFamily: font.bold, fontSize: 15 }}>
+				{user.displayName}
+				{user.username ? `  @${user.username}` : ""}
+				{user.isSuperAdmin ? `  · ${t("admin.superAdmin")}` : ""}
+				{user.disabled ? `  · ${t("admin.disabled")}` : ""}
+			</T>
+			<T style={{ color: colors.muted, fontSize: 13 }}>
+				{user.household
+					? `${user.household.name} · ${t(`role.${user.household.role}` as const)}`
+					: t("admin.noHousehold")}
+			</T>
+			<Button
+				variant="ghost"
+				label={user.isSuperAdmin ? t("admin.user.removeAdmin") : t("admin.user.makeAdmin")}
+				onPress={() => update.mutate({ isSuperAdmin: !user.isSuperAdmin }, { onSuccess: saved })}
+			/>
+			<Button
+				variant="ghost"
+				label={user.disabled ? t("admin.user.enable") : t("admin.user.disable")}
+				onPress={() => update.mutate({ disabled: !user.disabled }, { onSuccess: saved })}
+			/>
+			{user.household ? (
+				<Button
+					variant="ghost"
+					label={t("admin.user.takeOut")}
+					onPress={() => takeOut.mutate(undefined, { onSuccess: saved })}
+				/>
+			) : (
+				households.length > 0 && (
+					<>
+						<Button variant="ghost" label={t("admin.user.assign")} onPress={() => setPicking((v) => !v)} />
+						{picking && (
+							<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+								{households.map((h) => (
+									<Chip
+										key={h.id}
+										label={h.name}
+										on={false}
+										onPress={() =>
+											assign.mutate(h.id, {
+												onSuccess: () => {
+													setPicking(false);
+													saved();
+												},
+											})
+										}
+									/>
+								))}
+							</View>
+						)}
+					</>
+				)
+			)}
+			<Button
+				variant="ghost"
+				label={t("admin.user.delete")}
+				onPress={() =>
+					confirm(t("admin.user.delete"), t("admin.user.deleteConfirm", { name: user.displayName }), () =>
+						remove.mutate(undefined, { onSuccess: saved }),
+					)
+				}
+			/>
+		</View>
+	);
+}
+
+function CreateUser() {
+	const create = useAdminWrite((input: Parameters<typeof api.adminCreateUser>[0]) => api.adminCreateUser(input));
+	const [displayName, setDisplayName] = useState("");
+	const [username, setUsername] = useState("");
+	const [password, setPassword] = useState("");
+	return (
+		<View style={{ gap: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
+			<T style={{ fontFamily: font.bold, fontSize: 14 }}>{t("admin.user.create")}</T>
+			<Field label={t("admin.user.displayName")} value={displayName} onChangeText={setDisplayName} maxLength={80} />
+			<Field
+				label={t("auth.username")}
+				value={username}
+				onChangeText={setUsername}
+				autoCapitalize="none"
+				autoCorrect={false}
+			/>
+			<Field
+				label={t("auth.password")}
+				value={password}
+				onChangeText={setPassword}
+				secureTextEntry
+				autoCapitalize="none"
+			/>
+			<Button
+				label={t("admin.user.create")}
+				disabled={create.isPending || !displayName.trim() || username.trim().length < 3 || password.length < 10}
+				onPress={() =>
+					create.mutate(
+						{ displayName: displayName.trim(), username: username.trim(), password },
+						{
+							onSuccess: () => {
+								setDisplayName("");
+								setUsername("");
+								setPassword("");
+								saved();
+							},
+						},
+					)
+				}
+			/>
+		</View>
+	);
+}
+
+function HouseholdRow({ household }: { household: AdminHousehold }) {
+	const rename = useAdminWrite((name: string) => api.adminRenameHousehold(household.id, name));
+	const remove = useAdminWrite(() => api.adminDeleteHousehold(household.id));
+	const adjust = useAdminWrite((input: { amount: number; note: string }) => api.adminAdjustPot(household.id, input));
+	const [open, setOpen] = useState<"rename" | "pot" | null>(null);
+	const [name, setName] = useState(household.name);
+	const [amount, setAmount] = useState("");
+	const [note, setNote] = useState("");
+	return (
+		<View style={{ gap: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
+			<T style={{ fontFamily: font.bold, fontSize: 15 }}>
+				{household.name} · {t("admin.household.members", { count: household.memberCount })}
+			</T>
+			<Button
+				variant="ghost"
+				label={t("admin.household.rename")}
+				onPress={() => setOpen(open === "rename" ? null : "rename")}
+			/>
+			{open === "rename" && (
+				<>
+					<Field label={t("admin.household.name")} value={name} onChangeText={setName} maxLength={80} />
+					<Button
+						label={t("form.save")}
+						disabled={!name.trim() || rename.isPending}
+						onPress={() =>
+							rename.mutate(name.trim(), {
+								onSuccess: () => {
+									setOpen(null);
+									saved();
+								},
+							})
+						}
+					/>
+				</>
+			)}
+			<Button variant="ghost" label={t("admin.pot.adjust")} onPress={() => setOpen(open === "pot" ? null : "pot")} />
+			{open === "pot" && (
+				<>
+					<Field
+						label={t("admin.pot.amount")}
+						value={amount}
+						onChangeText={setAmount}
+						keyboardType="numbers-and-punctuation"
+					/>
+					<Field label={t("admin.pot.note")} value={note} onChangeText={setNote} maxLength={500} />
+					<Button
+						label={t("admin.pot.adjust")}
+						disabled={!Number.isInteger(Number(amount)) || Number(amount) === 0 || !note.trim() || adjust.isPending}
+						onPress={() =>
+							adjust.mutate(
+								{ amount: Number(amount), note: note.trim() },
+								{
+									onSuccess: (r) => {
+										setOpen(null);
+										setAmount("");
+										setNote("");
+										showToast(t("admin.pot.balance", { amount: r.balance }), 2500);
+									},
+								},
+							)
+						}
+					/>
+				</>
+			)}
+			<Button
+				variant="ghost"
+				label={t("admin.household.delete")}
+				onPress={() =>
+					confirm(t("admin.household.delete"), t("admin.household.deleteConfirm", { name: household.name }), () =>
+						remove.mutate(undefined, { onSuccess: saved }),
+					)
+				}
+			/>
+		</View>
+	);
+}
+
+function CreateHousehold() {
+	const create = useAdminWrite((name: string) => api.adminCreateHousehold(name));
+	const [name, setName] = useState("");
+	return (
+		<View style={{ gap: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
+			<Field label={t("admin.household.name")} value={name} onChangeText={setName} maxLength={80} />
+			<Button
+				label={t("admin.household.create")}
+				disabled={!name.trim() || create.isPending}
+				onPress={() =>
+					create.mutate(name.trim(), {
+						onSuccess: () => {
+							setName("");
+							saved();
+						},
+					})
+				}
+			/>
+		</View>
+	);
+}
+
+function Settings() {
+	const settings = useAdminSettings();
+	const update = useAdminWrite((householdCreation: "anyone" | "admins") =>
+		api.adminUpdateSettings({ householdCreation }),
+	);
+	if (!settings.data) return null;
+	return (
+		<Section title={t("admin.settings")}>
+			<T style={{ color: colors.muted, fontSize: 14 }}>{t("admin.settings.creation")}</T>
+			<View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+				{(["anyone", "admins"] as const).map((v) => (
+					<Chip
+						key={v}
+						label={t(`admin.settings.${v}` as const)}
+						on={settings.data.householdCreation === v}
+						onPress={() => update.mutate(v, { onSuccess: saved })}
+					/>
+				))}
+			</View>
+		</Section>
+	);
+}
+
+/** Instance administration for super admins: accounts, households, instance settings. Never any content. */
+export default function AdminScreen() {
+	const users = useAdminUsers();
+	const households = useAdminHouseholds();
+	const list = households.data?.households ?? [];
+	return (
+		<Screen topInset={false}>
+			<Stack.Screen
+				options={{
+					headerShown: true,
+					headerBackButtonDisplayMode: "minimal",
+					title: t("admin.title"),
+					headerStyle: { backgroundColor: colors.background },
+					headerTintColor: colors.text,
+					headerTitleStyle: { fontFamily: font.bold },
+					headerShadowVisible: false,
+				}}
+			/>
+			<Section title={t("admin.users")}>
+				{users.data?.users.map((u) => (
+					<UserRow key={u.id} user={u} households={list} />
+				))}
+				<CreateUser />
+			</Section>
+			<Section title={t("admin.households")}>
+				{list.map((h) => (
+					<HouseholdRow key={h.id} household={h} />
+				))}
+				<CreateHousehold />
+			</Section>
+			<Settings />
+		</Screen>
+	);
+}

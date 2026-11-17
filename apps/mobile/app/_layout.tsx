@@ -9,7 +9,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { AppState } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useMe } from "../src/hooks";
+import { useAccount } from "../src/hooks";
 import { LocaleBoundary, loadLocale, useLocaleState } from "../src/locale";
 import { persister, queryClient } from "../src/query";
 import { flushQueue, loadQueue } from "../src/queue";
@@ -18,8 +18,9 @@ import { loadServer, useServer } from "../src/server";
 function Routes() {
 	const server = useServer();
 	const hasServer = server.url !== null;
-	const me = useMe(hasServer);
-	const authed = hasServer && Boolean(me.data);
+	const account = useAccount(hasServer);
+	const authed = hasServer && Boolean(account.data);
+	const inHousehold = authed && Boolean(account.data?.household);
 
 	useEffect(() => {
 		void loadServer();
@@ -37,13 +38,19 @@ function Routes() {
 		};
 	}, [authed]);
 
-	if (!server.loaded || (hasServer && me.isPending)) return null;
+	if (!server.loaded || (hasServer && account.isPending)) return null;
 	return (
 		<Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0E1220" } }}>
-			<Stack.Protected guard={authed}>
+			<Stack.Protected guard={inHousehold}>
 				<Stack.Screen name="(tabs)" />
 				<Stack.Screen name="settings" />
 				<Stack.Screen name="household" />
+			</Stack.Protected>
+			<Stack.Protected guard={authed && !inHousehold}>
+				<Stack.Screen name="no-household" />
+			</Stack.Protected>
+			<Stack.Protected guard={authed && Boolean(account.data?.isSuperAdmin)}>
+				<Stack.Screen name="admin" />
 			</Stack.Protected>
 			<Stack.Protected guard={hasServer && !authed}>
 				<Stack.Screen name="login" />

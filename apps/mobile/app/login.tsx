@@ -60,7 +60,7 @@ function OidcButton({
 			})
 			.then(async (tokens) => {
 				await saveTokens(tokens);
-				await qc.invalidateQueries({ queryKey: keys.me });
+				await qc.invalidateQueries({ queryKey: keys.account });
 			})
 			.catch((err: unknown) => onError(describeError(err)));
 	}, [response, request, redirectUri, nonce, qc, onError, invite]);
@@ -82,7 +82,7 @@ export default function Login() {
 	const [inviteCode, setInviteCode] = useState("");
 	const joinMode = joining && !config.data?.setupRequired;
 
-	const done = () => qc.invalidateQueries({ queryKey: keys.me });
+	const done = () => qc.invalidateQueries({ queryKey: keys.account });
 
 	async function submit() {
 		setError(null);
