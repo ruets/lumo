@@ -33,7 +33,7 @@ export const households = sqliteTable(
 		id: id(),
 		name: text("name").notNull(),
 		timezone: text("timezone").notNull().default("Europe/Paris"),
-		/** 1 = lundi … 7 = dimanche (ISO). */
+		/** ISO weekday the week starts on: 1 = Monday … 7 = Sunday. */
 		weekStart: integer("week_start").notNull().default(1),
 		backdateDays: integer("backdate_days").notNull().default(2),
 		createdAt: createdAt(),

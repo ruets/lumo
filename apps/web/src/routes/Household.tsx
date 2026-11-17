@@ -1,17 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { Member, MeResponse } from "@lumo/api-client";
-import { shortDate, t } from "@lumo/i18n";
+import { shortDate, t, weekdayLong } from "@lumo/i18n";
 import { useState } from "react";
 import { Avatar } from "../components/AppShell";
-import { fieldClass, PageTitle, PrimaryButton } from "../components/ui";
-import { useCreateInvite, useHousehold, useRevokeInvite, useUpdateMember } from "../lib/hooks";
+import { Field, fieldClass, PageTitle, PrimaryButton } from "../components/ui";
+import {
+	useCreateInvite,
+	useHousehold,
+	useRemoveMember,
+	useRevokeInvite,
+	useUpdateHousehold,
+	useUpdateMember,
+} from "../lib/hooks";
 import { showToast } from "../lib/toast";
 
 const ROLES = ["owner", "adult", "child"] as const;
 
 function MemberRow({ member, isYou, canManage }: { member: Member; isYou: boolean; canManage: boolean }) {
 	const update = useUpdateMember();
+	const remove = useRemoveMember();
 	const saved = () => showToast(t("household.saved"), 1500);
+	const confirmRemove = () => {
+		if (!window.confirm(t("household.member.removeConfirm", { name: member.displayName }))) return;
+		remove.mutate(member.userId, {
+			onSuccess: () => showToast(t("household.member.removed", { name: member.displayName })),
+		});
+	};
 	return (
 		<li className="flex flex-wrap items-center gap-3 border-b border-line py-3 last:border-b-0">
 			<Avatar name={member.displayName} />
@@ -57,9 +71,95 @@ function MemberRow({ member, isYou, canManage }: { member: Member; isYou: boolea
 							{t("household.canCreate")}
 						</label>
 					)}
+					{!isYou && (
+						<button
+							type="button"
+							aria-label={t("household.member.removeFor", { name: member.displayName })}
+							disabled={remove.isPending}
+							onClick={confirmRemove}
+							className="min-h-11 cursor-pointer rounded-full border border-edge bg-transparent px-4 font-body text-sm font-bold text-bad hover:bg-raised"
+						>
+							{t("household.member.remove")}
+						</button>
+					)}
 				</>
 			)}
 		</li>
+	);
+}
+
+function SettingsSection() {
+	const household = useHousehold();
+	const update = useUpdateHousehold();
+	const h = household.data?.household;
+	if (!h) return null;
+	const zones = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
+
+	function submit(e: React.FormEvent<HTMLFormElement>) {
+		e.preventDefault();
+		const f = new FormData(e.currentTarget);
+		update.mutate(
+			{
+				name: String(f.get("name") ?? "").trim(),
+				timezone: String(f.get("timezone") ?? "").trim(),
+				weekStart: Number(f.get("weekStart")),
+				backdateDays: Number(f.get("backdateDays")),
+			},
+			{ onSuccess: () => showToast(t("household.saved"), 1500) },
+		);
+	}
+
+	return (
+		<section className="grid gap-2.5">
+			<h2 className="m-0 text-[15px] font-bold text-muted">{t("household.settings.title")}</h2>
+			<form key={JSON.stringify(h)} onSubmit={submit} className="grid gap-3 rounded-[20px] bg-surface p-4">
+				<Field label={t("household.settings.name")}>
+					<input name="name" defaultValue={h.name} required maxLength={80} className={fieldClass} />
+				</Field>
+				<Field label={t("household.settings.timezone")}>
+					<input
+						name="timezone"
+						defaultValue={h.timezone}
+						required
+						list="lumo-time-zones"
+						autoComplete="off"
+						className={fieldClass}
+					/>
+				</Field>
+				<datalist id="lumo-time-zones">
+					{zones.map((z) => (
+						<option key={z} value={z} />
+					))}
+				</datalist>
+				<p className="m-0 -mt-2 text-xs text-muted">{t("household.settings.timezoneHint")}</p>
+				<Field label={t("household.settings.weekStart")}>
+					<select name="weekStart" defaultValue={h.weekStart} className={fieldClass}>
+						{[1, 2, 3, 4, 5, 6, 7].map((d) => (
+							<option key={d} value={d}>
+								{weekdayLong(d)}
+							</option>
+						))}
+					</select>
+				</Field>
+				<Field label={t("household.settings.backdate")}>
+					<input
+						name="backdateDays"
+						type="number"
+						min={0}
+						max={30}
+						defaultValue={h.backdateDays}
+						required
+						className={fieldClass}
+					/>
+				</Field>
+				<p className="m-0 -mt-2 text-xs text-muted">{t("household.settings.backdateHint")}</p>
+				<div>
+					<PrimaryButton type="submit" disabled={update.isPending}>
+						{t("household.settings.save")}
+					</PrimaryButton>
+				</div>
+			</form>
+		</section>
 	);
 }
 
@@ -174,6 +274,7 @@ export function HouseholdPage({ me }: { me: MeResponse }) {
 				</ul>
 			</section>
 			{canManage && <InviteSection />}
+			{canManage && <SettingsSection />}
 		</div>
 	);
 }

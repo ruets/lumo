@@ -368,6 +368,183 @@
 						"bearer": []
 					}
 				]
+			},
+			"patch": {
+				"summary": "Change the household name, time zone, first day of the week or backdate window (owner)",
+				"tags": ["Household"],
+				"operationId": "patchApiV1Household",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 80
+									},
+									"timezone": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 64
+									},
+									"weekStart": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 7
+									},
+									"backdateDays": {
+										"type": "integer",
+										"minimum": 0,
+										"maximum": 30
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"household": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"name": {
+													"type": "string"
+												},
+												"timezone": {
+													"type": "string"
+												},
+												"weekStart": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"backdateDays": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												}
+											},
+											"required": ["id", "name", "timezone", "weekStart", "backdateDays"],
+											"additionalProperties": false
+										},
+										"members": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"userId": {
+														"type": "string"
+													},
+													"displayName": {
+														"type": "string"
+													},
+													"role": {
+														"type": "string",
+														"enum": ["owner", "adult", "child"]
+													},
+													"canCreateItems": {
+														"type": "boolean"
+													}
+												},
+												"required": ["userId", "displayName", "role", "canCreateItems"],
+												"additionalProperties": false
+											}
+										},
+										"invites": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"role": {
+														"type": "string",
+														"enum": ["owner", "adult", "child"]
+													},
+													"expiresAt": {
+														"type": "string"
+													},
+													"createdAt": {
+														"type": "string"
+													}
+												},
+												"required": ["id", "role", "expiresAt", "createdAt"],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["household", "members", "invites"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
 			}
 		},
 		"/api/v1/members/{id}": {
@@ -444,6 +621,77 @@
 								}
 							}
 						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"delete": {
+				"summary": "Remove a member from the household, keeping their history (owner)",
+				"tags": ["Household"],
+				"operationId": "deleteApiV1MembersId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "No content"
 					},
 					"default": {
 						"description": "Error (RFC 9457) with a stable `code`",

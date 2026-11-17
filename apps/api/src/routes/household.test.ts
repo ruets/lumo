@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createHousehold, createTestContext, type TestContext } from "../test/helpers.js";
+import { resolveOidcLogin } from "../auth/identity.js";
+import { itemAssignees, ledgerEntries, users } from "../db/schema.js";
+import { balances, createHousehold, createTestContext, makeHabit, type TestContext } from "../test/helpers.js";
 
 let ctx: TestContext;
 let h: Awaited<ReturnType<typeof createHousehold>>;
@@ -124,5 +128,138 @@ describe("DELETE /household/invites/:id", () => {
 		const [pending] = (await h.owner.api.get("/household")).json().invites;
 		expect((await h.adult.api.del(`/household/invites/${pending.id}`)).statusCode).toBe(403);
 		expect((await h.owner.api.del("/household/invites/unknown")).statusCode).toBe(404);
+	});
+});
+
+describe("DELETE /members/:id", () => {
+	it("the owner removes a member, who immediately loses access", async () => {
+		expect((await h.kid.api.get("/me")).statusCode).toBe(200);
+		expect((await h.owner.api.del(`/members/${h.kid.userId}`)).statusCode).toBe(204);
+		const members = (await h.owner.api.get("/household")).json().members;
+		expect(members.map((m: { userId: string }) => m.userId).sort()).toEqual([h.owner.userId, h.adult.userId].sort());
+		expect((await h.kid.api.get("/me")).statusCode).toBe(401); // the old session is gone
+		const login = await ctx.app.inject({
+			method: "POST",
+			url: "/api/v1/auth/local/login",
+			payload: { username: "kid", password: "a-long-password-here" },
+		});
+		expect(login.statusCode).toBe(401); // credentials are erased
+	});
+
+	it("frees the username and keeps the history", async () => {
+		const item = await makeHabit(h.adult, { reward: 5, assigneeIds: [h.kid.userId] });
+		await h.kid.api.post(`/items/${item.id}/completions`);
+		expect((await balances(h.kid)).personal).toBe(5);
+		const entriesBefore = ctx.db.select().from(ledgerEntries).all().length;
+
+		await h.owner.api.del(`/members/${h.kid.userId}`);
+		expect(ctx.db.select().from(ledgerEntries).all()).toHaveLength(entriesBefore); // the ledger is untouched
+		expect(ctx.db.select().from(users).where(eq(users.id, h.kid.userId)).get()).toMatchObject({
+			displayName: "kid",
+			username: null,
+			passwordHash: null,
+		});
+
+		const invite = (await h.owner.api.post("/household/invites", { role: "child" })).json();
+		expect((await register(invite.token, "kid")).statusCode).toBe(201); // the username is free again
+	});
+
+	it("unassigns the member from items and drops their pending approvals", async () => {
+		const item = await makeHabit(h.adult, { assigneeIds: [h.kid.userId], requiresApproval: true });
+		await h.kid.api.post(`/items/${item.id}/completions`);
+		expect((await h.adult.api.get("/completions?status=pending")).json().completions).toHaveLength(1);
+
+		await h.owner.api.del(`/members/${h.kid.userId}`);
+		expect(ctx.db.select().from(itemAssignees).where(eq(itemAssignees.userId, h.kid.userId)).all()).toEqual([]);
+		expect((await h.adult.api.get("/completions?status=pending")).json().completions).toEqual([]);
+	});
+
+	it("a removed OIDC member needs a new invitation to come back", async () => {
+		const invite = (await h.owner.api.post("/household/invites", { role: "adult" })).json();
+		const claims = { sub: "sub-zoe", name: "Zoe", email: null, picture: null, groups: [] };
+		const { userId } = resolveOidcLogin(ctx.db, ctx.config, claims, invite.token);
+		await h.owner.api.del(`/members/${userId}`);
+		expect(() => resolveOidcLogin(ctx.db, ctx.config, claims, null)).toThrow(/invitation/i);
+		const again = (await h.owner.api.post("/household/invites", { role: "adult" })).json();
+		expect(() => resolveOidcLogin(ctx.db, ctx.config, claims, again.token)).not.toThrow();
+	});
+
+	it("refuses to remove yourself, and only the owner can remove", async () => {
+		const self = await h.owner.api.del(`/members/${h.owner.userId}`);
+		expect(self.statusCode).toBe(409);
+		expect(self.json().code).toBe("cannot_remove_self");
+		expect((await h.adult.api.del(`/members/${h.kid.userId}`)).statusCode).toBe(403);
+		expect((await h.owner.api.del("/members/unknown")).statusCode).toBe(404);
+	});
+
+	it("an owner can remove another owner", async () => {
+		await h.owner.api.patch(`/members/${h.adult.userId}`, { role: "owner" });
+		expect((await h.owner.api.del(`/members/${h.adult.userId}`)).statusCode).toBe(204);
+	});
+});
+
+describe("PATCH /household", () => {
+	it("the owner updates the name, time zone, first day of the week and backdate window", async () => {
+		const res = await h.owner.api.patch("/household", {
+			name: "The Browns",
+			timezone: "America/New_York",
+			weekStart: 7,
+			backdateDays: 5,
+		});
+		expect(res.statusCode).toBe(200);
+		expect(res.json().household).toMatchObject({
+			name: "The Browns",
+			timezone: "America/New_York",
+			weekStart: 7,
+			backdateDays: 5,
+		});
+		expect((await h.kid.api.get("/household")).json().household.name).toBe("The Browns");
+		expect((await h.kid.api.get("/me")).json().household.name).toBe("The Browns");
+	});
+
+	it("partial updates leave the other fields alone", async () => {
+		await h.owner.api.patch("/household", { backdateDays: 0 });
+		expect((await h.owner.api.get("/household")).json().household).toMatchObject({
+			name: "The Smiths",
+			timezone: "Europe/Paris",
+			backdateDays: 0,
+		});
+	});
+
+	it("the new settings apply right away", async () => {
+		const item = await makeHabit(h.adult);
+		// Yesterday is inside the default 2-day window …
+		expect((await h.adult.api.post(`/items/${item.id}/completions`, { date: "2026-11-16" })).statusCode).toBe(201);
+		// … but not once the window is 0 (only an owner can go back further).
+		await h.owner.api.patch("/household", { backdateDays: 0 });
+		const second = await h.adult.api.post(`/items/${item.id}/completions`, { date: "2026-11-15" });
+		expect(second.statusCode).toBe(403);
+		expect(second.json().code).toBe("backdate_not_allowed");
+
+		// 23:30 UTC on the 17th is already the 18th in Paris, still the 17th in New York.
+		ctx.clock.now = new Date("2026-11-17T23:30:00Z");
+		expect((await h.owner.api.get("/today")).json().date).toBe("2026-11-18");
+		await h.owner.api.patch("/household", { timezone: "America/New_York" });
+		expect((await h.owner.api.get("/today")).json().date).toBe("2026-11-17");
+	});
+
+	it("only the owner can change the household", async () => {
+		expect((await h.adult.api.patch("/household", { name: "Hijacked" })).statusCode).toBe(403);
+		expect((await h.kid.api.patch("/household", { name: "Hijacked" })).statusCode).toBe(403);
+		expect((await h.owner.api.get("/household")).json().household.name).toBe("The Smiths");
+	});
+
+	it("validates every field", async () => {
+		const bad = (body: object) => h.owner.api.patch("/household", body).then((r) => r.statusCode);
+		expect(await bad({})).toBe(400);
+		expect(await bad({ name: "  " })).toBe(400);
+		expect(await bad({ name: "x".repeat(81) })).toBe(400);
+		expect(await bad({ timezone: "Mars/Phobos" })).toBe(400);
+		expect(await bad({ weekStart: 0 })).toBe(400);
+		expect(await bad({ weekStart: 8 })).toBe(400);
+		expect(await bad({ backdateDays: -1 })).toBe(400);
+		expect(await bad({ backdateDays: 31 })).toBe(400);
+		expect(await bad({ backdateDays: 1.5 })).toBe(400);
+		expect(await bad({ name: "ok", color: "red" })).toBe(400);
 	});
 });

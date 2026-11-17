@@ -297,6 +297,28 @@ export const householdView = z.object({
 	invites: z.array(z.object({ id: z.string(), role: roleEnum, expiresAt: z.string(), createdAt: z.string() })),
 });
 
+const isTimeZone = (tz: string) => {
+	try {
+		new Intl.DateTimeFormat("en", { timeZone: tz });
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+export const updateHouseholdBody = z
+	.object({
+		name: z.string().trim().min(1).max(80),
+		timezone: z.string().min(1).max(64).refine(isTimeZone, "unknown time zone"),
+		/** ISO weekday the week starts on: 1 = Monday … 7 = Sunday. */
+		weekStart: z.number().int().min(1).max(7),
+		/** How many days back anyone may complete something (an owner can always go further). */
+		backdateDays: z.number().int().min(0).max(30),
+	})
+	.partial()
+	.strict()
+	.refine((b) => Object.values(b).some((v) => v !== undefined), "provide at least one field");
+
 export const updateMemberBody = z
 	.object({ role: roleEnum, canCreateItems: z.boolean() })
 	.partial()

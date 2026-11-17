@@ -37,6 +37,7 @@ const DOMAIN_STATUS: Record<DomainError["code"], number> = {
 	future_date: 400,
 	backdate_not_allowed: 403,
 	last_owner: 409,
+	cannot_remove_self: 409,
 };
 
 export async function buildApp({

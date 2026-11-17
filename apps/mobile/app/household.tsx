@@ -1,14 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { Member } from "@lumo/api-client";
-import { shortDate, t } from "@lumo/i18n";
+import { shortDate, t, weekdayLong } from "@lumo/i18n";
 import { colors, radii, spacing } from "@lumo/tokens";
 import { Stack } from "expo-router";
 import { useState } from "react";
-import { Share, Switch, View } from "react-native";
-import { useCreateInvite, useHousehold, useMe, useRevokeInvite, useUpdateMember } from "../src/hooks";
+import { Alert, Share, Switch, View } from "react-native";
+import {
+	useCreateInvite,
+	useHousehold,
+	useMe,
+	useRemoveMember,
+	useRevokeInvite,
+	useUpdateHousehold,
+	useUpdateMember,
+} from "../src/hooks";
 import { currentServerUrl } from "../src/server";
 import { showToast } from "../src/store";
-import { Avatar, Button, Chip, font, Screen, T } from "../src/ui";
+import { Avatar, Button, Chip, Field, font, Screen, T } from "../src/ui";
 
 const ROLES = ["owner", "adult", "child"] as const;
 
@@ -35,6 +43,19 @@ function MemberRow({
 	first: boolean;
 }) {
 	const update = useUpdateMember();
+	const remove = useRemoveMember();
+	const confirmRemove = () =>
+		Alert.alert(t("household.member.remove"), t("household.member.removeConfirm", { name: member.displayName }), [
+			{ text: t("common.cancel"), style: "cancel" },
+			{
+				text: t("household.member.remove"),
+				style: "destructive",
+				onPress: () =>
+					remove.mutate(member.userId, {
+						onSuccess: () => showToast(t("household.member.removed", { name: member.displayName })),
+					}),
+			},
+		]);
 	const saved = () => showToast(t("household.saved"), 1500);
 	return (
 		<View style={first ? { gap: 10 } : { gap: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 14 }}>
@@ -78,9 +99,78 @@ function MemberRow({
 							/>
 						</View>
 					)}
+					{!isYou && (
+						<Button
+							label={t("household.member.remove")}
+							variant="ghost"
+							accessibilityLabel={t("household.member.removeFor", { name: member.displayName })}
+							disabled={remove.isPending}
+							onPress={confirmRemove}
+						/>
+					)}
 				</View>
 			)}
 		</View>
+	);
+}
+
+function SettingsSection() {
+	const household = useHousehold();
+	const update = useUpdateHousehold();
+	const h = household.data?.household;
+	const [name, setName] = useState<string | null>(null);
+	const [timezone, setTimezone] = useState<string | null>(null);
+	const [weekStart, setWeekStart] = useState<number | null>(null);
+	const [backdate, setBackdate] = useState<string | null>(null);
+	if (!h) return null;
+	return (
+		<Section title={t("household.settings.title")}>
+			<Field label={t("household.settings.name")} value={name ?? h.name} onChangeText={setName} maxLength={80} />
+			<Field
+				label={t("household.settings.timezone")}
+				value={timezone ?? h.timezone}
+				onChangeText={setTimezone}
+				autoCapitalize="none"
+				autoCorrect={false}
+			/>
+			<T style={{ fontSize: 12, color: colors.muted }}>{t("household.settings.timezoneHint")}</T>
+			<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.muted }}>{t("household.settings.weekStart")}</T>
+			<View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+				{[1, 2, 3, 4, 5, 6, 7].map((d) => (
+					<Chip key={d} label={weekdayLong(d)} on={(weekStart ?? h.weekStart) === d} onPress={() => setWeekStart(d)} />
+				))}
+			</View>
+			<Field
+				label={t("household.settings.backdate")}
+				value={backdate ?? String(h.backdateDays)}
+				onChangeText={setBackdate}
+				keyboardType="number-pad"
+			/>
+			<T style={{ fontSize: 12, color: colors.muted }}>{t("household.settings.backdateHint")}</T>
+			<Button
+				label={t("household.settings.save")}
+				disabled={update.isPending}
+				onPress={() =>
+					update.mutate(
+						{
+							name: (name ?? h.name).trim(),
+							timezone: (timezone ?? h.timezone).trim(),
+							weekStart: weekStart ?? h.weekStart,
+							backdateDays: Number(backdate ?? h.backdateDays),
+						},
+						{
+							onSuccess: () => {
+								setName(null);
+								setTimezone(null);
+								setWeekStart(null);
+								setBackdate(null);
+								showToast(t("household.saved"), 1500);
+							},
+						},
+					)
+				}
+			/>
+		</Section>
 	);
 }
 
@@ -178,6 +268,7 @@ export default function HouseholdScreen() {
 				))}
 			</Section>
 			{canManage && <InviteSection />}
+			{canManage && <SettingsSection />}
 		</Screen>
 	);
 }

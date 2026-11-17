@@ -22,10 +22,13 @@ WebBrowser.maybeCompleteAuthSession();
 function OidcButton({
 	issuer,
 	clientId,
+	invite,
 	onError,
 }: {
 	issuer: string;
 	clientId: string;
+	/** Invitation code typed in the join form, sent with the code exchange so the account joins that household. */
+	invite?: string;
 	onError: (message: string) => void;
 }) {
 	const qc = useQueryClient();
@@ -53,14 +56,16 @@ function OidcButton({
 				redirectUri,
 				nonce,
 				...(response.params.state ? { state: response.params.state } : {}),
+				...(invite ? { invite } : {}),
 			})
 			.then(async (tokens) => {
 				await saveTokens(tokens);
 				await qc.invalidateQueries({ queryKey: keys.me });
 			})
 			.catch((err: unknown) => onError(describeError(err)));
-	}, [response, request, redirectUri, nonce, qc, onError]);
+	}, [response, request, redirectUri, nonce, qc, onError, invite]);
 
+	// While joining, Authentik sign-in needs the invitation code (otherwise it is a plain sign-in).
 	return <Button label={t("auth.oidc")} disabled={!request} onPress={() => void promptAsync()} />;
 }
 
@@ -111,24 +116,29 @@ export default function Login() {
 					<T style={{ fontFamily: font.displayBold, fontSize: 32 }}>{t("app.name")}</T>
 					{error && <T style={{ color: colors.danger, fontFamily: font.semi }}>{error}</T>}
 					{config.isPending && <ActivityIndicator color={colors.primaryLink} />}
+					{joinMode && (
+						<>
+							<T style={{ fontFamily: font.bold, fontSize: 16 }}>{t("join.title")}</T>
+							<T style={{ fontSize: 14, color: colors.muted }}>{t("join.hint")}</T>
+							<Field
+								label={t("join.code")}
+								autoCapitalize="none"
+								autoCorrect={false}
+								value={inviteCode}
+								onChangeText={setInviteCode}
+							/>
+						</>
+					)}
 					{config.data?.oidc && config.data.oidcIssuer && config.data.oidcClientId && !config.data.setupRequired && (
-						<OidcButton issuer={config.data.oidcIssuer} clientId={config.data.oidcClientId} onError={setError} />
+						<OidcButton
+							issuer={config.data.oidcIssuer}
+							clientId={config.data.oidcClientId}
+							invite={joinMode ? inviteCode.trim() : undefined}
+							onError={setError}
+						/>
 					)}
 					{config.data?.local && (
 						<>
-							{joinMode && (
-								<>
-									<T style={{ fontFamily: font.bold, fontSize: 16 }}>{t("join.title")}</T>
-									<T style={{ fontSize: 14, color: colors.muted }}>{t("join.hint")}</T>
-									<Field
-										label={t("join.code")}
-										autoCapitalize="none"
-										autoCorrect={false}
-										value={inviteCode}
-										onChangeText={setInviteCode}
-									/>
-								</>
-							)}
 							{config.data.setupRequired && (
 								<Field label={t("auth.setup.householdName")} value={householdName} onChangeText={setHouseholdName} />
 							)}
@@ -150,14 +160,14 @@ export default function Login() {
 								onChangeText={setPassword}
 							/>
 							<Button label={joinMode ? t("join.submit") : t("auth.submit")} onPress={() => void submit()} />
-							{!config.data.setupRequired && (
-								<Button
-									label={joinMode ? t("join.back") : t("join.have")}
-									variant="ghost"
-									onPress={() => setJoining(!joining)}
-								/>
-							)}
 						</>
+					)}
+					{config.data && !config.data.setupRequired && (
+						<Button
+							label={joinMode ? t("join.back") : t("join.have")}
+							variant="ghost"
+							onPress={() => setJoining(!joining)}
+						/>
 					)}
 					<T style={{ fontSize: 13, color: colors.muted }}>{t("server.current", { url: currentServerUrl() })}</T>
 					<Button label={t("server.change")} variant="ghost" onPress={() => void changeServer()} />
