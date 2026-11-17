@@ -30,6 +30,10 @@ type QueryOf<P extends keyof paths, M extends keyof paths[P]> = paths[P][M] exte
 
 export type Role = "owner" | "adult" | "child";
 export type MeResponse = Response<"/api/v1/me", "get", 200>;
+export type HouseholdResponse = Response<"/api/v1/household", "get", 200>;
+export type Member = HouseholdResponse["members"][number];
+export type PendingInvite = HouseholdResponse["invites"][number];
+export type UpdateMemberInput = BodyOf<"/api/v1/members/{id}", "patch">;
 export type Item = Response<"/api/v1/items", "post", 201>;
 export type CreateItemInput = BodyOf<"/api/v1/items", "post">;
 export type UpdateItemInput = BodyOf<"/api/v1/items/{id}", "patch">;
@@ -164,7 +168,13 @@ export function createClient(options: ClientOptions) {
 		adjustCoins: (input: BodyOf<"/api/v1/ledger/adjustments", "post">) =>
 			request<Response<"/api/v1/ledger/adjustments", "post", 201>>("POST", "/ledger/adjustments", input),
 		getStats: (query: QueryOf<"/api/v1/stats", "get"> = {}) => request<StatsResponse>("GET", `/stats${qs(query)}`),
-		// --- Authentification
+		// --- Household
+		getHousehold: () => request<HouseholdResponse>("GET", "/household"),
+		updateMember: (id: string, input: UpdateMemberInput) => request<Member>("PATCH", `/members/${id}`, input),
+		createInvite: (role: "adult" | "child") =>
+			request<{ token: string; expiresAt: string }>("POST", "/household/invites", { role }),
+		revokeInvite: (id: string) => request<void>("DELETE", `/household/invites/${id}`),
+		// --- Authentication
 		getAuthConfig: () => request<AuthConfig>("GET", "/auth/config"),
 		getMe: () => request<MeResponse>("GET", "/me"),
 		setup: (input: {
@@ -174,6 +184,13 @@ export function createClient(options: ClientOptions) {
 			password: string;
 			client: "web" | "mobile";
 		}) => request<TokenPair | { ok: true }>("POST", "/auth/setup", input),
+		registerLocal: (input: {
+			invite: string;
+			displayName: string;
+			username: string;
+			password: string;
+			client: "web" | "mobile";
+		}) => request<TokenPair | { ok: true }>("POST", "/auth/local/register", input),
 		loginLocal: (input: { username: string; password: string; client: "web" | "mobile" }) =>
 			request<TokenPair | { ok: true }>("POST", "/auth/local/login", input),
 		exchangeMobile: (input: { code: string; codeVerifier: string; redirectUri: string; nonce: string }) =>

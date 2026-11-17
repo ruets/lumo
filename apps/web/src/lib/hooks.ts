@@ -15,6 +15,7 @@ export const keys = {
 	stats: (from: string, to: string) => ["stats", from, to] as const,
 	ledger: ["ledger"] as const,
 	pending: ["pending"] as const,
+	household: ["household"] as const,
 };
 
 export function describeError(err: unknown): string {
@@ -159,3 +160,21 @@ export function useLogout() {
 		qc.setQueryData(keys.me, null);
 	};
 }
+
+export const useHousehold = () => useQuery({ queryKey: keys.household, queryFn: () => api.getHousehold() });
+
+function useHouseholdWrite<V, R>(fn: (v: V) => Promise<R>) {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: fn,
+		onError: (err) => showToast(describeError(err)),
+		onSettled: () => void qc.invalidateQueries({ queryKey: keys.household }),
+	});
+}
+
+export const useUpdateMember = () =>
+	useHouseholdWrite(({ id, input }: { id: string; input: Parameters<typeof api.updateMember>[1] }) =>
+		api.updateMember(id, input),
+	);
+export const useCreateInvite = () => useHouseholdWrite((role: "adult" | "child") => api.createInvite(role));
+export const useRevokeInvite = () => useHouseholdWrite((id: string) => api.revokeInvite(id));
