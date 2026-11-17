@@ -20,6 +20,23 @@
 			"preset": "recommended"
 		}
 	},
+	"overrides": [
+		{
+			"includes": ["apps/mobile/**"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noReactNativeRawText": { "level": "error", "options": { "skip": ["T", "Button", "Title", "SvgText"] } }
+					}
+				}
+			}
+		}
+	],
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
