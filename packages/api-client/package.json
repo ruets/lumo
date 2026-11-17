@@ -16,6 +16,7 @@
 	"scripts": {
 		"build": "tsc -p tsconfig.build.json",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
-		"test": "vitest run --passWithNoTests"
+		"test": "vitest run --passWithNoTests",
+		"generate": "pnpm --package=typescript@5.9.3 --package=openapi-typescript@7.13.0 dlx openapi-typescript ../../apps/api/openapi.json -o src/generated/schema.ts"
 	}
 }
