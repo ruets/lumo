@@ -10,7 +10,7 @@ import {
 	periodStats,
 	scheduleSchema,
 } from "@lumo/domain";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import type { z } from "zod";
 import { completions, itemAssignees, items } from "../db/schema.js";
 import { errors } from "../errors.js";
@@ -59,9 +59,13 @@ export function getToday(db: DbOrTx, actor: ActorCtx, date: string | undefined, 
 						eq(completions.status, status),
 					),
 				)
-				.all().length;
-		const approved = onDay("approved");
-		const pending = onDay("pending");
+				.orderBy(desc(completions.completedAt))
+				.all()
+				.map((r) => r.id);
+		const approvedIds = onDay("approved");
+		const pendingIds = onDay("pending");
+		const approved = approvedIds.length;
+		const pending = pendingIds.length;
 
 		if (item.kind === "habit") {
 			if (!isDue(scheduleSchema.parse(item.schedule), day)) continue;
@@ -74,6 +78,8 @@ export function getToday(db: DbOrTx, actor: ActorCtx, date: string | undefined, 
 			pending,
 			target: item.targetPerPeriod,
 			done: approved >= item.targetPerPeriod,
+			// Validations annulables du jour ; le client annule la première.
+			completionIds: [...pendingIds, ...approvedIds],
 		});
 	}
 	entries.sort((a, b) => Number(b.item.pinned) - Number(a.item.pinned) || a.item.name.localeCompare(b.item.name, "fr"));

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUID } from "node:crypto";
 import { can, planTransfer } from "@lumo/domain";
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 import type { z } from "zod";
-import { ledgerEntries, memberships } from "../db/schema.js";
+import { completions, items, ledgerEntries, memberships, redemptions, rewards } from "../db/schema.js";
 import { errors } from "../errors.js";
 import type { ledgerEntryView } from "../schemas.js";
 import type { ActorCtx } from "./context.js";
@@ -13,7 +13,7 @@ import type { DbOrTx, Tx } from "./members.js";
 type EntryRow = typeof ledgerEntries.$inferSelect;
 type EntryView = z.input<typeof ledgerEntryView>;
 
-const toEntryView = (e: EntryRow): EntryView => ({
+const toEntryView = (e: EntryRow, label: string | null = null): EntryView => ({
 	id: e.id,
 	walletId: e.walletId,
 	amount: e.amount,
@@ -23,7 +23,44 @@ const toEntryView = (e: EntryRow): EntryView => ({
 	note: e.note,
 	createdBy: e.createdBy,
 	createdAt: e.createdAt.toISOString(),
+	label,
 });
+
+/** Nom de l'habitude, de la tâche ou de l'envie à l'origine des écritures (`refId` → nom). */
+function labelsFor(db: DbOrTx, rows: EntryRow[]): Map<string, string> {
+	const labels = new Map<string, string>();
+	const byCompletion = rows.filter((r) => (r.reason === "completion" || r.reason === "undo") && r.refId);
+	if (byCompletion.length > 0) {
+		const found = db
+			.select({ id: completions.id, name: items.name })
+			.from(completions)
+			.innerJoin(items, eq(items.id, completions.itemId))
+			.where(
+				inArray(
+					completions.id,
+					byCompletion.map((r) => r.refId as string),
+				),
+			)
+			.all();
+		for (const f of found) labels.set(f.id, f.name);
+	}
+	const byRedemption = rows.filter((r) => r.reason === "redemption" && r.refId);
+	if (byRedemption.length > 0) {
+		const found = db
+			.select({ id: redemptions.id, name: rewards.name })
+			.from(redemptions)
+			.innerJoin(rewards, eq(rewards.id, redemptions.rewardId))
+			.where(
+				inArray(
+					redemptions.id,
+					byRedemption.map((r) => r.refId as string),
+				),
+			)
+			.all();
+		for (const f of found) labels.set(f.id, f.name);
+	}
+	return labels;
+}
 
 /** Virement perso → cagnotte : deux écritures liées par `transfer_id`, solde vérifié dans la même transaction. */
 export function transferToShared(tx: Tx, actor: ActorCtx, amount: number, now: Date) {
@@ -117,11 +154,12 @@ export function listLedger(
 		.all();
 	const page = rows.slice(0, q.limit);
 	const last = page[page.length - 1];
+	const labels = labelsFor(db, page);
 	return {
 		wallet: q.wallet,
 		walletId,
 		balance: walletBalance(db, walletId),
-		entries: page.map(toEntryView),
+		entries: page.map((e) => toEntryView(e, e.refId ? (labels.get(e.refId) ?? null) : null)),
 		nextCursor: rows.length > q.limit && last ? encodeCursor(last) : null,
 	};
 }
