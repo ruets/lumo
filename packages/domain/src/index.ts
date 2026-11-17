@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 export * from "./dates.js";
 export * from "./permissions.js";
+export * from "./progress.js";
 export * from "./roles.js";
 export * from "./rules.js";
 export * from "./schedule.js";
