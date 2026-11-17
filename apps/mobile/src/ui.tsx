@@ -81,7 +81,7 @@ export function Ring({ pct, label }: { pct: number; label: string }) {
 				strokeDashoffset={Math.round(c * (1 - pct / 100) * 10) / 10}
 				transform="rotate(-90 46 46)"
 			/>
-			<SvgText x={46} y={52} textAnchor="middle" fill="#fff" fontFamily={font.displayBold} fontSize={18}>
+			<SvgText x={46} y={52} textAnchor="middle" fill="#fff" fontFamily={font.displayBold} fontSize={15}>
 				{`${pct}%`}
 			</SvgText>
 		</Svg>

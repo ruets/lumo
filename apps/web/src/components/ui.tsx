@@ -47,7 +47,7 @@ export function Ring({ pct, label }: { pct: number; label: string }) {
 				textAnchor="middle"
 				fill="#fff"
 				fontFamily="Unbounded, sans-serif"
-				fontSize="18"
+				fontSize="15"
 				fontWeight="700"
 			>
 				{pct}%
