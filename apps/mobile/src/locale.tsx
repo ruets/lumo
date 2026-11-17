@@ -51,7 +51,7 @@ export function LocaleBoundary({ children }: { children: ReactNode }) {
 	return <Fragment key={useLocaleState().locale}>{children}</Fragment>;
 }
 
-export function LanguagePicker() {
+export function LanguagePicker({ showTitle = true }: { showTitle?: boolean }) {
 	const { preference } = useLocaleState();
 	const options: { id: LocalePreference; label: string }[] = [
 		{ id: "auto", label: t("language.auto") },
@@ -59,7 +59,7 @@ export function LanguagePicker() {
 	];
 	return (
 		<View style={{ gap: 8 }}>
-			<T style={{ fontFamily: font.semi, fontSize: 12, color: colors.muted }}>{t("language.title")}</T>
+			{showTitle && <T style={{ fontFamily: font.semi, fontSize: 12, color: colors.muted }}>{t("language.title")}</T>}
 			<View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
 				{options.map((o) => (
 					<Pressable

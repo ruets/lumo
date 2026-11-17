@@ -28,6 +28,15 @@ export const fr: Record<MessageId, string> = {
 	"language.title": "Langue",
 	"language.auto": "Automatique",
 
+	"settings.title": "Réglages",
+	"settings.open": "Ouvrir les réglages",
+	"settings.account": "Compte",
+	"settings.household": "Foyer : {name}",
+	"settings.server": "Serveur",
+	"role.owner": "Propriétaire",
+	"role.adult": "Adulte",
+	"role.child": "Enfant",
+
 	"server.title": "Ton serveur Lumo",
 	"server.hint": "Saisis l’adresse de ton serveur, par exemple lumo.exemple.fr.",
 	"server.label": "Adresse du serveur",

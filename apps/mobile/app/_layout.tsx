@@ -42,6 +42,7 @@ function Routes() {
 		<Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0E1220" } }}>
 			<Stack.Protected guard={authed}>
 				<Stack.Screen name="(tabs)" />
+				<Stack.Screen name="settings" />
 			</Stack.Protected>
 			<Stack.Protected guard={hasServer && !authed}>
 				<Stack.Screen name="login" />

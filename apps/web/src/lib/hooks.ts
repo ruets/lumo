@@ -149,3 +149,13 @@ export function useReview() {
 		onSettled: () => invalidateAfterWrite(qc),
 	});
 }
+
+/** Signs out: revokes the session on the server (if reachable) and clears every cached query. */
+export function useLogout() {
+	const qc = useQueryClient();
+	return async () => {
+		await api.logout().catch(() => undefined);
+		qc.clear();
+		qc.setQueryData(keys.me, null);
+	};
+}

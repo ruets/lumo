@@ -210,7 +210,7 @@ Two separate apps (React for web, React Native/Expo for mobile). They share `dom
 
 Reference mock-up: the "Lumo — app mock-up" canvas (dark theme, Unbounded and Manrope fonts, purple `#6B4BF2`, coins in `#FFC857`). Colors live in `packages/tokens`; the web copies them into the Tailwind `@theme` of `apps/web/src/styles.css` (keep them in sync).
 
-- **Screens** (same on web and mobile): Today (day ring, still to do, pending approvals for adults, next wish), Habits (week, Habits/Tasks tabs, complete or undo, creation), Progress (week or month rate, bars, streaks, latest coins), Wishes (balance, redeem, creation). From 768 px up the web adds a sidebar and two-column grids; below that, the same tab bar as mobile.
+- **Screens** (same on web and mobile): Today (day ring, still to do, pending approvals for adults, next wish), Habits (week, Habits/Tasks tabs, complete or undo, creation), Progress (week or month rate, bars, streaks, latest coins), Wishes (balance, redeem, creation), Settings (account and sign-out, language, and on mobile the server), opened from the avatar next to the balance. From 768 px up the web adds a sidebar and two-column grids; below that, the same tab bar as mobile.
 - **Web**: TanStack Router routes in code (no file generation), TanStack Query, session cookie, optimistic updates rolled back if the server refuses. Fonts served by `@fontsource` (no CDN: the instance stays self-contained). Routes: `/`, `/habits`, `/progress`, `/wishes`.
 - **Mobile**: Expo Router (`Stack.Protected` for sign-in, tabs), TanStack Query with a cache persisted in AsyncStorage (24 h). **NativeWind is not used**: `StyleSheet` and the tokens are enough, with no extra dependency on the Metro/Tailwind chain.
 - **Shared logic**: `domain/progress` (`summarizeProgress`: bars, rates, trend), `i18n/format` (localised dates, schedule labels, error messages by code).
@@ -230,7 +230,7 @@ Reference mock-up: the "Lumo — app mock-up" canvas (dark theme, Unbounded and 
 - It is checked with `GET /auth/config`: the response must carry `app: "lumo"`, otherwise "does not answer like a Lumo server". 8-second timeout, otherwise "unreachable".
 - The Authentik issuer and `client_id` come from that same call: no more `EXPO_PUBLIC_OIDC_*` variables to compile into the APK. The `lumo://auth` redirect URI still has to be declared in Authentik.
 - The router has three states: no server (entry screen), server without a session (sign-in), session (tabs).
-- "Change server" (sign-in and bottom of the Today screen) erases tokens, cache and offline queue before forgetting the address: no data from one household is ever sent to another.
+- "Change server" (sign-in and the Settings screen) erases tokens, cache and offline queue before forgetting the address: no data from one household is ever sent to another.
 
 **API additions for the front ends**: `GET /today` returns `completionIds` (undoable completions of the day); `GET /rewards` returns `remaining` (redemptions still possible in the limit period); `GET /ledger` returns `label` (name of the habit, task or wish behind the entry). Progress: the week is the calendar week (future days empty), the month is the last 4 rolling weeks, each compared with the previous period (56-day window requested from `/stats`).
 

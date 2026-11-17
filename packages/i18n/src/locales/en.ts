@@ -30,6 +30,15 @@ export const en = {
 	"language.title": "Language",
 	"language.auto": "Automatic",
 
+	"settings.title": "Settings",
+	"settings.open": "Open settings",
+	"settings.account": "Account",
+	"settings.household": "Household: {name}",
+	"settings.server": "Server",
+	"role.owner": "Owner",
+	"role.adult": "Adult",
+	"role.child": "Child",
+
 	"server.title": "Your Lumo server",
 	"server.hint": "Enter your server address, for example lumo.example.com.",
 	"server.label": "Server address",
