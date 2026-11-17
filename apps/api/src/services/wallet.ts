@@ -86,7 +86,7 @@ export function transferToShared(tx: Tx, actor: ActorCtx, amount: number, now: D
 	return { transferId, balances: balancesFor(tx, actor) };
 }
 
-/** Ajustement manuel (owner) : `userId` null = cagnotte. Une note explique toujours l'ajustement. */
+/** Manual adjustment (owner): `userId` null = pot. A note always explains the adjustment. */
 export function adjust(
 	tx: Tx,
 	actor: ActorCtx,

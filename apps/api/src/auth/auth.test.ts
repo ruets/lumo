@@ -41,7 +41,7 @@ describe("fresh instance", () => {
 		const cookie = await setupOwner(ctx);
 		const me = (await get("/me", cookieHeader(cookie))).json();
 		expect(me.user.displayName).toBe("Alice");
-		expect(me.household.name).toBe("Les Dupont");
+		expect(me.household.name).toBe("The Smiths");
 		expect(me.role).toBe("owner");
 		expect(me.wallets.personal.balance).toBe(0);
 		expect(me.wallets.shared.balance).toBe(0);
@@ -55,8 +55,8 @@ describe("fresh instance", () => {
 		expect(res.json().code).toBe("setup_done");
 	});
 
-	it("rejette un mot de passe trop court", async () => {
-		const res = await post("/auth/setup", { ...OWNER, password: "court" });
+	it("rejects a password that is too short", async () => {
+		const res = await post("/auth/setup", { ...OWNER, password: "short" });
 		expect(res.statusCode).toBe(400);
 		expect(res.headers["content-type"]).toContain("application/problem+json");
 		expect(res.json().code).toBe("validation_error");
@@ -76,7 +76,7 @@ describe("connexion locale", () => {
 	});
 
 	it("rejects a wrong password and an unknown username with the same error", async () => {
-		const bad = await post("/auth/local/login", { username: "alice", password: "mauvais-mot-de-passe" });
+		const bad = await post("/auth/local/login", { username: "alice", password: "wrong-password-here" });
 		const unknown = await post("/auth/local/login", { username: "zoe", password: OWNER.password });
 		expect(bad.statusCode).toBe(401);
 		expect(unknown.statusCode).toBe(401);
@@ -213,7 +213,7 @@ describe("refresh token rotatif", () => {
 	});
 });
 
-describe("invitations et comptes locaux", () => {
+describe("invitations and local accounts", () => {
 	async function invite(role: "adult" | "child", cookie: string) {
 		const res = await post("/household/invites", { role }, { ...cookieHeader(cookie), ...ORIGIN });
 		expect(res.statusCode).toBe(201);
@@ -226,7 +226,7 @@ describe("invitations et comptes locaux", () => {
 			invite: "jeton-inexistant-123",
 			displayName: "Bob",
 			username: "bob",
-			password: "un-mot-de-passe-long",
+			password: "a-long-password-here",
 		});
 		expect(res.statusCode).toBe(400);
 		expect(res.json().code).toBe("invalid_invite");
@@ -239,19 +239,19 @@ describe("invitations et comptes locaux", () => {
 			invite: token,
 			displayName: "Bob",
 			username: "bob",
-			password: "un-mot-de-passe-long",
+			password: "a-long-password-here",
 		});
 		expect(res.statusCode).toBe(201);
 		const me = (await get("/me", cookieHeader(sessionCookie(res) as string))).json();
 		expect(me.role).toBe("child");
-		expect(me.household.name).toBe("Les Dupont");
+		expect(me.household.name).toBe("The Smiths");
 		expect(me.wallets.personal.id).toBeTruthy();
 
 		const again = await post("/auth/local/register", {
 			invite: token,
 			displayName: "Eve",
 			username: "eve",
-			password: "un-mot-de-passe-long",
+			password: "a-long-password-here",
 		});
 		expect(again.json().code).toBe("invalid_invite");
 	});
@@ -269,7 +269,7 @@ describe("invitations et comptes locaux", () => {
 			invite: token,
 			displayName: "Bob",
 			username: "bob",
-			password: "un-mot-de-passe-long",
+			password: "a-long-password-here",
 		});
 		expect(res.json().code).toBe("invalid_invite");
 	});
@@ -281,14 +281,14 @@ describe("invitations et comptes locaux", () => {
 			invite: token,
 			displayName: "Autre",
 			username: "alice",
-			password: "un-mot-de-passe-long",
+			password: "a-long-password-here",
 		});
 		expect(clash.statusCode).toBe(409);
 		const ok = await post("/auth/local/register", {
 			invite: token,
 			displayName: "Bob",
 			username: "bob",
-			password: "un-mot-de-passe-long",
+			password: "a-long-password-here",
 		});
 		expect(ok.statusCode).toBe(201);
 	});
@@ -300,7 +300,7 @@ describe("invitations et comptes locaux", () => {
 			invite: token,
 			displayName: "Bob",
 			username: "bob",
-			password: "un-mot-de-passe-long",
+			password: "a-long-password-here",
 		});
 		const res = await post(
 			"/household/invites",
@@ -366,7 +366,7 @@ describe("OIDC web (Authentik)", () => {
 		ctx.oidc.grant("c1", { sub: "sub-bob", name: "Bob" });
 		const res = await callback((await startLogin(token)).state, "c1");
 		const me = (await get("/me", cookieHeader(sessionCookie(res) as string))).json();
-		expect(me).toMatchObject({ role: "adult", household: { name: "Les Dupont" } });
+		expect(me).toMatchObject({ role: "adult", household: { name: "The Smiths" } });
 		// The sub is now linked: the same invitation no longer works, but Bob signs back in without it.
 		ctx.oidc.grant("c2", { sub: "sub-bob" });
 		const again = await callback((await startLogin()).state, "c2");
@@ -472,7 +472,7 @@ describe("OIDC mobile (expo-auth-session)", () => {
 });
 
 describe("divers", () => {
-	it("expose /healthz et /readyz", async () => {
+	it("exposes /healthz and /readyz", async () => {
 		expect((await ctx.app.inject({ url: "/healthz" })).json()).toEqual({ status: "ok" });
 		expect((await ctx.app.inject({ url: "/readyz" })).statusCode).toBe(200);
 	});

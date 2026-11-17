@@ -52,7 +52,7 @@ export const users = sqliteTable(
 		avatarUrl: text("avatar_url"),
 		/** Authentik `sub`; null for a purely local account. */
 		oidcSubject: text("oidc_subject"),
-		/** Compte local (secours) : identifiant de connexion, minuscules. */
+		/** Local account (fallback): sign-in username, lowercase. */
 		username: text("username"),
 		email: text("email"),
 		/** Argon2id hash; null for an OIDC-only account. */
@@ -295,7 +295,7 @@ export const devices = sqliteTable(
 );
 
 /**
- * Sessions : cookie web (`kind = 'web'`) ou refresh token mobile (`kind = 'mobile'`).
+ * Sessions: web cookie (`kind = 'web'`) or mobile refresh token (`kind = 'mobile'`).
  * The plain token is never stored, only its SHA-256 hash.
  * `previous_token_hash` detects reuse of a refresh token that was already rotated.
  */

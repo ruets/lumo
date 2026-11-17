@@ -17,7 +17,7 @@ beforeEach(() => {
 });
 
 describe("verifyServer", () => {
-	it("accepte un serveur Lumo et appelle /api/v1/auth/config", async () => {
+	it("accepts a Lumo server and calls /api/v1/auth/config", async () => {
 		fetchMock.mockResolvedValue(json({ app: "lumo", oidc: false, local: true, setupRequired: false }));
 		const cfg = await verifyServer("https://lumo.example.org");
 		expect(cfg.local).toBe(true);

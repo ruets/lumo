@@ -17,7 +17,7 @@ function seed() {
 	const hid = randomUUID();
 	const uid = randomUUID();
 	const wid = randomUUID();
-	exec("INSERT INTO households (id, name) VALUES (?, ?)", hid, "Foyer");
+	exec("INSERT INTO households (id, name) VALUES (?, ?)", hid, "Household");
 	exec("INSERT INTO users (id, display_name) VALUES (?, ?)", uid, "Alice");
 	exec("INSERT INTO wallets (id, household_id, kind, user_id) VALUES (?, ?, 'personal', ?)", wid, hid, uid);
 	return { hid, uid, wid };
@@ -97,7 +97,7 @@ describe("contraintes", () => {
 		).toThrow(/UNIQUE/);
 	});
 
-	it("refuse un username ou un sub OIDC en double", () => {
+	it("rejects a duplicate username or OIDC sub", () => {
 		exec("INSERT INTO users (id, display_name, username, oidc_subject) VALUES (?, 'A', 'alice', 'sub1')", randomUUID());
 		expect(() => exec("INSERT INTO users (id, display_name, username) VALUES (?, 'B', 'alice')", randomUUID())).toThrow(
 			/UNIQUE/,
@@ -111,7 +111,7 @@ describe("contraintes", () => {
 		const { hid, uid } = seed();
 		const itemId = randomUUID();
 		exec(
-			"INSERT INTO items (id, household_id, kind, name, created_by) VALUES (?, ?, 'habit', 'Eau', ?)",
+			"INSERT INTO items (id, household_id, kind, name, created_by) VALUES (?, ?, 'habit', 'Water', ?)",
 			itemId,
 			hid,
 			uid,

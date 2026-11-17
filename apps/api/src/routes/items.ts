@@ -86,7 +86,7 @@ export const itemRoutes = [
 	route({
 		method: "get",
 		url: "/completions",
-		summary: "Validations en attente d'accord (owner et adultes)",
+		summary: "Completions waiting for approval (owner and adults)",
 		tag: "Validations",
 		query: pendingQuery,
 		response: z.object({ completions: z.array(completionView) }),

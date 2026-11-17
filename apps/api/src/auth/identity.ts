@@ -25,7 +25,7 @@ export function resolveOidcLogin(
 	inviteToken: string | null,
 ): { userId: string } {
 	return writeTx(db, (tx) => {
-		const displayName = claims.name?.trim() || claims.email || "Membre";
+		const displayName = claims.name?.trim() || claims.email || "Member";
 
 		const existing = tx.select().from(users).where(eq(users.oidcSubject, claims.sub)).get();
 		if (existing) {

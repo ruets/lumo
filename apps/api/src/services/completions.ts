@@ -62,7 +62,7 @@ function getCompletion(db: DbOrTx, actor: ActorCtx, id: string) {
 		.innerJoin(items, eq(items.id, completions.itemId))
 		.where(and(eq(completions.id, id), eq(items.householdId, actor.householdId)))
 		.get();
-	if (!row) throw new AppError(404, "not_found", "Validation introuvable");
+	if (!row) throw new AppError(404, "not_found", "Completion not found");
 	return row;
 }
 

@@ -36,6 +36,7 @@ const DOMAIN_STATUS: Record<DomainError["code"], number> = {
 	invalid_amount: 400,
 	future_date: 400,
 	backdate_not_allowed: 403,
+	last_owner: 409,
 };
 
 export async function buildApp({
@@ -67,8 +68,8 @@ export async function buildApp({
 		if (status && status >= 400 && status < 500) {
 			return send(new AppError(status, "bad_request", "Invalid request", err.message));
 		}
-		req.log.error({ err }, "erreur interne");
-		return send(new AppError(500, "internal_error", "Erreur interne"));
+		req.log.error({ err }, "internal error");
+		return send(new AppError(500, "internal_error", "Internal error"));
 	});
 
 	app.get("/healthz", async () => ({ status: "ok" }));
@@ -99,14 +100,14 @@ export async function buildApp({
 			return reply
 				.code(404)
 				.type("application/problem+json")
-				.send(toProblem(new AppError(404, "not_found", "Ressource introuvable"), req.url));
+				.send(toProblem(new AppError(404, "not_found", "Resource not found"), req.url));
 		});
 	} else {
 		app.setNotFoundHandler((req, reply) =>
 			reply
 				.code(404)
 				.type("application/problem+json")
-				.send(toProblem(new AppError(404, "not_found", "Ressource introuvable"), req.url)),
+				.send(toProblem(new AppError(404, "not_found", "Resource not found"), req.url)),
 		);
 	}
 
