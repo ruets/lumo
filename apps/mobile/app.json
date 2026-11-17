@@ -1,0 +1,15 @@
+{
+	"expo": {
+		"name": "Lumo",
+		"slug": "lumo",
+		"version": "0.0.0",
+		"scheme": "lumo",
+		"orientation": "portrait",
+		"userInterfaceStyle": "light",
+		"android": {
+			"package": "app.lumo.mobile"
+		},
+		"plugins": ["expo-router", "expo-secure-store"],
+		"experiments": { "typedRoutes": false }
+	}
+}
