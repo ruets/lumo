@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUID } from "node:crypto";
 import type { Role } from "@lumo/domain";
-import { count, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { households, memberships, users, wallets } from "../db/schema.js";
 
@@ -30,25 +30,54 @@ export interface NewUser {
 	username?: string | null;
 	email?: string | null;
 	passwordHash?: string | null;
+	isSuperAdmin?: boolean;
 }
 
-/** Creates a user, their household membership and their personal wallet. */
-export function createMember(tx: Tx, input: { householdId: string; role: Role; user: NewUser }): string {
+/** Creates an account with no household. */
+export function createAccount(tx: Tx, user: NewUser): string {
 	const userId = randomUUID();
 	tx.insert(users)
 		.values({
 			id: userId,
-			displayName: input.user.displayName,
-			avatarUrl: input.user.avatarUrl ?? null,
-			oidcSubject: input.user.oidcSubject ?? null,
-			username: input.user.username ?? null,
-			email: input.user.email ?? null,
-			passwordHash: input.user.passwordHash ?? null,
+			displayName: user.displayName,
+			avatarUrl: user.avatarUrl ?? null,
+			oidcSubject: user.oidcSubject ?? null,
+			username: user.username ?? null,
+			email: user.email ?? null,
+			passwordHash: user.passwordHash ?? null,
+			isSuperAdmin: user.isSuperAdmin ?? false,
 		})
 		.run();
-	tx.insert(memberships).values({ householdId: input.householdId, userId, role: input.role }).run();
-	tx.insert(wallets).values({ id: randomUUID(), householdId: input.householdId, kind: "personal", userId }).run();
 	return userId;
+}
+
+/**
+ * Puts an existing account into a household with the given role. Their personal wallet there is reused when it
+ * exists (someone coming back finds their coins), created otherwise.
+ */
+export function joinHousehold(tx: Tx, input: { householdId: string; userId: string; role: Role }): void {
+	tx.insert(memberships).values({ householdId: input.householdId, userId: input.userId, role: input.role }).run();
+	const wallet = tx
+		.select({ id: wallets.id })
+		.from(wallets)
+		.where(and(eq(wallets.householdId, input.householdId), eq(wallets.userId, input.userId)))
+		.get();
+	if (!wallet) {
+		tx.insert(wallets)
+			.values({ id: randomUUID(), householdId: input.householdId, kind: "personal", userId: input.userId })
+			.run();
+	}
+}
+
+/** Creates an account together with its household membership and personal wallet. */
+export function createMember(tx: Tx, input: { householdId: string; role: Role; user: NewUser }): string {
+	const userId = createAccount(tx, input.user);
+	joinHousehold(tx, { householdId: input.householdId, userId, role: input.role });
+	return userId;
+}
+
+export function superAdminCount(db: DbOrTx): number {
+	return db.select({ n: count() }).from(users).where(eq(users.isSuperAdmin, true)).get()?.n ?? 0;
 }
 
 export function userCount(db: DbOrTx): number {

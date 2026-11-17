@@ -202,6 +202,7 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 		const user = db.select().from(users).where(eq(users.username, body.username)).get();
 		const ok = await verifyPassword(user?.passwordHash ?? null, body.password);
 		if (!user || !ok) throw errors.invalidCredentials();
+		if (user.disabledAt || user.deletedAt) throw errors.accountDisabled();
 		return reply.send(await startSession(reply, user.id, body.client));
 	});
 

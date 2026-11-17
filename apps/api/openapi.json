@@ -236,6 +236,1732 @@
 				]
 			}
 		},
+		"/api/v1/account": {
+			"get": {
+				"summary": "The signed-in account, with or without a household",
+				"tags": ["Account"],
+				"operationId": "getApiV1Account",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"user": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"displayName": {
+													"type": "string"
+												},
+												"avatarUrl": {
+													"type": ["string", "null"]
+												}
+											},
+											"required": ["id", "displayName", "avatarUrl"],
+											"additionalProperties": false
+										},
+										"isSuperAdmin": {
+											"type": "boolean"
+										},
+										"household": {
+											"anyOf": [
+												{
+													"type": "object",
+													"properties": {
+														"id": {
+															"type": "string"
+														},
+														"name": {
+															"type": "string"
+														},
+														"role": {
+															"type": "string",
+															"enum": ["owner", "adult", "child"]
+														}
+													},
+													"required": ["id", "name", "role"],
+													"additionalProperties": false
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"canCreateHousehold": {
+											"type": "boolean"
+										}
+									},
+									"required": ["user", "isSuperAdmin", "household", "canCreateHousehold"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/households": {
+			"post": {
+				"summary": "Create a household and become its owner (when the instance allows it)",
+				"tags": ["Account"],
+				"operationId": "postApiV1Households",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 80
+									}
+								},
+								"required": ["name"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success"
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/household/join": {
+			"post": {
+				"summary": "Join a household with an invitation code (accounts without a household)",
+				"tags": ["Account"],
+				"operationId": "postApiV1HouseholdJoin",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"code": {
+										"type": "string",
+										"minLength": 10,
+										"maxLength": 200
+									}
+								},
+								"required": ["code"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success"
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/household/leave": {
+			"post": {
+				"summary": "Leave the household and keep the account (never the last owner)",
+				"tags": ["Account"],
+				"operationId": "postApiV1HouseholdLeave",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "No content"
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/admin/users": {
+			"get": {
+				"summary": "All accounts with their household and status",
+				"tags": ["Admin"],
+				"operationId": "getApiV1AdminUsers",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"users": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"displayName": {
+														"type": "string"
+													},
+													"username": {
+														"type": ["string", "null"]
+													},
+													"oidc": {
+														"type": "boolean"
+													},
+													"isSuperAdmin": {
+														"type": "boolean"
+													},
+													"disabled": {
+														"type": "boolean"
+													},
+													"household": {
+														"anyOf": [
+															{
+																"type": "object",
+																"properties": {
+																	"id": {
+																		"type": "string"
+																	},
+																	"name": {
+																		"type": "string"
+																	},
+																	"role": {
+																		"type": "string",
+																		"enum": ["owner", "adult", "child"]
+																	}
+																},
+																"required": ["id", "name", "role"],
+																"additionalProperties": false
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"createdAt": {
+														"type": "string"
+													}
+												},
+												"required": [
+													"id",
+													"displayName",
+													"username",
+													"oidc",
+													"isSuperAdmin",
+													"disabled",
+													"household",
+													"createdAt"
+												],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["users"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"post": {
+				"summary": "Create a local account without a household",
+				"tags": ["Admin"],
+				"operationId": "postApiV1AdminUsers",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"displayName": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 80
+									},
+									"username": {
+										"type": "string",
+										"pattern": "^[a-z0-9._-]{3,32}$"
+									},
+									"password": {
+										"type": "string",
+										"minLength": 10,
+										"maxLength": 200
+									}
+								},
+								"required": ["displayName", "username", "password"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"displayName": {
+											"type": "string"
+										},
+										"username": {
+											"type": ["string", "null"]
+										},
+										"oidc": {
+											"type": "boolean"
+										},
+										"isSuperAdmin": {
+											"type": "boolean"
+										},
+										"disabled": {
+											"type": "boolean"
+										},
+										"household": {
+											"anyOf": [
+												{
+													"type": "object",
+													"properties": {
+														"id": {
+															"type": "string"
+														},
+														"name": {
+															"type": "string"
+														},
+														"role": {
+															"type": "string",
+															"enum": ["owner", "adult", "child"]
+														}
+													},
+													"required": ["id", "name", "role"],
+													"additionalProperties": false
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"createdAt": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"id",
+										"displayName",
+										"username",
+										"oidc",
+										"isSuperAdmin",
+										"disabled",
+										"household",
+										"createdAt"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/admin/users/{id}": {
+			"patch": {
+				"summary": "Grant or remove the super admin role, disable or enable an account",
+				"tags": ["Admin"],
+				"operationId": "patchApiV1AdminUsersId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"isSuperAdmin": {
+										"type": "boolean"
+									},
+									"disabled": {
+										"type": "boolean"
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"displayName": {
+											"type": "string"
+										},
+										"username": {
+											"type": ["string", "null"]
+										},
+										"oidc": {
+											"type": "boolean"
+										},
+										"isSuperAdmin": {
+											"type": "boolean"
+										},
+										"disabled": {
+											"type": "boolean"
+										},
+										"household": {
+											"anyOf": [
+												{
+													"type": "object",
+													"properties": {
+														"id": {
+															"type": "string"
+														},
+														"name": {
+															"type": "string"
+														},
+														"role": {
+															"type": "string",
+															"enum": ["owner", "adult", "child"]
+														}
+													},
+													"required": ["id", "name", "role"],
+													"additionalProperties": false
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"createdAt": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"id",
+										"displayName",
+										"username",
+										"oidc",
+										"isSuperAdmin",
+										"disabled",
+										"household",
+										"createdAt"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"delete": {
+				"summary": "Delete an account (credentials erased, history kept)",
+				"tags": ["Admin"],
+				"operationId": "deleteApiV1AdminUsersId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "No content"
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/admin/users/{id}/household": {
+			"post": {
+				"summary": "Put an account without a household into one",
+				"tags": ["Admin"],
+				"operationId": "postApiV1AdminUsersIdHousehold",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"householdId": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 100
+									},
+									"role": {
+										"type": "string",
+										"enum": ["owner", "adult", "child"]
+									}
+								},
+								"required": ["householdId", "role"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"displayName": {
+											"type": "string"
+										},
+										"username": {
+											"type": ["string", "null"]
+										},
+										"oidc": {
+											"type": "boolean"
+										},
+										"isSuperAdmin": {
+											"type": "boolean"
+										},
+										"disabled": {
+											"type": "boolean"
+										},
+										"household": {
+											"anyOf": [
+												{
+													"type": "object",
+													"properties": {
+														"id": {
+															"type": "string"
+														},
+														"name": {
+															"type": "string"
+														},
+														"role": {
+															"type": "string",
+															"enum": ["owner", "adult", "child"]
+														}
+													},
+													"required": ["id", "name", "role"],
+													"additionalProperties": false
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"createdAt": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"id",
+										"displayName",
+										"username",
+										"oidc",
+										"isSuperAdmin",
+										"disabled",
+										"household",
+										"createdAt"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"delete": {
+				"summary": "Take an account out of its household, keeping the account",
+				"tags": ["Admin"],
+				"operationId": "deleteApiV1AdminUsersIdHousehold",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "No content"
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/admin/households": {
+			"get": {
+				"summary": "All households with their member count",
+				"tags": ["Admin"],
+				"operationId": "getApiV1AdminHouseholds",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"households": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"memberCount": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"createdAt": {
+														"type": "string"
+													}
+												},
+												"required": ["id", "name", "memberCount", "createdAt"],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["households"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"post": {
+				"summary": "Create an empty household",
+				"tags": ["Admin"],
+				"operationId": "postApiV1AdminHouseholds",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 80
+									}
+								},
+								"required": ["name"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"memberCount": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"createdAt": {
+											"type": "string"
+										}
+									},
+									"required": ["id", "name", "memberCount", "createdAt"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/admin/households/{id}": {
+			"patch": {
+				"summary": "Rename a household",
+				"tags": ["Admin"],
+				"operationId": "patchApiV1AdminHouseholdsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 80
+									}
+								},
+								"required": ["name"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"memberCount": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"createdAt": {
+											"type": "string"
+										}
+									},
+									"required": ["id", "name", "memberCount", "createdAt"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"delete": {
+				"summary": "Delete an empty household",
+				"tags": ["Admin"],
+				"operationId": "deleteApiV1AdminHouseholdsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "No content"
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/admin/households/{id}/pot/adjustments": {
+			"post": {
+				"summary": "Adjust a household pot with an explanatory note",
+				"tags": ["Admin"],
+				"operationId": "postApiV1AdminHouseholdsIdPotAdjustments",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"amount": {
+										"type": "integer",
+										"minimum": -9007199254740991,
+										"maximum": 9007199254740991
+									},
+									"note": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 500
+									}
+								},
+								"required": ["amount", "note"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"balance": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										}
+									},
+									"required": ["balance"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/admin/settings": {
+			"get": {
+				"summary": "Instance settings",
+				"tags": ["Admin"],
+				"operationId": "getApiV1AdminSettings",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"householdCreation": {
+											"type": "string",
+											"enum": ["anyone", "admins"]
+										}
+									},
+									"required": ["householdCreation"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"patch": {
+				"summary": "Change the instance settings",
+				"tags": ["Admin"],
+				"operationId": "patchApiV1AdminSettings",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"householdCreation": {
+										"type": "string",
+										"enum": ["anyone", "admins"]
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"householdCreation": {
+											"type": "string",
+											"enum": ["anyone", "admins"]
+										}
+									},
+									"required": ["householdCreation"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
 		"/api/v1/household": {
 			"get": {
 				"summary": "The household, its members and (owner only) pending invitations",

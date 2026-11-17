@@ -8,17 +8,28 @@ import type { Config } from "../config.js";
 import type { Db } from "../db/client.js";
 import { idempotencyKeys } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
-import { type ActorCtx, loadActor } from "../services/context.js";
+import { type AccountCtx, type ActorCtx, loadAccount, loadActor } from "../services/context.js";
 import { type Tx, writeTx } from "../services/members.js";
 
-export interface RouteContext<B, Q, P> {
+/**
+ * `household` routes need a household (403 `no_household` otherwise) and receive an `actor`;
+ * `account` routes work for any signed-in account, with or without a household, and receive an `account`.
+ */
+export type RouteScope = "household" | "account";
+
+export interface RouteContext<B, Q, P, A = ActorCtx, X = undefined> {
 	/** Write: the request's `BEGIN IMMEDIATE` transaction. Read: the database (same queries, no writes). */
 	db: Tx;
 	config: Config;
-	actor: ActorCtx;
+	/** The caller inside their household (household routes), or `null` on account routes when they have none. */
+	actor: A;
+	/** The caller's account (always set on account routes). */
+	account: AccountCtx;
 	body: B;
 	query: Q;
 	params: P;
+	/** Result of the route's async `prepare` step (for work that cannot run inside the sync transaction). */
+	prepared: X;
 	now: Date;
 }
 
@@ -31,11 +42,16 @@ export interface RouteDef {
 	query?: z.ZodType;
 	params?: z.ZodType;
 	response?: z.ZodType;
+	scope: RouteScope;
+	/** Only super admins may call it (403 otherwise). */
+	superAdmin: boolean;
+	// biome-ignore lint/suspicious/noExplicitAny: typed by `route()`
+	prepare?: (body: any) => Promise<unknown>;
 	status: number;
 	/** Write: run in a single transaction, `Idempotency-Key` required. */
 	idempotent: boolean;
 	// biome-ignore lint/suspicious/noExplicitAny: the fine-grained typing is carried by `route()`
-	handler: (ctx: RouteContext<any, any, any>) => unknown;
+	handler: (ctx: RouteContext<any, any, any, any, any>) => unknown;
 }
 
 type Out<T extends z.ZodType | undefined> = T extends z.ZodType ? z.output<T> : undefined;
@@ -46,7 +62,15 @@ export function route<
 	TQ extends z.ZodType | undefined = undefined,
 	TP extends z.ZodType | undefined = undefined,
 	TR extends z.ZodType | undefined = undefined,
+	S extends RouteScope = "household",
+	X = undefined,
 >(def: {
+	/** Defaults to `household`. */
+	scope?: S;
+	/** Restricts the route to super admins. */
+	superAdmin?: boolean;
+	/** Async step run before the transaction (password hashing...); its result reaches the handler as `prepared`. */
+	prepare?: (body: Out<TB>) => Promise<X>;
 	method: RouteDef["method"];
 	url: string;
 	summary: string;
@@ -57,8 +81,10 @@ export function route<
 	response?: TR;
 	status?: number;
 	idempotent?: boolean;
-	// biome-ignore lint/suspicious/noConfusingVoidType: handlers without a body (204) return void
-	handler: (ctx: RouteContext<Out<TB>, Out<TQ>, Out<TP>>) => TR extends z.ZodType ? z.input<TR> : undefined | void;
+	handler: (
+		ctx: RouteContext<Out<TB>, Out<TQ>, Out<TP>, S extends "account" ? ActorCtx | null : ActorCtx, X>,
+	) => // biome-ignore lint/suspicious/noConfusingVoidType: handlers without a body (204) return void
+	TR extends z.ZodType ? z.input<TR> : undefined | void;
 }): RouteDef {
 	const write = def.method !== "get";
 	return {
@@ -70,6 +96,9 @@ export function route<
 		...(def.query ? { query: def.query } : {}),
 		...(def.params ? { params: def.params } : {}),
 		...(def.response ? { response: def.response } : {}),
+		scope: def.scope ?? "household",
+		superAdmin: def.superAdmin ?? false,
+		...(def.prepare ? { prepare: def.prepare as RouteDef["prepare"] } : {}),
 		status: def.status ?? 200,
 		idempotent: def.idempotent ?? write,
 		handler: def.handler as RouteDef["handler"],
@@ -113,11 +142,15 @@ export function registerRoutes(
 				const query = parse(def.query, req.query, "query");
 				const body = parse(def.body, req.body, "body");
 				const now = clock();
+				const prepared = def.prepare ? await def.prepare(body) : undefined;
 
 				const run = (dbx: Tx) => {
+					const account = loadAccount(dbx, userId);
+					if (!account) throw errors.unauthenticated();
+					if (def.superAdmin && !account.isSuperAdmin) throw errors.forbidden("Super admins only");
 					const actor = loadActor(dbx, userId);
-					if (!actor) throw errors.unauthenticated();
-					return def.handler({ db: dbx, config, actor, body, query, params, now });
+					if (!actor && def.scope === "household") throw errors.noHousehold();
+					return def.handler({ db: dbx, config, actor, account, body, query, params, prepared, now });
 				};
 				const reply_ = (r: Stored) => (r.status === 204 ? reply.code(204).send() : reply.code(r.status).send(r.body));
 

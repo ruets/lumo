@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { and, eq, isNull } from "drizzle-orm";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Config } from "../config.js";
 import type { Db } from "../db/client.js";
+import { users } from "../db/schema.js";
 import { errors } from "../errors.js";
 import { findWebSession, isSessionActive } from "./sessions.js";
 import { verifyAccessToken } from "./tokens.js";
@@ -22,7 +24,20 @@ declare module "fastify" {
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+/** A disabled or deleted account is never authenticated, whatever session it still holds. */
+const isUserActive = (db: Db, userId: string) =>
+	db
+		.select({ id: users.id })
+		.from(users)
+		.where(and(eq(users.id, userId), isNull(users.disabledAt), isNull(users.deletedAt)))
+		.get() !== undefined;
+
 async function authenticate(req: FastifyRequest, db: Db, config: Config): Promise<AuthContext | null> {
+	const auth = await resolveSession(req, db, config);
+	return auth && isUserActive(db, auth.userId) ? auth : null;
+}
+
+async function resolveSession(req: FastifyRequest, db: Db, config: Config): Promise<AuthContext | null> {
 	const header = req.headers.authorization;
 	if (header?.startsWith("Bearer ")) {
 		const claims = await verifyAccessToken(config.SESSION_SECRET, header.slice(7));

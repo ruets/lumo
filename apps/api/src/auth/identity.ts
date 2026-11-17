@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { type Role, roleAfterOidcLogin } from "@lumo/domain";
+import { isSuperAdminAfterOidcLogin, type Role } from "@lumo/domain";
 import { eq } from "drizzle-orm";
 import type { Config } from "../config.js";
 import type { Db } from "../db/client.js";
 import { memberships, users } from "../db/schema.js";
 import { errors } from "../errors.js";
-import { createHousehold, createMember, userCount, usernameTaken, writeTx } from "../services/members.js";
+import {
+	createHousehold,
+	createMember,
+	joinHousehold,
+	userCount,
+	usernameTaken,
+	writeTx,
+} from "../services/members.js";
 import { findValidInvite, markInviteUsed } from "./invites.js";
 import type { OidcClaims } from "./oidc.js";
 
@@ -13,9 +20,9 @@ const adminGroup = (config: Config) => config.OIDC_ADMIN_GROUP ?? null;
 
 /**
  * Links an OIDC identity to a Lumo user.
- *  1. Known `sub` → sign-in (role promoted to `owner` if in the admin group).
- *  2. Invitation provided → account created with the invitation's role.
- *  3. No user in the instance → first account, `owner`, new household.
+ *  1. Known `sub` → sign-in (super admin if in the admin group; a disabled account is refused).
+ *  2. Invitation provided → account created and put in the invitation's household with its role.
+ *  3. No user in the instance → first account: super admin, with a new household.
  *  4. Otherwise → refused: no account without an invitation.
  */
 export function resolveOidcLogin(
@@ -29,20 +36,24 @@ export function resolveOidcLogin(
 
 		const existing = tx.select().from(users).where(eq(users.oidcSubject, claims.sub)).get();
 		if (existing) {
-			const membership = tx.select().from(memberships).where(eq(memberships.userId, existing.id)).get();
-			if (membership) {
-				const role = roleAfterOidcLogin(membership.role, claims.groups, adminGroup(config));
-				if (role !== membership.role) {
-					tx.update(memberships).set({ role }).where(eq(memberships.userId, existing.id)).run();
-				}
-			}
-			if (claims.picture && claims.picture !== existing.avatarUrl) {
-				tx.update(users).set({ avatarUrl: claims.picture }).where(eq(users.id, existing.id)).run();
+			if (existing.deletedAt) throw errors.invitationRequired();
+			if (existing.disabledAt) throw errors.accountDisabled();
+			const isSuperAdmin = isSuperAdminAfterOidcLogin(existing.isSuperAdmin, claims.groups, adminGroup(config));
+			const set: Partial<typeof users.$inferInsert> = {};
+			if (isSuperAdmin !== existing.isSuperAdmin) set.isSuperAdmin = isSuperAdmin;
+			if (claims.picture && claims.picture !== existing.avatarUrl) set.avatarUrl = claims.picture;
+			if (Object.keys(set).length > 0) tx.update(users).set(set).where(eq(users.id, existing.id)).run();
+			// An account without a household that follows an invitation link joins that household.
+			if (inviteToken && !tx.select().from(memberships).where(eq(memberships.userId, existing.id)).get()) {
+				const invite = findValidInvite(tx, inviteToken);
+				joinHousehold(tx, { householdId: invite.householdId, userId: existing.id, role: invite.role });
+				markInviteUsed(tx, invite.id, existing.id);
 			}
 			return { userId: existing.id };
 		}
 
 		const newUser = {
+			isSuperAdmin: isSuperAdminAfterOidcLogin(false, claims.groups, adminGroup(config)),
 			displayName,
 			avatarUrl: claims.picture,
 			oidcSubject: claims.sub,
@@ -51,15 +62,14 @@ export function resolveOidcLogin(
 
 		if (inviteToken) {
 			const invite = findValidInvite(tx, inviteToken);
-			const role = roleAfterOidcLogin(invite.role, claims.groups, adminGroup(config));
-			const userId = createMember(tx, { householdId: invite.householdId, role, user: newUser });
+			const userId = createMember(tx, { householdId: invite.householdId, role: invite.role, user: newUser });
 			markInviteUsed(tx, invite.id, userId);
 			return { userId };
 		}
 
 		if (userCount(tx) === 0) {
 			const householdId = createHousehold(tx, { name: "My household" });
-			return { userId: createMember(tx, { householdId, role: "owner", user: newUser }) };
+			return { userId: createMember(tx, { householdId, role: "owner", user: { ...newUser, isSuperAdmin: true } }) };
 		}
 
 		throw errors.invitationRequired();
@@ -72,7 +82,7 @@ export interface LocalAccountInput {
 	passwordHash: string;
 }
 
-/** First account of the instance (local account): creates the household and its `owner`. */
+/** First account of the instance (local account): the super admin, who also creates the household and owns it. */
 export function setupInstance(db: Db, input: LocalAccountInput & { householdName: string }): { userId: string } {
 	return writeTx(db, (tx) => {
 		if (userCount(tx) > 0) throw errors.setupDone();
@@ -80,7 +90,12 @@ export function setupInstance(db: Db, input: LocalAccountInput & { householdName
 		const userId = createMember(tx, {
 			householdId,
 			role: "owner",
-			user: { displayName: input.displayName, username: input.username, passwordHash: input.passwordHash },
+			user: {
+				displayName: input.displayName,
+				username: input.username,
+				passwordHash: input.passwordHash,
+				isSuperAdmin: true,
+			},
 		});
 		return { userId };
 	});

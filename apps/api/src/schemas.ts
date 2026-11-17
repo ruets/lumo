@@ -325,3 +325,76 @@ export const updateMemberBody = z
 	.partial()
 	.strict()
 	.refine((b) => b.role !== undefined || b.canCreateItems !== undefined, "provide role and/or canCreateItems");
+
+// ---- Account (with or without a household) and administration ------------------------------
+
+export const accountView = z.object({
+	user: z.object({ id: z.string(), displayName: z.string(), avatarUrl: z.string().nullable() }),
+	isSuperAdmin: z.boolean(),
+	/** `null` when the account is not in a household. */
+	household: z.object({ id: z.string(), name: z.string(), role: roleEnum }).nullable(),
+	/** Whether this account may create a household (instance setting). */
+	canCreateHousehold: z.boolean(),
+});
+
+export const createHouseholdBody = z.object({ name: z.string().trim().min(1).max(80) }).strict();
+export const joinHouseholdBody = z.object({ code: z.string().min(10).max(200) }).strict();
+
+export const adminUserView = z.object({
+	id: z.string(),
+	displayName: z.string(),
+	username: z.string().nullable(),
+	/** Signs in through the identity provider. */
+	oidc: z.boolean(),
+	isSuperAdmin: z.boolean(),
+	disabled: z.boolean(),
+	household: z.object({ id: z.string(), name: z.string(), role: roleEnum }).nullable(),
+	createdAt: z.string(),
+});
+export const adminUsersView = z.object({ users: z.array(adminUserView) });
+
+export const adminCreateUserBody = z
+	.object({
+		displayName: z.string().trim().min(1).max(80),
+		username: z
+			.string()
+			.trim()
+			.toLowerCase()
+			.regex(/^[a-z0-9._-]{3,32}$/, "3 to 32 characters: letters, digits, dot, hyphen, underscore"),
+		password: z.string().min(10).max(200),
+	})
+	.strict();
+
+export const adminUpdateUserBody = z
+	.object({ isSuperAdmin: z.boolean(), disabled: z.boolean() })
+	.partial()
+	.strict()
+	.refine((b) => b.isSuperAdmin !== undefined || b.disabled !== undefined, "provide isSuperAdmin and/or disabled");
+
+export const adminAssignHouseholdBody = z.object({ householdId: z.string().min(1).max(100), role: roleEnum }).strict();
+
+export const adminHouseholdView = z.object({
+	id: z.string(),
+	name: z.string(),
+	memberCount: z.number().int(),
+	createdAt: z.string(),
+});
+export const adminHouseholdsView = z.object({ households: z.array(adminHouseholdView) });
+export const adminHouseholdBody = z.object({ name: z.string().trim().min(1).max(80) }).strict();
+export const potAdjustmentBody = z
+	.object({
+		amount: z
+			.number()
+			.int()
+			.refine((n) => n !== 0, "the amount cannot be zero"),
+		note: text(500),
+	})
+	.strict();
+export const potBalanceView = z.object({ balance: z.number().int() });
+
+export const instanceSettingsView = z.object({ householdCreation: z.enum(["anyone", "admins"]) });
+export const updateInstanceSettingsBody = z
+	.object({ householdCreation: z.enum(["anyone", "admins"]) })
+	.partial()
+	.strict()
+	.refine((b) => b.householdCreation !== undefined, "provide at least one field");
