@@ -20,6 +20,10 @@ ENV NODE_ENV=production \
     PORT=3000 \
     DATABASE_PATH=/data/lumo.db \
     WEB_DIST_PATH=/app/web
+# The runtime only runs `node dist/server.js`: drop the package managers shipped with the base image.
+# They are not needed in production and their bundled dependencies are a recurring source of scanner findings.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 WORKDIR /app
 COPY --from=build --chown=node:node /out /app
 COPY --from=build --chown=node:node /repo/apps/web/dist /app/web

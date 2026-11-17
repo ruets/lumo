@@ -252,6 +252,7 @@ Reference mock-up: the "Lumo — app mock-up" canvas (dark theme, Unbounded and 
 - Migrations applied at `app` startup, the only process that writes.
 - JSON logs (pino), `/healthz`, `/readyz`, optional `/metrics`.
 - Images built by CI, scanned (Trivy), versioned with SemVer.
+- The runtime image drops npm, corepack and yarn (it only runs `node dist/server.js`): their bundled dependencies were the only findings of the Trivy scan on the base image.
 - **GitHub Actions CI** (`.github/workflows`):
   - `ci.yml`: lint, typecheck, tests (OpenAPI freshness and the offline queue included), build; then the single web + API image, tested (the container starts, serves the web app and answers the API) and scanned by Trivy; then published to `ghcr.io/<owner>/<repo>` on every push to `main` (`edge` and the SHA) and on a `vX.Y.Z` tag (SemVer and `latest`). Pull requests never publish. `linux/amd64` image only (an ARM build under emulation is too slow).
   - `mobile.yml`: Android APK built on the runner (`expo prebuild` then Gradle), no Expo account or secret, signed with Expo's debug key (enough to install it on your own phones). Available as an artifact, and attached to the GitHub release on a tag. Since the server address is chosen in the app, a single APK serves every household. `versionCode` = run number (`apps/mobile/app.config.ts`). EAS Build remains possible to publish to a store someday.
