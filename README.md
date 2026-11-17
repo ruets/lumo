@@ -14,7 +14,7 @@ cp .env.example apps/api/.env   # then fill in SESSION_SECRET; PUBLIC_URL=http:/
 pnpm dev                        # API :3000 and web :5173 (the web app proxies /api)
 ```
 
-On first launch, open http://localhost:5173: the screen offers to create the household (local owner account) or to sign in with Authentik if OIDC is configured.
+On first launch, open http://localhost:5173: the screen offers to create the first account (a super admin) and its household or to sign in with Authentik if OIDC is configured.
 
 ```bash
 pnpm lint        # Biome
@@ -39,4 +39,4 @@ CI publishes the single web + API image to `ghcr.io/<owner>/<repo>` (`edge` on e
 
 In Authentik: a single OIDC application (confidential client) with two redirect URIs, `PUBLIC_URL/api/v1/auth/callback` for the web and `lumo://auth` for mobile. Mobile never holds the secret: it gets the code through PKCE and the API exchanges it.
 
-Optional: set `OIDC_ADMIN_GROUP` to the name of an Authentik group (for example `lumo-admins`) so its members become owners when they sign in. Without it, nobody is promoted from their groups.
+Optional: set `OIDC_ADMIN_GROUP` to the name of an Authentik group (for example `lumo-admins`) so its members become super admins when they sign in. Without it, nobody is promoted from their groups. The first account created on an instance is always a super admin; super admins manage accounts and households from the Administration page and never see household content.

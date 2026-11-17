@@ -49,6 +49,14 @@ export type UpdateRewardInput = BodyOf<"/api/v1/rewards/{id}", "patch">;
 export type LedgerPage = Response<"/api/v1/ledger", "get", 200>;
 export type StatsResponse = Response<"/api/v1/stats", "get", 200>;
 
+export type AccountResponse = Response<"/api/v1/account", "get", 200>;
+export type AdminUser = Response<"/api/v1/admin/users", "get", 200>["users"][number];
+export type AdminHousehold = Response<"/api/v1/admin/households", "get", 200>["households"][number];
+export type InstanceSettings = Response<"/api/v1/admin/settings", "get", 200>;
+export type UpdateInstanceSettingsInput = BodyOf<"/api/v1/admin/settings", "patch">;
+export type CreateAdminUserInput = BodyOf<"/api/v1/admin/users", "post">;
+export type UpdateAdminUserInput = BodyOf<"/api/v1/admin/users/{id}", "patch">;
+
 export interface AuthConfig {
 	/** Identification marker: proves an address is a Lumo server. */
 	app: "lumo";
@@ -177,6 +185,30 @@ export function createClient(options: ClientOptions) {
 		createInvite: (role: "adult" | "child") =>
 			request<{ token: string; expiresAt: string }>("POST", "/household/invites", { role }),
 		revokeInvite: (id: string) => request<void>("DELETE", `/household/invites/${id}`),
+		leaveHousehold: () => request<void>("POST", "/household/leave"),
+		// --- Account without (or with) a household
+		getAccount: () => request<AccountResponse>("GET", "/account"),
+		createHousehold: (name: string) => request<void>("POST", "/households", { name }),
+		joinHousehold: (code: string) => request<void>("POST", "/household/join", { code }),
+		// --- Administration (super admins)
+		adminListUsers: () => request<Response<"/api/v1/admin/users", "get", 200>>("GET", "/admin/users"),
+		adminCreateUser: (input: CreateAdminUserInput) => request<AdminUser>("POST", "/admin/users", input),
+		adminUpdateUser: (id: string, input: UpdateAdminUserInput) =>
+			request<AdminUser>("PATCH", `/admin/users/${id}`, input),
+		adminDeleteUser: (id: string) => request<void>("DELETE", `/admin/users/${id}`),
+		adminAssignHousehold: (id: string, input: BodyOf<"/api/v1/admin/users/{id}/household", "post">) =>
+			request<AdminUser>("POST", `/admin/users/${id}/household`, input),
+		adminRemoveFromHousehold: (id: string) => request<void>("DELETE", `/admin/users/${id}/household`),
+		adminListHouseholds: () => request<Response<"/api/v1/admin/households", "get", 200>>("GET", "/admin/households"),
+		adminCreateHousehold: (name: string) => request<AdminHousehold>("POST", "/admin/households", { name }),
+		adminRenameHousehold: (id: string, name: string) =>
+			request<AdminHousehold>("PATCH", `/admin/households/${id}`, { name }),
+		adminDeleteHousehold: (id: string) => request<void>("DELETE", `/admin/households/${id}`),
+		adminAdjustPot: (id: string, input: { amount: number; note: string }) =>
+			request<{ balance: number }>("POST", `/admin/households/${id}/pot/adjustments`, input),
+		adminGetSettings: () => request<InstanceSettings>("GET", "/admin/settings"),
+		adminUpdateSettings: (input: UpdateInstanceSettingsInput) =>
+			request<InstanceSettings>("PATCH", "/admin/settings", input),
 		// --- Authentication
 		getAuthConfig: () => request<AuthConfig>("GET", "/auth/config"),
 		getMe: () => request<MeResponse>("GET", "/me"),
