@@ -26,8 +26,9 @@ export function describeError(err: unknown): string {
 export const useAuthConfig = () => useQuery({ queryKey: keys.authConfig, queryFn: () => api.getAuthConfig() });
 
 /** `null` = non connecté (401). */
-export const useMe = () =>
+export const useMe = (enabled = true) =>
 	useQuery({
+		enabled,
 		queryKey: keys.me,
 		queryFn: async () => {
 			try {

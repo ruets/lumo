@@ -96,8 +96,13 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 		return oidc;
 	}
 
+	// Public et sans authentification : l'appli mobile l'interroge pour vérifier qu'une adresse est bien un
+	// serveur Lumo (`app`) et pour apprendre comment s'y connecter. L'issuer et le client_id ne sont pas secrets.
 	app.get("/auth/config", async () => ({
+		app: "lumo" as const,
 		oidc: config.oidcEnabled,
+		oidcIssuer: config.OIDC_ISSUER ?? null,
+		oidcClientId: config.OIDC_CLIENT_ID ?? null,
 		local: config.LOCAL_AUTH_ENABLED,
 		setupRequired: config.LOCAL_AUTH_ENABLED && userCount(db) === 0,
 	}));

@@ -24,7 +24,7 @@ pnpm --filter @lumo/api openapi:generate     # spec OpenAPI après changement de
 pnpm --filter @lumo/api-client generate      # client typé depuis la spec
 ```
 
-Mobile (Android) : `cd apps/mobile && pnpm dev`, avec `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_OIDC_ISSUER` et `EXPO_PUBLIC_OIDC_CLIENT_ID`.
+Mobile : `cd apps/mobile && pnpm dev`. L'appli demande l'adresse du serveur au premier lancement (un seul APK pour tous les foyers) ; `EXPO_PUBLIC_API_URL` ne fait que pré-remplir ce champ en développement.
 
 ## Déploiement
 

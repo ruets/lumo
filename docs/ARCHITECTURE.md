@@ -159,17 +159,17 @@ Règles précisées à l'implémentation :
 - **CSRF :** en plus de `SameSite=Lax`, toute requête qui modifie l'état avec un cookie doit porter un `Origin` égal à `PUBLIC_URL`.
 - **Mots de passe :** Argon2id (19 Mio, 2 passes), 10 caractères minimum, limitation de débit sur les routes d'auth.
 
-| Méthode et chemin                                     | Rôle                                                                    |
-| ----------------------------------------------------- | ----------------------------------------------------------------------- |
-| `GET /auth/config`                                    | Méthodes de connexion actives, `setupRequired`                          |
-| `GET /auth/login?invite=`                             | Redirige vers Authentik (PKCE S256, state, nonce)                       |
-| `GET /auth/callback`                                  | Retour d'Authentik ; ouvre la session web et redirige vers `PUBLIC_URL` |
-| `POST /auth/mobile/exchange`                          | Code PKCE obtenu par `expo-auth-session` contre une paire de jetons     |
-| `POST /auth/refresh`                                  | Rotation du refresh token mobile                                        |
-| `POST /auth/setup`                                    | Premier compte local (instance vide)                                    |
-| `POST /auth/local/login`, `POST /auth/local/register` | Connexion locale ; création d'un compte local sur invitation            |
-| `POST /auth/logout`                                   | Révoque la session courante                                             |
-| `POST /household/invites`                             | Crée une invitation (owner)                                             |
+| Méthode et chemin                                     | Rôle                                                                                                                                        |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /auth/config`                                    | Public. `app: "lumo"` (identifie le serveur), méthodes actives, `oidcIssuer` et `oidcClientId` (publics, jamais le secret), `setupRequired` |
+| `GET /auth/login?invite=`                             | Redirige vers Authentik (PKCE S256, state, nonce)                                                                                           |
+| `GET /auth/callback`                                  | Retour d'Authentik ; ouvre la session web et redirige vers `PUBLIC_URL`                                                                     |
+| `POST /auth/mobile/exchange`                          | Code PKCE obtenu par `expo-auth-session` contre une paire de jetons                                                                         |
+| `POST /auth/refresh`                                  | Rotation du refresh token mobile                                                                                                            |
+| `POST /auth/setup`                                    | Premier compte local (instance vide)                                                                                                        |
+| `POST /auth/local/login`, `POST /auth/local/register` | Connexion locale ; création d'un compte local sur invitation                                                                                |
+| `POST /auth/logout`                                   | Révoque la session courante                                                                                                                 |
+| `POST /household/invites`                             | Crée une invitation (owner)                                                                                                                 |
 
 | Action                                                                 | owner | adult | child       |
 | ---------------------------------------------------------------------- | ----- | ----- | ----------- |
@@ -211,6 +211,14 @@ Maquette de référence : le canvas « Lumo — maquette de l'appli » (thème s
 - Envoi au démarrage, au retour au premier plan, au retour du réseau, à chaque saisie et au tirer-pour-rafraîchir.
 - Annuler une validation encore en file la retire localement ; annuler une validation déjà envoyée exige le réseau.
 - Échanger une envie, approuver et créer exigent aussi le réseau (le serveur doit juger le solde).
+
+**Choix du serveur (mobile).** Le web est servi par l'API, son serveur est son origine. Le mobile n'a pas d'origine : au premier lancement, l'utilisateur saisit l'adresse de son serveur, un seul APK sert tous les foyers.
+
+- L'adresse est normalisée (`lumo.exemple.fr` devient `https://lumo.exemple.fr`, slash final et requête retirés). HTTPS obligatoire ; le HTTP en clair n'est accepté que pour `localhost` et les réseaux privés (développement). Sur un APK de production, Android bloque de toute façon le HTTP en clair.
+- Elle est vérifiée avec `GET /auth/config` : la réponse doit porter `app: "lumo"`, sinon « ne répond pas comme un serveur Lumo ». Délai de 8 s, sinon « injoignable ».
+- L'issuer et le `client_id` Authentik viennent de ce même appel : plus de variables `EXPO_PUBLIC_OIDC_*` à compiler dans l'APK. La redirect URI `lumo://auth` reste à déclarer dans Authentik.
+- Le routeur a trois états : pas de serveur (écran de saisie), serveur sans session (connexion), session (onglets).
+- « Changer de serveur » (connexion et bas de l'écran Aujourd'hui) efface jetons, cache et file hors ligne avant d'oublier l'adresse : aucune donnée d'un foyer n'est envoyée à un autre.
 
 **Ajouts à l'API pour les fronts** : `GET /today` renvoie `completionIds` (validations annulables du jour) ; `GET /rewards` renvoie `remaining` (échanges encore possibles dans la période de limite) ; `GET /ledger` renvoie `label` (nom de l'habitude, tâche ou envie à l'origine de l'écriture). Progrès : la semaine est la semaine calendaire (jours futurs vides), le mois est les 4 dernières semaines glissantes, chacun comparé à la période précédente (fenêtre de 56 jours demandée à `/stats`).
 

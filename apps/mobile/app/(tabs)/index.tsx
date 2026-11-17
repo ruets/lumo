@@ -4,6 +4,7 @@ import { longDate, t } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useRouter } from "expo-router";
 import { Pressable, View } from "react-native";
+import { changeServer, logout } from "../../src/account";
 import {
 	statsWindow,
 	useBalance,
@@ -18,6 +19,7 @@ import {
 import { awaitingReview, itemMeta } from "../../src/itemMeta";
 import { enqueueCompletion, useQueue } from "../../src/queue";
 import { useRefresh } from "../../src/refresh";
+import { currentServerUrl } from "../../src/server";
 import { BalanceChip, Bar, Button, CoinIcon, font, Reward, Ring, Screen, T, Title } from "../../src/ui";
 
 function RemainingRow({ e, onTap }: { e: TodayItem; onTap: () => void }) {
@@ -216,6 +218,14 @@ export default function TodayScreen() {
 					</T>
 				</Pressable>
 			)}
+
+			<View style={{ gap: 8, marginTop: 8 }}>
+				<T style={{ fontSize: 12, color: colors.muted }}>{t("server.current", { url: currentServerUrl() })}</T>
+				<View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+					<Button label={t("auth.logout")} variant="ghost" onPress={() => void logout()} />
+					<Button label={t("server.change")} variant="ghost" onPress={() => void changeServer()} />
+				</View>
+			</View>
 		</Screen>
 	);
 }

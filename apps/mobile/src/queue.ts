@@ -49,6 +49,13 @@ export async function enqueueCompletion(itemId: string, date: string): Promise<v
 	void flushQueue();
 }
 
+/** Vide la file (changement de serveur ou de compte : ces validations ne sont plus les nôtres). */
+export async function clearQueue(): Promise<void> {
+	await loadQueue();
+	store.set([]);
+	await persist();
+}
+
 /** Annule localement la dernière validation en file de cet élément ce jour-là (rien n'a été envoyé). */
 export async function dequeueLast(itemId: string, date: string): Promise<boolean> {
 	await loadQueue();
