@@ -11,6 +11,7 @@ import { showToast } from "./store";
 export const keys = {
 	authConfig: ["auth-config"] as const,
 	me: ["me"] as const,
+	account: ["account"] as const,
 	today: (date?: string) => ["today", date ?? "now"] as const,
 	items: ["items"] as const,
 	rewards: ["rewards"] as const,
@@ -26,7 +27,23 @@ export function describeError(err: unknown): string {
 
 export const useAuthConfig = () => useQuery({ queryKey: keys.authConfig, queryFn: () => api.getAuthConfig() });
 
-/** `null` = not signed in (401). */
+/** The signed-in account, with or without a household. `null` = not signed in (401). */
+export const useAccount = (enabled = true) =>
+	useQuery({
+		enabled,
+		queryKey: keys.account,
+		queryFn: async () => {
+			try {
+				return await api.getAccount();
+			} catch (err) {
+				if (err instanceof ApiError && err.status === 401) return null;
+				throw err;
+			}
+		},
+		staleTime: 30_000,
+	});
+
+/** Profile inside the household. `null` = not signed in, or not (any more) in a household. */
 export const useMe = (enabled = true) =>
 	useQuery({
 		enabled,
@@ -35,7 +52,7 @@ export const useMe = (enabled = true) =>
 			try {
 				return await api.getMe();
 			} catch (err) {
-				if (err instanceof ApiError && err.status === 401) return null;
+				if (err instanceof ApiError && (err.status === 401 || err.code === "no_household")) return null;
 				throw err;
 			}
 		},
@@ -144,3 +161,14 @@ export function useUpdateHousehold() {
 		onSettled: () => void qc.invalidateQueries(),
 	});
 }
+
+export const useLeaveHousehold = () => useWrite(() => api.leaveHousehold());
+export const useJoinHousehold = () => useWrite((code: string) => api.joinHousehold(code));
+export const useCreateOwnHousehold = () => useWrite((name: string) => api.createHousehold(name));
+
+export const useAdminUsers = () => useQuery({ queryKey: ["admin", "users"], queryFn: () => api.adminListUsers() });
+export const useAdminHouseholds = () =>
+	useQuery({ queryKey: ["admin", "households"], queryFn: () => api.adminListHouseholds() });
+export const useAdminSettings = () =>
+	useQuery({ queryKey: ["admin", "settings"], queryFn: () => api.adminGetSettings() });
+export { useWrite as useAdminWrite };

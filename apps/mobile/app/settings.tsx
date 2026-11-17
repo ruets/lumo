@@ -2,9 +2,9 @@
 import { t } from "@lumo/i18n";
 import { colors, radii, spacing } from "@lumo/tokens";
 import { Stack, useRouter } from "expo-router";
-import { Pressable, View } from "react-native";
+import { Alert, Pressable, View } from "react-native";
 import { changeServer, logout } from "../src/account";
-import { useMe } from "../src/hooks";
+import { useAccount, useLeaveHousehold, useMe } from "../src/hooks";
 import { LanguagePicker } from "../src/locale";
 import { currentServerUrl } from "../src/server";
 import { Button, font, Screen, T } from "../src/ui";
@@ -23,6 +23,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function SettingsScreen() {
 	const me = useMe().data;
 	const router = useRouter();
+	const leave = useLeaveHousehold();
+	const isSuperAdmin = useAccount().data?.isSuperAdmin ?? false;
 	return (
 		<Screen topInset={false}>
 			<Stack.Screen
@@ -43,6 +45,17 @@ export default function SettingsScreen() {
 						{t(`role.${me.role}` as const)} · {t("settings.household", { name: me.household.name })}
 					</T>
 					<Button label={t("auth.logout")} variant="ghost" onPress={() => void logout()} />
+					<Button
+						label={t("household.leave")}
+						variant="ghost"
+						disabled={leave.isPending}
+						onPress={() =>
+							Alert.alert(t("household.leave"), t("household.leaveConfirm", { name: me.household.name }), [
+								{ text: t("common.cancel"), style: "cancel" },
+								{ text: t("household.leave"), style: "destructive", onPress: () => leave.mutate() },
+							])
+						}
+					/>
 				</Section>
 			)}
 			<Pressable
@@ -61,6 +74,24 @@ export default function SettingsScreen() {
 				<T style={{ fontFamily: font.bold, fontSize: 15 }}>{t("household.open")}</T>
 				<T style={{ fontSize: 20, color: colors.muted }}>›</T>
 			</Pressable>
+			{isSuperAdmin && (
+				<Pressable
+					accessibilityRole="button"
+					onPress={() => router.push("/admin")}
+					style={{
+						minHeight: 52,
+						flexDirection: "row",
+						alignItems: "center",
+						justifyContent: "space-between",
+						backgroundColor: colors.surface,
+						borderRadius: radii.md,
+						paddingHorizontal: spacing.md,
+					}}
+				>
+					<T style={{ fontFamily: font.bold, fontSize: 15 }}>{t("admin.open")}</T>
+					<T style={{ fontSize: 20, color: colors.muted }}>›</T>
+				</Pressable>
+			)}
 			<Section title={t("language.title")}>
 				<LanguagePicker showTitle={false} />
 			</Section>
