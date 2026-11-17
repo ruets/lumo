@@ -197,6 +197,28 @@ export function Segmented<V extends string>({
 	);
 }
 
+/** Small selectable pill (frequency, weekday, role…). */
+export function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+	return (
+		<Pressable
+			accessibilityRole="button"
+			accessibilityState={{ selected: on }}
+			onPress={onPress}
+			style={{
+				minHeight: 44,
+				minWidth: 44,
+				paddingHorizontal: 12,
+				borderRadius: 12,
+				alignItems: "center",
+				justifyContent: "center",
+				backgroundColor: on ? colors.primary : colors.surfaceRaised,
+			}}
+		>
+			<T style={{ fontFamily: font.bold, fontSize: 14, color: on ? "#fff" : colors.textSoft }}>{label}</T>
+		</Pressable>
+	);
+}
+
 export function Button({
 	label,
 	variant = "primary",

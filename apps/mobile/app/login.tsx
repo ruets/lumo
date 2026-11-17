@@ -72,6 +72,10 @@ export default function Login() {
 	const [password, setPassword] = useState("");
 	const [displayName, setDisplayName] = useState("");
 	const [householdName, setHouseholdName] = useState("");
+	// "I have an invitation": join an existing household with the code someone shared.
+	const [joining, setJoining] = useState(false);
+	const [inviteCode, setInviteCode] = useState("");
+	const joinMode = joining && !config.data?.setupRequired;
 
 	const done = () => qc.invalidateQueries({ queryKey: keys.me });
 
@@ -81,7 +85,15 @@ export default function Login() {
 			const tokens = (
 				config.data?.setupRequired
 					? await api.setup({ householdName, displayName, username, password, client: "mobile" })
-					: await api.loginLocal({ username, password, client: "mobile" })
+					: joinMode
+						? await api.registerLocal({
+								invite: inviteCode.trim(),
+								displayName: displayName.trim(),
+								username: username.trim(),
+								password,
+								client: "mobile",
+							})
+						: await api.loginLocal({ username, password, client: "mobile" })
 			) as TokenPair;
 			await saveTokens(tokens);
 			await done();
@@ -104,11 +116,24 @@ export default function Login() {
 					)}
 					{config.data?.local && (
 						<>
-							{config.data.setupRequired && (
+							{joinMode && (
 								<>
-									<Field label={t("auth.setup.householdName")} value={householdName} onChangeText={setHouseholdName} />
-									<Field label={t("auth.setup.displayName")} value={displayName} onChangeText={setDisplayName} />
+									<T style={{ fontFamily: font.bold, fontSize: 16 }}>{t("join.title")}</T>
+									<T style={{ fontSize: 14, color: colors.muted }}>{t("join.hint")}</T>
+									<Field
+										label={t("join.code")}
+										autoCapitalize="none"
+										autoCorrect={false}
+										value={inviteCode}
+										onChangeText={setInviteCode}
+									/>
 								</>
+							)}
+							{config.data.setupRequired && (
+								<Field label={t("auth.setup.householdName")} value={householdName} onChangeText={setHouseholdName} />
+							)}
+							{(config.data.setupRequired || joinMode) && (
+								<Field label={t("auth.setup.displayName")} value={displayName} onChangeText={setDisplayName} />
 							)}
 							<Field
 								label={t("auth.username")}
@@ -124,7 +149,14 @@ export default function Login() {
 								value={password}
 								onChangeText={setPassword}
 							/>
-							<Button label={t("auth.submit")} onPress={() => void submit()} />
+							<Button label={joinMode ? t("join.submit") : t("auth.submit")} onPress={() => void submit()} />
+							{!config.data.setupRequired && (
+								<Button
+									label={joinMode ? t("join.back") : t("join.have")}
+									variant="ghost"
+									onPress={() => setJoining(!joining)}
+								/>
+							)}
 						</>
 					)}
 					<T style={{ fontSize: 13, color: colors.muted }}>{t("server.current", { url: currentServerUrl() })}</T>

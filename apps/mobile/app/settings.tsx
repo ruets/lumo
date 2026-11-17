@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { t } from "@lumo/i18n";
 import { colors, radii, spacing } from "@lumo/tokens";
-import { Stack } from "expo-router";
-import { View } from "react-native";
+import { Stack, useRouter } from "expo-router";
+import { Pressable, View } from "react-native";
 import { changeServer, logout } from "../src/account";
 import { useMe } from "../src/hooks";
 import { LanguagePicker } from "../src/locale";
@@ -22,6 +22,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function SettingsScreen() {
 	const me = useMe().data;
+	const router = useRouter();
 	return (
 		<Screen topInset={false}>
 			<Stack.Screen
@@ -44,6 +45,22 @@ export default function SettingsScreen() {
 					<Button label={t("auth.logout")} variant="ghost" onPress={() => void logout()} />
 				</Section>
 			)}
+			<Pressable
+				accessibilityRole="button"
+				onPress={() => router.push("/household")}
+				style={{
+					minHeight: 52,
+					flexDirection: "row",
+					alignItems: "center",
+					justifyContent: "space-between",
+					backgroundColor: colors.surface,
+					borderRadius: radii.md,
+					paddingHorizontal: spacing.md,
+				}}
+			>
+				<T style={{ fontFamily: font.bold, fontSize: 15 }}>{t("household.open")}</T>
+				<T style={{ fontSize: 20, color: colors.muted }}>›</T>
+			</Pressable>
 			<Section title={t("language.title")}>
 				<LanguagePicker showTitle={false} />
 			</Section>
