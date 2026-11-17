@@ -69,6 +69,7 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
 		OIDC_ISSUER: "https://idp.test/application/o/lumo/",
 		OIDC_CLIENT_ID: "lumo",
 		OIDC_CLIENT_SECRET: "secret",
+		OIDC_ADMIN_GROUP: "lumo-admins",
 		NODE_ENV: "test",
 		...env,
 	});

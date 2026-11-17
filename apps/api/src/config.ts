@@ -16,8 +16,12 @@ const envSchema = z
 		OIDC_ISSUER: z.url().optional(),
 		OIDC_CLIENT_ID: z.string().min(1).optional(),
 		OIDC_CLIENT_SECRET: z.string().min(1).optional(),
-		/** Authentik group whose members become `owner`. Empty = disabled. */
-		OIDC_ADMIN_GROUP: z.string().default("lumo-admins"),
+		/** Authentik group whose members become `owner`. Unset or empty = disabled (opt-in). */
+		OIDC_ADMIN_GROUP: z
+			.string()
+			.trim()
+			.transform((v) => v || undefined)
+			.optional(),
 		/** Folder of the web build to serve; unset = no front end served. */
 		WEB_DIST_PATH: z.string().optional(),
 	})

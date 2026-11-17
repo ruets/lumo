@@ -391,6 +391,19 @@ describe("OIDC web (Authentik)", () => {
 		expect(role()).toBe(2);
 	});
 
+	it("without OIDC_ADMIN_GROUP nobody is promoted, whatever groups they have", async () => {
+		await ctx.close();
+		ctx = await createTestContext({ OIDC_ADMIN_GROUP: "" });
+		const owner = await setupOwner(ctx);
+		const token = (await post("/household/invites", { role: "adult" }, { ...cookieHeader(owner), ...ORIGIN })).json()
+			.token;
+		ctx.oidc.grant("c1", { sub: "sub-bob", groups: ["lumo-admins"] });
+		await callback((await startLogin(token)).state, "c1");
+		ctx.oidc.grant("c2", { sub: "sub-bob", groups: ["lumo-admins"] });
+		await callback((await startLogin()).state, "c2");
+		expect(ctx.db.select().from(memberships).where(eq(memberships.role, "owner")).all()).toHaveLength(1);
+	});
+
 	it("the state is single-use and mandatory", async () => {
 		ctx.oidc.grant("c1", { sub: "sub-1" });
 		const { state } = await startLogin();

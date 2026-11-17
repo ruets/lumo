@@ -156,7 +156,7 @@ Rules clarified during implementation:
 - **Web:** the API acts as a BFF, `HttpOnly`, `Secure`, `SameSite=Lax` cookie, no token in the browser.
 - **Mobile:** `expo-auth-session` (PKCE) then `/auth/mobile/exchange` → 15-minute access token + rotating refresh token in `expo-secure-store`.
 - **Local accounts** as a fallback (Argon2id), can be disabled with `LOCAL_AUTH_ENABLED`.
-- **Linking:** by `sub`, or by invitation. No account creation without an invitation. Authentik group `lumo-admins` → `owner` (optional, `OIDC_ADMIN_GROUP`, promotion only, never demotion).
+- **Linking:** by `sub`, or by invitation. No account creation without an invitation. Members of the Authentik group named by `OIDC_ADMIN_GROUP` (for example `lumo-admins`) become `owner`: opt-in, disabled when the variable is unset or empty, promotion only, never demotion.
 - **First start:** as long as no user exists, the first person to sign in (OIDC) or to call `POST /auth/setup` (local account) creates the household and becomes `owner`. After that, no account without an invitation.
 - **Sessions:** web = opaque token in a cookie, 30 days; mobile = 15-minute HS256 JWT access token (tied to a session, so revocable) + 60-day rotating refresh token. If an already used refresh token is replayed, the whole session is revoked.
 - **CSRF:** on top of `SameSite=Lax`, any request that changes state with a cookie must carry an `Origin` equal to `PUBLIC_URL`.
