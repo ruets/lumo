@@ -1,0 +1,9 @@
+# Réplication continue de /data/lumo.db + snapshot quotidien, conservés 7 jours.
+# La destination vient de .env : LITESTREAM_REPLICA_URL (ex. s3://bucket/lumo, ou
+# sftp://user@hote/chemin) et, pour S3, LITESTREAM_ACCESS_KEY_ID / LITESTREAM_SECRET_ACCESS_KEY.
+dbs:
+  - path: /data/lumo.db
+    replicas:
+      - url: ${LITESTREAM_REPLICA_URL}
+        snapshot-interval: 24h
+        retention: 168h
