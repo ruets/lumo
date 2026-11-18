@@ -207,3 +207,31 @@ export async function makeHabit(by: { api: Api }, over: Record<string, unknown> 
 	if (res.statusCode !== 201) throw new Error(`habit creation refused : ${res.body}`);
 	return res.json() as { id: string; assigneeIds: string[] };
 }
+
+/**
+ * Someone creates their own local account with a code (a household invitation, a guardian's code or a super
+ * admin's account invitation) and is signed in.
+ */
+export async function signUp(
+	ctx: TestContext,
+	token: string,
+	username: string,
+	password = "a-long-password-here",
+): Promise<{ id: string; api: Api; cookie: string; status: number }> {
+	const res = await ctx.app.inject({
+		method: "POST",
+		url: "/api/v1/auth/local/register",
+		payload: { invite: token, displayName: username, username, password },
+	});
+	const cookie = sessionCookie(res) ?? "";
+	const account = cookie ? await ctx.app.inject({ url: "/api/v1/account", headers: cookieHeader(cookie) }) : null;
+	return { id: (account?.json().user?.id as string) ?? "", api: api(ctx, cookie), cookie, status: res.statusCode };
+}
+
+/** A local account with no household, created by its owner through a super admin's account invitation. */
+export async function newLoneAccount(ctx: TestContext, admin: { api: Api }, username: string) {
+	const invite = (await admin.api.post("/admin/account-invites")).json();
+	const created = await signUp(ctx, invite.token, username);
+	if (created.status !== 201) throw new Error(`sign-up refused (${created.status})`);
+	return created;
+}

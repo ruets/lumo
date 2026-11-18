@@ -95,49 +95,29 @@ function UserRow({ user, households }: { user: AdminUser; households: AdminHouse
 	);
 }
 
-function CreateUserForm() {
-	const create = useAdminWrite((input: Parameters<typeof api.adminCreateUser>[0]) => api.adminCreateUser(input));
-	function submit(e: FormEvent<HTMLFormElement>) {
-		e.preventDefault();
-		const form = e.currentTarget;
-		const f = new FormData(form);
-		create.mutate(
-			{
-				displayName: String(f.get("displayName") ?? "").trim(),
-				username: String(f.get("username") ?? "").trim(),
-				password: String(f.get("password") ?? ""),
-			},
-			{
-				onSuccess: () => {
-					form.reset();
-					saved();
-				},
-			},
-		);
-	}
+/** A super admin invites someone: they create their own account (Authentik or local) with the code. */
+function InviteUser() {
+	const [token, setToken] = useState<string | null>(null);
+	const make = useAdminWrite(() => api.adminCreateAccountInvite());
 	return (
-		<form onSubmit={submit} className="grid gap-3 border-t border-line pt-3">
-			<h3 className="m-0 text-sm font-bold">{t("admin.user.create")}</h3>
-			<Field label={t("admin.user.displayName")}>
-				<input name="displayName" required maxLength={80} className={fieldClass} />
-			</Field>
-			<Field label={t("auth.username")}>
-				<input name="username" required minLength={3} maxLength={32} autoComplete="off" className={fieldClass} />
-			</Field>
-			<Field label={t("auth.password")}>
-				<input
-					name="password"
-					type="password"
-					required
-					minLength={10}
-					autoComplete="new-password"
-					className={fieldClass}
-				/>
-			</Field>
-			<PrimaryButton type="submit" disabled={create.isPending}>
-				{t("admin.user.create")}
-			</PrimaryButton>
-		</form>
+		<div className="grid gap-2 border-t border-line pt-3">
+			<button
+				type="button"
+				className={ghost}
+				onClick={() => make.mutate(undefined, { onSuccess: (r) => setToken(r.token) })}
+			>
+				{t("admin.invite.button")}
+			</button>
+			{token && (
+				<div className="grid gap-1.5">
+					<p className="m-0 text-sm text-muted">{t("admin.invite.shown")}</p>
+					<p className="m-0 text-xs text-muted">{t("admin.invite.link")}</p>
+					<code className="select-all break-all rounded-xl bg-bg p-3 text-sm">{`${window.location.origin}/?invite=${token}`}</code>
+					<p className="m-0 text-xs text-muted">{t("admin.invite.code")}</p>
+					<code className="select-all break-all rounded-xl bg-bg p-3 text-sm">{token}</code>
+				</div>
+			)}
+		</div>
 	);
 }
 
@@ -267,7 +247,7 @@ export function AdminPage() {
 						<UserRow key={u.id} user={u} households={list} />
 					))}
 				</ul>
-				<CreateUserForm />
+				<InviteUser />
 			</Section>
 			<Section title={t("admin.households")}>
 				<ul className="m-0 list-none p-0">

@@ -38,6 +38,7 @@ function Codes() {
 				label={t("supervision.codeBeSupervised")}
 				onPress={() => make.mutate("be_supervised", { onSuccess: (r) => setShown(r.token) })}
 			/>
+			<T style={{ color: colors.muted, fontSize: 12 }}>{t("supervision.codeHint")}</T>
 			{shown && (
 				<View style={{ gap: 6 }}>
 					<T style={{ color: colors.muted, fontSize: 14 }}>{t("supervision.codeShown")}</T>
@@ -60,51 +61,6 @@ function Codes() {
 				onPress={() => redeem.mutate(code.trim(), { onSuccess: () => setCode("") })}
 			/>
 		</>
-	);
-}
-
-function CreateWard() {
-	const create = useSupervisionWrite((input: Parameters<typeof api.createWardAccount>[0]) =>
-		api.createWardAccount(input),
-	);
-	const [displayName, setDisplayName] = useState("");
-	const [username, setUsername] = useState("");
-	const [password, setPassword] = useState("");
-	return (
-		<View style={{ gap: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
-			<T style={{ fontFamily: font.bold, fontSize: 14 }}>{t("supervision.createAccount")}</T>
-			<Field label={t("admin.user.displayName")} value={displayName} onChangeText={setDisplayName} maxLength={80} />
-			<Field
-				label={t("auth.username")}
-				value={username}
-				onChangeText={setUsername}
-				autoCapitalize="none"
-				autoCorrect={false}
-			/>
-			<Field
-				label={t("auth.password")}
-				value={password}
-				onChangeText={setPassword}
-				secureTextEntry
-				autoCapitalize="none"
-			/>
-			<Button
-				label={t("supervision.createAccount")}
-				disabled={create.isPending || !displayName.trim() || username.trim().length < 3 || password.length < 10}
-				onPress={() =>
-					create.mutate(
-						{ displayName: displayName.trim(), username: username.trim(), password },
-						{
-							onSuccess: () => {
-								setDisplayName("");
-								setUsername("");
-								setPassword("");
-							},
-						},
-					)
-				}
-			/>
-		</View>
 	);
 }
 
@@ -157,7 +113,6 @@ export default function SupervisionScreen() {
 							<T style={{ color: colors.primaryLink, fontSize: 14 }}>{t("supervision.manage")} ›</T>
 						</Pressable>
 					))}
-					<CreateWard />
 				</Section>
 			)}
 			<Section title={t("supervision.redeemTitle")}>

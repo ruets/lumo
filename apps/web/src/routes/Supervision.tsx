@@ -39,6 +39,7 @@ function Codes() {
 					</button>
 				))}
 			</div>
+			<p className="m-0 text-xs text-muted">{t("supervision.codeHint")}</p>
 			{shown && (
 				<div className="grid gap-1.5">
 					<p className="m-0 text-sm text-muted">{t("supervision.codeShown")}</p>
@@ -62,51 +63,6 @@ function Codes() {
 				</PrimaryButton>
 			</form>
 		</>
-	);
-}
-
-function CreateWard() {
-	const create = useSupervisionWrite((input: Parameters<typeof api.createWardAccount>[0]) =>
-		api.createWardAccount(input),
-	);
-	return (
-		<form
-			onSubmit={(e: FormEvent<HTMLFormElement>) => {
-				e.preventDefault();
-				const form = e.currentTarget;
-				const f = new FormData(form);
-				create.mutate(
-					{
-						displayName: String(f.get("displayName") ?? "").trim(),
-						username: String(f.get("username") ?? "").trim(),
-						password: String(f.get("password") ?? ""),
-					},
-					{ onSuccess: () => form.reset() },
-				);
-			}}
-			className="grid gap-3"
-		>
-			<h3 className="m-0 text-sm font-bold">{t("supervision.createAccount")}</h3>
-			<Field label={t("admin.user.displayName")}>
-				<input name="displayName" required maxLength={80} className={fieldClass} />
-			</Field>
-			<Field label={t("auth.username")}>
-				<input name="username" required minLength={3} maxLength={32} autoComplete="off" className={fieldClass} />
-			</Field>
-			<Field label={t("auth.password")}>
-				<input
-					name="password"
-					type="password"
-					required
-					minLength={10}
-					autoComplete="new-password"
-					className={fieldClass}
-				/>
-			</Field>
-			<PrimaryButton type="submit" disabled={create.isPending}>
-				{t("supervision.createAccount")}
-			</PrimaryButton>
-		</form>
 	);
 }
 
@@ -154,9 +110,6 @@ export function SupervisionPage() {
 							<span className="text-sm text-link">{t("supervision.manage")} ›</span>
 						</Link>
 					))}
-					<div className="border-t border-line pt-3">
-						<CreateWard />
-					</div>
 				</Section>
 			)}
 			<Section title={t("supervision.redeemTitle")}>

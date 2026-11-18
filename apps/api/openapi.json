@@ -974,51 +974,13 @@
 						"bearer": []
 					}
 				]
-			},
+			}
+		},
+		"/api/v1/admin/account-invites": {
 			"post": {
-				"summary": "Create a local account without a household",
+				"summary": "Invite someone to create an account (OIDC or local), with a one-time code",
 				"tags": ["Admin"],
-				"operationId": "postApiV1AdminUsers",
-				"parameters": [
-					{
-						"name": "Idempotency-Key",
-						"in": "header",
-						"required": true,
-						"description": "Unique UUID per request; a duplicate returns the response already stored.",
-						"schema": {
-							"type": "string",
-							"maxLength": 200
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"displayName": {
-										"type": "string",
-										"minLength": 1,
-										"maxLength": 80
-									},
-									"username": {
-										"type": "string",
-										"pattern": "^[a-z0-9._-]{3,32}$"
-									},
-									"password": {
-										"type": "string",
-										"minLength": 10,
-										"maxLength": 200
-									}
-								},
-								"required": ["displayName", "username", "password"],
-								"additionalProperties": false
-							}
-						}
-					}
-				},
+				"operationId": "postApiV1AdminAccountInvites",
 				"responses": {
 					"201": {
 						"description": "Success",
@@ -1027,58 +989,14 @@
 								"schema": {
 									"type": "object",
 									"properties": {
-										"id": {
+										"token": {
 											"type": "string"
 										},
-										"displayName": {
-											"type": "string"
-										},
-										"username": {
-											"type": ["string", "null"]
-										},
-										"oidc": {
-											"type": "boolean"
-										},
-										"isSuperAdmin": {
-											"type": "boolean"
-										},
-										"disabled": {
-											"type": "boolean"
-										},
-										"households": {
-											"type": "array",
-											"items": {
-												"type": "object",
-												"properties": {
-													"id": {
-														"type": "string"
-													},
-													"name": {
-														"type": "string"
-													},
-													"role": {
-														"type": "string",
-														"enum": ["owner", "member"]
-													}
-												},
-												"required": ["id", "name", "role"],
-												"additionalProperties": false
-											}
-										},
-										"createdAt": {
+										"expiresAt": {
 											"type": "string"
 										}
 									},
-									"required": [
-										"id",
-										"displayName",
-										"username",
-										"oidc",
-										"isSuperAdmin",
-										"disabled",
-										"households",
-										"createdAt"
-									],
+									"required": ["token", "expiresAt"],
 									"additionalProperties": false
 								}
 							}
@@ -6824,133 +6742,6 @@
 										}
 									},
 									"required": ["guardians", "rights", "wards"],
-									"additionalProperties": false
-								}
-							}
-						}
-					},
-					"default": {
-						"description": "Error (RFC 9457) with a stable `code`",
-						"content": {
-							"application/problem+json": {
-								"schema": {
-									"type": "object",
-									"required": ["type", "title", "status", "code"],
-									"properties": {
-										"type": {
-											"type": "string"
-										},
-										"title": {
-											"type": "string"
-										},
-										"status": {
-											"type": "integer"
-										},
-										"code": {
-											"type": "string"
-										},
-										"detail": {
-											"type": "string"
-										},
-										"instance": {
-											"type": "string"
-										}
-									}
-								}
-							}
-						}
-					}
-				},
-				"security": [
-					{
-						"session": []
-					},
-					{
-						"bearer": []
-					}
-				]
-			}
-		},
-		"/api/v1/supervision/wards": {
-			"post": {
-				"summary": "Create a local account that I supervise (for a child)",
-				"tags": ["Supervision"],
-				"operationId": "postApiV1SupervisionWards",
-				"parameters": [
-					{
-						"name": "Idempotency-Key",
-						"in": "header",
-						"required": true,
-						"description": "Unique UUID per request; a duplicate returns the response already stored.",
-						"schema": {
-							"type": "string",
-							"maxLength": 200
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"displayName": {
-										"type": "string",
-										"minLength": 1,
-										"maxLength": 80
-									},
-									"username": {
-										"type": "string",
-										"pattern": "^[a-z0-9._-]{3,32}$"
-									},
-									"password": {
-										"type": "string",
-										"minLength": 10,
-										"maxLength": 200
-									}
-								},
-								"required": ["displayName", "username", "password"],
-								"additionalProperties": false
-							}
-						}
-					}
-				},
-				"responses": {
-					"201": {
-						"description": "Success",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"id": {
-											"type": "string"
-										},
-										"displayName": {
-											"type": "string"
-										},
-										"rights": {
-											"type": "object",
-											"properties": {
-												"canCreate": {
-													"type": "boolean"
-												},
-												"canModify": {
-													"type": "boolean"
-												},
-												"canDelete": {
-													"type": "boolean"
-												},
-												"canTransfer": {
-													"type": "boolean"
-												}
-											},
-											"required": ["canCreate", "canModify", "canDelete", "canTransfer"],
-											"additionalProperties": false
-										}
-									},
-									"required": ["id", "displayName", "rights"],
 									"additionalProperties": false
 								}
 							}

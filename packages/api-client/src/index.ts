@@ -60,7 +60,6 @@ export type WardPending = Response<"/api/v1/supervision/wards/{wardId}/pending",
 export type UpdateAccountInput = BodyOf<"/api/v1/account", "patch">;
 export type InstanceSettings = Response<"/api/v1/admin/settings", "get", 200>;
 export type UpdateInstanceSettingsInput = BodyOf<"/api/v1/admin/settings", "patch">;
-export type CreateAdminUserInput = BodyOf<"/api/v1/admin/users", "post">;
 export type UpdateAdminUserInput = BodyOf<"/api/v1/admin/users/{id}", "patch">;
 
 export interface AuthConfig {
@@ -203,7 +202,7 @@ export function createClient(options: ClientOptions) {
 		joinHousehold: (code: string) => request<{ householdId: string }>("POST", "/household/join", { code }),
 		// --- Administration (super admins)
 		adminListUsers: () => request<Response<"/api/v1/admin/users", "get", 200>>("GET", "/admin/users"),
-		adminCreateUser: (input: CreateAdminUserInput) => request<AdminUser>("POST", "/admin/users", input),
+		adminCreateAccountInvite: () => request<{ token: string; expiresAt: string }>("POST", "/admin/account-invites", {}),
 		adminUpdateUser: (id: string, input: UpdateAdminUserInput) =>
 			request<AdminUser>("PATCH", `/admin/users/${id}`, input),
 		adminDeleteUser: (id: string) => request<void>("DELETE", `/admin/users/${id}`),
@@ -228,8 +227,6 @@ export function createClient(options: ClientOptions) {
 		createSupervisionCode: (kind: "supervise" | "be_supervised") =>
 			request<{ token: string; expiresAt: string }>("POST", "/supervision/codes", { kind }),
 		redeemSupervisionCode: (code: string) => request<SupervisionResponse>("POST", "/supervision/redeem", { code }),
-		createWardAccount: (input: { displayName: string; username: string; password: string }) =>
-			request<Ward>("POST", "/supervision/wards", input),
 		endSupervision: (wardId: string) => request<void>("DELETE", `/supervision/wards/${wardId}`),
 		updateWardRights: (wardId: string, input: Partial<WardRights>) =>
 			request<Ward>("PATCH", `/supervision/wards/${wardId}/rights`, input),

@@ -1,9 +1,104 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bcbdad53-5bb4-4664-bee9-86b62945f253",
+  "id": "4c6b081b-102a-4c53-9621-900bc4ddd992",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "account_invites": {
+      "name": "account_invites",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "used_by": {
+          "name": "used_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch('subsec') * 1000)"
+        }
+      },
+      "indexes": {
+        "account_invites_token_hash_uq": {
+          "name": "account_invites_token_hash_uq",
+          "columns": [
+            "token_hash"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "account_invites_created_by_users_id_fk": {
+          "name": "account_invites_created_by_users_id_fk",
+          "tableFrom": "account_invites",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "account_invites_used_by_users_id_fk": {
+          "name": "account_invites_used_by_users_id_fk",
+          "tableFrom": "account_invites",
+          "tableTo": "users",
+          "columnsFrom": [
+            "used_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "completions": {
       "name": "completions",
       "columns": {

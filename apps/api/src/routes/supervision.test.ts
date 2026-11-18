@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-	api,
+	type api,
 	balances,
 	createHousehold,
 	createTestContext,
 	makeHabit,
-	sessionCookie,
+	newLoneAccount,
+	signUp,
 	type TestContext,
 } from "../test/helpers.js";
 
@@ -77,23 +78,19 @@ describe("codes and consent", () => {
 		);
 	});
 
-	it("a guardian creates a supervised local account for a child", async () => {
-		const res = await h.owner.api.post("/supervision/wards", {
-			displayName: "Lea",
-			username: "lea",
-			password: "a-long-password-here",
-		});
-		expect(res.statusCode).toBe(201);
-		expect(res.json().rights).toEqual({ canCreate: false, canModify: false, canDelete: false, canTransfer: true });
-		const login = await ctx.app.inject({
-			method: "POST",
-			url: "/api/v1/auth/local/login",
-			payload: { username: "lea", password: "a-long-password-here" },
-		});
-		expect(login.statusCode).toBe(200);
-		const lea = api(ctx, sessionCookie(login) ?? "");
-		expect((await lea.get("/supervision")).json().guardians).toHaveLength(1);
-		expect((await lea.post("/items", { kind: "task", name: "x" })).json().code).toBe("supervised");
+	it("a guardian's code also creates the account of a child who does not have one yet", async () => {
+		const code = (await h.owner.api.post("/supervision/codes", { kind: "supervise" })).json();
+		const lea = await signUp(ctx, code.token, "lea");
+		expect(lea.status).toBe(201);
+		const view = (await lea.api.get("/supervision")).json();
+		expect(view.guardians).toEqual([expect.objectContaining({ id: h.owner.userId })]);
+		expect(view.rights).toEqual({ canCreate: false, canModify: false, canDelete: false, canTransfer: true });
+		expect((await lea.api.post("/items", { kind: "task", name: "x" })).json().code).toBe("supervised");
+		// The code worked once.
+		expect((await signUp(ctx, code.token, "lea2")).status).toBe(400);
+		// A supervised account cannot invite supervised accounts of its own.
+		const cycle = (await lea.api.post("/supervision/codes", { kind: "supervise" })).json();
+		expect((await signUp(ctx, cycle.token, "lea3")).status).toBe(409);
 	});
 });
 
@@ -215,9 +212,7 @@ describe("what a guardian can do for a ward", () => {
 	it("shows nothing of accounts you do not supervise, to anyone, super admins included", async () => {
 		await supervise(h.owner, h.adult);
 		// A plain account created by the super admin: alice is super admin yet sees nothing of it.
-		const zoe = (
-			await h.owner.api.post("/admin/users", { displayName: "Zoe", username: "zoe", password: "a-long-password-here" })
-		).json();
+		const zoe = await newLoneAccount(ctx, h.owner, "zoe");
 		for (const url of [
 			`/supervision/wards/${zoe.id}/items`,
 			`/supervision/wards/${zoe.id}/pending`,

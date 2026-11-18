@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-	api,
 	balances,
 	createHousehold,
 	createTestContext,
 	makeHabit,
-	sessionCookie,
+	newLoneAccount,
 	type TestContext,
 } from "../test/helpers.js";
 
@@ -20,18 +19,12 @@ afterEach(async () => {
 	await ctx.close();
 });
 
-const PASSWORD = "a-long-password-here";
+const _PASSWORD = "a-long-password-here";
 
-/** A local account with no household, created by the super admin. */
+/** A local account with no household: someone invited by the super admin creates it themselves. */
 async function loner(username: string) {
-	const res = await h.owner.api.post("/admin/users", { displayName: username, username, password: PASSWORD });
-	expect(res.statusCode).toBe(201);
-	const login = await ctx.app.inject({
-		method: "POST",
-		url: "/api/v1/auth/local/login",
-		payload: { username, password: PASSWORD },
-	});
-	return { id: res.json().id as string, api: api(ctx, sessionCookie(login) ?? "") };
+	const account = await newLoneAccount(ctx, h.owner, username);
+	return { id: account.id, api: account.api };
 }
 
 describe("an account without a household", () => {

@@ -1,3 +1,16 @@
+CREATE TABLE `account_invites` (
+	`id` text PRIMARY KEY NOT NULL,
+	`token_hash` text NOT NULL,
+	`created_by` text NOT NULL,
+	`expires_at` integer NOT NULL,
+	`used_at` integer,
+	`used_by` text,
+	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
+	FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`used_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `account_invites_token_hash_uq` ON `account_invites` (`token_hash`);--> statement-breakpoint
 CREATE TABLE `completions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`item_id` text NOT NULL,

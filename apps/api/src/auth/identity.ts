@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { isSuperAdminAfterOidcLogin, type Role } from "@lumo/domain";
+import { isSuperAdminAfterOidcLogin } from "@lumo/domain";
 import { and, eq } from "drizzle-orm";
 import type { Config } from "../config.js";
 import type { Db } from "../db/client.js";
@@ -13,8 +13,9 @@ import {
 	usernameTaken,
 	writeTx,
 } from "../services/members.js";
-import { findValidInvite, markInviteUsed } from "./invites.js";
+import { markInviteUsed } from "./invites.js";
 import type { OidcClaims } from "./oidc.js";
+import { createAccountFromSignup, findSignupToken, resolveSignupToken } from "./signup.js";
 
 const adminGroup = (config: Config) => config.OIDC_ADMIN_GROUP ?? null;
 
@@ -30,6 +31,7 @@ export function resolveOidcLogin(
 	config: Config,
 	claims: OidcClaims,
 	inviteToken: string | null,
+	now: Date = new Date(),
 ): { userId: string } {
 	return writeTx(db, (tx) => {
 		const displayName = claims.name?.trim() || claims.email || "Member";
@@ -48,11 +50,14 @@ export function resolveOidcLogin(
 			if (isSuperAdmin !== existing.isSuperAdmin) set.isSuperAdmin = isSuperAdmin;
 			if (claims.picture && claims.picture !== existing.avatarUrl) set.avatarUrl = claims.picture;
 			if (Object.keys(set).length > 0) tx.update(users).set(set).where(eq(users.id, existing.id)).run();
-			// An account without a household that follows an invitation link joins that household.
-			if (inviteToken && !tx.select().from(memberships).where(eq(memberships.userId, existing.id)).get()) {
-				const invite = findValidInvite(tx, inviteToken);
-				joinHousehold(tx, { householdId: invite.householdId, userId: existing.id, role: invite.role });
-				markInviteUsed(tx, invite.id, existing.id);
+			// An account without a household that follows a household invitation link joins that household.
+			const signup = inviteToken ? findSignupToken(tx, inviteToken, now) : null;
+			if (
+				signup?.type === "household" &&
+				!tx.select().from(memberships).where(eq(memberships.userId, existing.id)).get()
+			) {
+				joinHousehold(tx, { householdId: signup.invite.householdId, userId: existing.id, role: signup.invite.role });
+				markInviteUsed(tx, signup.invite.id, existing.id, now);
 			}
 			return { userId: existing.id };
 		}
@@ -67,10 +72,8 @@ export function resolveOidcLogin(
 		};
 
 		if (inviteToken) {
-			const invite = findValidInvite(tx, inviteToken);
-			const userId = createMember(tx, { householdId: invite.householdId, role: invite.role, user: newUser });
-			markInviteUsed(tx, invite.id, userId);
-			return { userId };
+			const signup = resolveSignupToken(tx, inviteToken, now);
+			return { userId: createAccountFromSignup(tx, signup, newUser, now) };
 		}
 
 		if (userCount(tx) === 0) {
@@ -141,17 +144,21 @@ export function setupInstance(db: Db, input: LocalAccountInput & { householdName
 	});
 }
 
-/** Creation of a local account from an invitation. */
-export function registerLocal(db: Db, input: LocalAccountInput & { inviteToken: string }): { userId: string } {
+/** Creation of a local account from a code: a household invitation, a guardian's code or an account invitation. */
+export function registerLocal(
+	db: Db,
+	input: LocalAccountInput & { inviteToken: string },
+	now: Date = new Date(),
+): { userId: string } {
 	return writeTx(db, (tx) => {
-		const invite = findValidInvite(tx, input.inviteToken);
+		const signup = resolveSignupToken(tx, input.inviteToken, now);
 		if (usernameTaken(tx, input.username)) throw errors.conflict("username_taken", "This username is already taken");
-		const userId = createMember(tx, {
-			householdId: invite.householdId,
-			role: invite.role as Role,
-			user: { displayName: input.displayName, username: input.username, passwordHash: input.passwordHash },
-		});
-		markInviteUsed(tx, invite.id, userId);
+		const userId = createAccountFromSignup(
+			tx,
+			signup,
+			{ displayName: input.displayName, username: input.username, passwordHash: input.passwordHash },
+			now,
+		);
 		return { userId };
 	});
 }

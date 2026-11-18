@@ -7,7 +7,7 @@ import { completions, guardianshipCodes, guardianships, items, users } from "../
 import { AppError, errors } from "../errors.js";
 import { type ActorCtx, loadActor, wardRightsOf } from "./context.js";
 import { addEntry, personalWalletId, walletBalance } from "./ledger.js";
-import { createAccount, type DbOrTx, type Tx, usernameTaken } from "./members.js";
+import type { DbOrTx, Tx } from "./members.js";
 
 export const CODE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -134,18 +134,6 @@ export function updateWardRights(tx: Tx, guardianId: string, wardId: string, pat
 	}
 	if (Object.keys(set).length > 0) tx.update(users).set(set).where(eq(users.id, wardId)).run();
 	return { id: wardId, displayName: nameOf(tx, wardId), rights: wardRightsOf(tx, wardId) as WardRights };
-}
-
-/** A guardian creates a local account for a child: already supervised by them, with the strict default rights. */
-export function createWardAccount(
-	tx: Tx,
-	guardianId: string,
-	input: { displayName: string; username: string; passwordHash: string },
-) {
-	if (usernameTaken(tx, input.username)) throw errors.conflict("username_taken", "This username is already taken");
-	const wardId = createAccount(tx, input);
-	startSupervision(tx, guardianId, wardId);
-	return { id: wardId, displayName: input.displayName, rights: wardRightsOf(tx, wardId) as WardRights };
 }
 
 /** A guardian corrects their ward's coins (never their own: this only ever touches the ward's wallet). */

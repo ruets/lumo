@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { hashPassword } from "../auth/passwords.js";
+import { createAccountInvite } from "../auth/signup.js";
 import {
 	adminAssignHouseholdBody,
-	adminCreateUserBody,
 	adminHouseholdBody,
 	adminHouseholdsView,
 	adminHouseholdView,
 	adminUpdateUserBody,
 	adminUsersView,
 	adminUserView,
+	guardianshipCodeView,
 	idParams,
 	instanceSettingsView,
 	potAdjustmentBody,
@@ -20,7 +20,6 @@ import {
 	adjustPot,
 	adminCreateHousehold,
 	assignHousehold,
-	createLocalUser,
 	deleteHousehold,
 	deleteUser,
 	listHouseholds,
@@ -47,18 +46,12 @@ export const adminRoutes = [
 	route({
 		...admin,
 		method: "post",
-		url: "/admin/users",
-		summary: "Create a local account without a household",
-		body: adminCreateUserBody,
-		response: adminUserView,
+		url: "/admin/account-invites",
+		summary: "Invite someone to create an account (OIDC or local), with a one-time code",
+		response: guardianshipCodeView,
 		status: 201,
-		prepare: async (body) => ({ passwordHash: await hashPassword(body.password) }),
-		handler: ({ db, body, prepared }) =>
-			createLocalUser(db, {
-				displayName: body.displayName,
-				username: body.username,
-				passwordHash: prepared.passwordHash,
-			}),
+		idempotent: false,
+		handler: ({ db, account, now }) => createAccountInvite(db, account.userId, now),
 	}),
 	route({
 		...admin,

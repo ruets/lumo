@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { z } from "zod";
-import { hashPassword } from "../auth/passwords.js";
 import { errors } from "../errors.js";
 import {
 	completionResult,
-	createWardBody,
 	guardianPendingView,
 	guardianshipCodeBody,
 	guardianshipCodeView,
@@ -24,7 +22,6 @@ import {
 	adjustWard,
 	assertGuardian,
 	createCode,
-	createWardAccount,
 	endSupervision,
 	listPendingForGuardian,
 	listWardPending,
@@ -84,22 +81,6 @@ export const supervisionRoutes = [
 			redeemCode(db, account.userId, body.code, now);
 			return viewOf(db, account.userId);
 		},
-	}),
-	route({
-		...base,
-		method: "post",
-		url: "/supervision/wards",
-		summary: "Create a local account that I supervise (for a child)",
-		body: createWardBody,
-		response: wardView,
-		status: 201,
-		prepare: async (body) => ({ passwordHash: await hashPassword(body.password) }),
-		handler: ({ db, account, body, prepared }) =>
-			createWardAccount(db, account.userId, {
-				displayName: body.displayName,
-				username: body.username,
-				passwordHash: prepared.passwordHash,
-			}),
 	}),
 	route({
 		...base,

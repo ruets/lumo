@@ -16,7 +16,8 @@ export function Login({ config }: { config: AuthConfig }) {
 	const [busy, setBusy] = useState(false);
 	// An invitation link (`/?invite=…`) opens the join form directly.
 	const [joining, setJoining] = useState(params.has("invite"));
-	const invite = params.get("invite") ?? "";
+	// The code of an invitation (household, guardian or administrator), typed here or taken from the link.
+	const [inviteCode, setInviteCode] = useState(params.get("invite") ?? "");
 	const joinMode = joining && !config.setupRequired;
 
 	async function submit(e: FormEvent<HTMLFormElement>) {
@@ -36,7 +37,7 @@ export function Login({ config }: { config: AuthConfig }) {
 				});
 			} else if (joinMode) {
 				await api.registerLocal({
-					invite: v("invite"),
+					invite: inviteCode.trim(),
 					displayName: v("displayName"),
 					username: v("username"),
 					password: String(form.get("password") ?? ""),
@@ -55,7 +56,9 @@ export function Login({ config }: { config: AuthConfig }) {
 	}
 
 	const oidcHref =
-		joinMode && invite ? `/api/v1/auth/login?invite=${encodeURIComponent(invite)}` : "/api/v1/auth/login";
+		joinMode && inviteCode.trim()
+			? `/api/v1/auth/login?invite=${encodeURIComponent(inviteCode.trim())}`
+			: "/api/v1/auth/login";
 	const linkButton =
 		"min-h-11 cursor-pointer border-0 bg-transparent font-body text-sm font-semibold text-link underline";
 
@@ -68,6 +71,21 @@ export function Login({ config }: { config: AuthConfig }) {
 						{t("auth.error")} ({error})
 					</p>
 				)}
+				{joinMode && (
+					<div className="grid gap-2">
+						<h2 className="m-0 text-base font-bold text-muted">{t("join.title")}</h2>
+						<p className="m-0 text-sm text-muted">{t("join.hint")}</p>
+						<Field label={t("join.code")}>
+							<input
+								value={inviteCode}
+								onChange={(e) => setInviteCode(e.target.value)}
+								minLength={10}
+								autoComplete="off"
+								className={fieldClass}
+							/>
+						</Field>
+					</div>
+				)}
 				{config.oidc && !config.setupRequired && (
 					<a
 						href={oidcHref}
@@ -79,24 +97,11 @@ export function Login({ config }: { config: AuthConfig }) {
 				{config.local && (
 					<form onSubmit={submit} className="grid gap-3">
 						<h2 className="m-0 text-base font-bold text-muted">
-							{config.setupRequired ? t("auth.setup.title") : joinMode ? t("join.title") : t("auth.local")}
+							{config.setupRequired ? t("auth.setup.title") : joinMode ? t("auth.local.create") : t("auth.local")}
 						</h2>
-						{joinMode && <p className="m-0 text-sm text-muted">{t("join.hint")}</p>}
 						{config.setupRequired && (
 							<Field label={t("auth.setup.householdName")}>
 								<input name="householdName" required className={fieldClass} />
-							</Field>
-						)}
-						{joinMode && (
-							<Field label={t("join.code")}>
-								<input
-									name="invite"
-									defaultValue={invite}
-									required
-									minLength={10}
-									autoComplete="off"
-									className={fieldClass}
-								/>
 							</Field>
 						)}
 						{(config.setupRequired || joinMode) && (
@@ -120,12 +125,12 @@ export function Login({ config }: { config: AuthConfig }) {
 						<PrimaryButton type="submit" disabled={busy}>
 							{joinMode ? t("join.submit") : t("auth.submit")}
 						</PrimaryButton>
-						{!config.setupRequired && (
-							<button type="button" onClick={() => setJoining(!joining)} className={linkButton}>
-								{joinMode ? t("join.back") : t("join.have")}
-							</button>
-						)}
 					</form>
+				)}
+				{!config.setupRequired && (
+					<button type="button" onClick={() => setJoining(!joining)} className={linkButton}>
+						{joinMode ? t("join.back") : t("join.have")}
+					</button>
 				)}
 				<LanguageSelect />
 			</section>

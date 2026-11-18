@@ -588,3 +588,91 @@ describe("linking an OIDC identity to a signed-in account", () => {
 		expect(unauth.statusCode).toBe(401);
 	});
 });
+
+describe("creating an account with a code", () => {
+	const PASSWORD = "a-long-password-here";
+	/** Writes through the declarative routes need an `Idempotency-Key`. */
+	const api = (url: string, payload: unknown, headers: Record<string, string>) =>
+		post(url, payload, { ...headers, "idempotency-key": crypto.randomUUID() });
+	const oidcSignUp = async (code: string, sub: string, invite: string) => {
+		ctx.oidc.grant(code, { sub, name: "Newcomer" });
+		const start = await get(`/auth/login?invite=${invite}`);
+		const state = new URL(start.headers.location as string).searchParams.get("state") as string;
+		return get(`/auth/callback?code=${code}&state=${state}`);
+	};
+
+	it("a super admin's account invitation lets someone create an account through Authentik, with no household", async () => {
+		const owner = await setupOwner(ctx);
+		const invite = (await post("/admin/account-invites", {}, { ...cookieHeader(owner), ...ORIGIN })).json().token;
+		const res = await oidcSignUp("a1", "sub-new", invite);
+		expect(res.headers.location).toBe("https://lumo.test/");
+		const account = (await get("/account", cookieHeader(sessionCookie(res) as string))).json();
+		expect(account).toMatchObject({ isSuperAdmin: false, households: [], oidc: true });
+		// Once only.
+		expect((await oidcSignUp("a2", "sub-new-2", invite)).headers.location).toBe(
+			"https://lumo.test/?auth_error=invalid_invite",
+		);
+	});
+
+	it("a guardian's code lets a child create an account through Authentik, already supervised", async () => {
+		const owner = await setupOwner(ctx);
+		const code = (await api("/supervision/codes", { kind: "supervise" }, { ...cookieHeader(owner), ...ORIGIN })).json();
+		const res = await oidcSignUp("g1", "sub-child", code.token);
+		const child = cookieHeader(sessionCookie(res) as string);
+		const view = (await get("/supervision", child)).json();
+		expect(view.guardians).toHaveLength(1);
+		expect(view.rights).toMatchObject({ canCreate: false });
+	});
+
+	it("only a super admin makes account invitations", async () => {
+		const owner = await setupOwner(ctx);
+		const invite = (await post("/household/invites", { role: "member" }, { ...cookieHeader(owner), ...ORIGIN })).json();
+		const bob = await post("/auth/local/register", {
+			invite: invite.token,
+			displayName: "Bob",
+			username: "bob",
+			password: PASSWORD,
+		});
+		const res = await post("/admin/account-invites", {}, { ...cookieHeader(sessionCookie(bob) as string), ...ORIGIN });
+		expect(res.statusCode).toBe(403);
+	});
+
+	describe("with local sign-in turned off", () => {
+		beforeEach(async () => {
+			await ctx.close();
+			ctx = await createTestContext({ LOCAL_AUTH_ENABLED: "false" });
+		});
+
+		it("the first Authentik sign-in is the super admin; the others come with a code", async () => {
+			expect((await get("/auth/config")).json()).toMatchObject({ local: false, setupRequired: false });
+			ctx.oidc.grant("f1", { sub: "sub-first", name: "First" });
+			const start = await get("/auth/login");
+			const state = new URL(start.headers.location as string).searchParams.get("state") as string;
+			const first = await get(`/auth/callback?code=f1&state=${state}`);
+			const admin = cookieHeader(sessionCookie(first) as string);
+			expect((await get("/account", admin)).json().isSuperAdmin).toBe(true);
+
+			// Nobody else gets in without a code, and local registration is closed.
+			ctx.oidc.grant("n1", { sub: "sub-nobody" });
+			const s2 = await get("/auth/login");
+			const st2 = new URL(s2.headers.location as string).searchParams.get("state") as string;
+			expect((await get(`/auth/callback?code=n1&state=${st2}`)).headers.location).toBe(
+				"https://lumo.test/?auth_error=invitation_required",
+			);
+			expect(
+				(
+					await post("/auth/local/register", {
+						invite: "x".repeat(12),
+						displayName: "X",
+						username: "xxx",
+						password: PASSWORD,
+					})
+				).statusCode,
+			).toBe(404);
+
+			// With an invitation they do.
+			const invite = (await api("/admin/account-invites", {}, { ...admin, ...ORIGIN })).json().token;
+			expect((await oidcSignUp("n2", "sub-invited", invite)).headers.location).toBe("https://lumo.test/");
+		});
+	});
+});
