@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import {
 	type Actor,
+	DEFAULT_FEATURES,
+	type HouseholdFeatures,
 	type PotPolicy,
 	type Role,
 	supervisionAllows,
@@ -13,11 +15,20 @@ import { guardianships, households, memberships, users } from "../db/schema.js";
 import { errors } from "../errors.js";
 import type { DbOrTx } from "./members.js";
 
+/** What a household has switched on. */
+export const featuresOf = (h: typeof households.$inferSelect): HouseholdFeatures => ({
+	pot: h.featurePot,
+	wishes: h.featureWishes,
+	habits: h.featureHabits,
+	tasks: h.featureTasks,
+});
+
 /** One membership of the actor, with what the household sets for them. */
 export interface MembershipCtx {
 	householdId: string;
 	role: Role;
 	potWithdrawals: PotPolicy;
+	features: HouseholdFeatures;
 	/** Days back allowed in this household; `Number.POSITIVE_INFINITY` when it has no limit. */
 	backdateDays: number;
 }
@@ -32,6 +43,8 @@ export interface MembershipCtx {
 export interface ActorCtx extends Actor {
 	householdId: string | null;
 	memberships: MembershipCtx[];
+	/** What the active household has switched on (all on without a household). */
+	features: HouseholdFeatures;
 	timezone: string;
 	weekStart: Weekday;
 	backdateDays: number;
@@ -64,12 +77,20 @@ export function actorIn(actor: ActorCtx, householdId: string | null): ActorCtx {
 			householdId: null,
 			role: "member",
 			potWithdrawals: "owners",
+			features: DEFAULT_FEATURES,
 			backdateDays: Number.POSITIVE_INFINITY,
 		};
 	}
 	const m = actor.memberships.find((x) => x.householdId === householdId);
 	if (!m) throw errors.notFound("Household");
-	return { ...actor, householdId, role: m.role, potWithdrawals: m.potWithdrawals, backdateDays: m.backdateDays };
+	return {
+		...actor,
+		householdId,
+		role: m.role,
+		potWithdrawals: m.potWithdrawals,
+		features: m.features,
+		backdateDays: m.backdateDays,
+	};
 }
 
 export function membershipsOf(db: DbOrTx, userId: string): MembershipCtx[] {
@@ -84,6 +105,7 @@ export function membershipsOf(db: DbOrTx, userId: string): MembershipCtx[] {
 			householdId: h.id,
 			role: m.role,
 			potWithdrawals: h.potWithdrawals,
+			features: featuresOf(h),
 			backdateDays: h.backdateUnlimited ? Number.POSITIVE_INFINITY : h.backdateDays,
 		}));
 }
@@ -97,6 +119,7 @@ export function loadActor(db: DbOrTx, userId: string, preferredHouseholdId?: str
 		userId,
 		role: "member",
 		potWithdrawals: "owners",
+		features: DEFAULT_FEATURES,
 		householdId: null,
 		memberships: list,
 		timezone: user.timezone,

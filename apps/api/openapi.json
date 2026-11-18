@@ -91,22 +91,48 @@
 														"enum": ["owner", "member"]
 													},
 													"pot": {
+														"anyOf": [
+															{
+																"type": "object",
+																"properties": {
+																	"id": {
+																		"type": "string"
+																	},
+																	"balance": {
+																		"type": "integer",
+																		"minimum": -9007199254740991,
+																		"maximum": 9007199254740991
+																	}
+																},
+																"required": ["id", "balance"],
+																"additionalProperties": false
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"features": {
 														"type": "object",
 														"properties": {
-															"id": {
-																"type": "string"
+															"pot": {
+																"type": "boolean"
 															},
-															"balance": {
-																"type": "integer",
-																"minimum": -9007199254740991,
-																"maximum": 9007199254740991
+															"wishes": {
+																"type": "boolean"
+															},
+															"habits": {
+																"type": "boolean"
+															},
+															"tasks": {
+																"type": "boolean"
 															}
 														},
-														"required": ["id", "balance"],
+														"required": ["pot", "wishes", "habits", "tasks"],
 														"additionalProperties": false
 													}
 												},
-												"required": ["id", "name", "role", "pot"],
+												"required": ["id", "name", "role", "pot", "features"],
 												"additionalProperties": false
 											}
 										},
@@ -2230,9 +2256,28 @@
 												"potWithdrawals": {
 													"type": "string",
 													"enum": ["owners", "members", "nobody"]
+												},
+												"features": {
+													"type": "object",
+													"properties": {
+														"pot": {
+															"type": "boolean"
+														},
+														"wishes": {
+															"type": "boolean"
+														},
+														"habits": {
+															"type": "boolean"
+														},
+														"tasks": {
+															"type": "boolean"
+														}
+													},
+													"required": ["pot", "wishes", "habits", "tasks"],
+													"additionalProperties": false
 												}
 											},
-											"required": ["id", "name", "backdateDays", "potWithdrawals"],
+											"required": ["id", "name", "backdateDays", "potWithdrawals", "features"],
 											"additionalProperties": false
 										},
 										"members": {
@@ -2369,6 +2414,24 @@
 									"potWithdrawals": {
 										"type": "string",
 										"enum": ["owners", "members", "nobody"]
+									},
+									"features": {
+										"type": "object",
+										"properties": {
+											"pot": {
+												"type": "boolean"
+											},
+											"wishes": {
+												"type": "boolean"
+											},
+											"habits": {
+												"type": "boolean"
+											},
+											"tasks": {
+												"type": "boolean"
+											}
+										},
+										"additionalProperties": false
 									}
 								},
 								"additionalProperties": false
@@ -2408,9 +2471,28 @@
 												"potWithdrawals": {
 													"type": "string",
 													"enum": ["owners", "members", "nobody"]
+												},
+												"features": {
+													"type": "object",
+													"properties": {
+														"pot": {
+															"type": "boolean"
+														},
+														"wishes": {
+															"type": "boolean"
+														},
+														"habits": {
+															"type": "boolean"
+														},
+														"tasks": {
+															"type": "boolean"
+														}
+													},
+													"required": ["pot", "wishes", "habits", "tasks"],
+													"additionalProperties": false
 												}
 											},
-											"required": ["id", "name", "backdateDays", "potWithdrawals"],
+											"required": ["id", "name", "backdateDays", "potWithdrawals", "features"],
 											"additionalProperties": false
 										},
 										"members": {
@@ -7745,22 +7827,48 @@
 														"enum": ["owner", "member"]
 													},
 													"pot": {
+														"anyOf": [
+															{
+																"type": "object",
+																"properties": {
+																	"id": {
+																		"type": "string"
+																	},
+																	"balance": {
+																		"type": "integer",
+																		"minimum": -9007199254740991,
+																		"maximum": 9007199254740991
+																	}
+																},
+																"required": ["id", "balance"],
+																"additionalProperties": false
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"features": {
 														"type": "object",
 														"properties": {
-															"id": {
-																"type": "string"
+															"pot": {
+																"type": "boolean"
 															},
-															"balance": {
-																"type": "integer",
-																"minimum": -9007199254740991,
-																"maximum": 9007199254740991
+															"wishes": {
+																"type": "boolean"
+															},
+															"habits": {
+																"type": "boolean"
+															},
+															"tasks": {
+																"type": "boolean"
 															}
 														},
-														"required": ["id", "balance"],
+														"required": ["pot", "wishes", "habits", "tasks"],
 														"additionalProperties": false
 													}
 												},
-												"required": ["id", "name", "role", "pot"],
+												"required": ["id", "name", "role", "pot", "features"],
 												"additionalProperties": false
 											}
 										},

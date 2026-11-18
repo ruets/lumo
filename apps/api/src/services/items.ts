@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUID } from "node:crypto";
-import { can, scheduleSchema } from "@lumo/domain";
+import { assertFeature, can, featureOfItem, scheduleSchema } from "@lumo/domain";
 import { and, eq, inArray, isNull, or, type SQL } from "drizzle-orm";
 import type { z } from "zod";
 import { itemAssignees, items, memberships } from "../db/schema.js";
@@ -45,10 +45,19 @@ export function toItemView(row: ItemRow, assigneeIds: string[]): ItemView {
 	};
 }
 
-/** Items the actor can see: their own personal items and those of their household. */
+/**
+ * Items the actor can see: their own personal items, and those of their households, except the kinds a household
+ * turned off (hidden, not deleted: they come back if the feature is switched on again).
+ */
 export function accessibleItems(actor: ActorCtx): SQL | undefined {
-	const ids = actor.memberships.map((m) => m.householdId);
-	return or(eq(items.ownerId, actor.userId), ids.length > 0 ? inArray(items.householdId, ids) : undefined);
+	const perHousehold = actor.memberships.flatMap((m) => {
+		const kinds = [
+			...(m.features.habits ? (["habit"] as const) : []),
+			...(m.features.tasks ? (["task"] as const) : []),
+		];
+		return kinds.length > 0 ? [and(eq(items.householdId, m.householdId), inArray(items.kind, kinds))] : [];
+	});
+	return or(eq(items.ownerId, actor.userId), ...perHousehold);
 }
 
 /** Item of the actor (personal) or of their household, not archived; otherwise 404 (nothing is revealed about others). */
@@ -80,6 +89,10 @@ export function createItem(tx: Tx, actor: ActorCtx, input: z.output<typeof creat
 	if (scope === "household" && !householdId) throw errors.noHousehold();
 	// Rights come from the household the item will belong to.
 	const as = actorIn(actor, householdId);
+	if (householdId) {
+		assertFeature(as.features, featureOfItem(input.kind));
+		if (input.creditsTo === "shared") assertFeature(as.features, "pot");
+	}
 	const assigneeIds = unique(input.assigneeIds ?? [actor.userId]);
 	if (!can(as, "item:create", { assigneeIds })) throw errors.forbidden("Creation not allowed");
 	if (householdId === null) {
@@ -138,6 +151,7 @@ export function updateItem(tx: Tx, actor: ActorCtx, id: string, input: z.output<
 	requireRight(actor, "modify");
 	const row = getActiveItem(tx, actor, id);
 	const as = actorIn(actor, row.householdId);
+	if (row.householdId && input.creditsTo === "shared") assertFeature(as.features, "pot");
 	if (!can(as, "item:update", { createdBy: row.createdBy })) throw errors.forbidden("Update not allowed");
 	if (row.kind === "task" && input.schedule) throw errors.validation("body.schedule: a task has no schedule");
 	if (row.kind === "habit" && input.dueAt !== undefined) throw errors.validation("body.dueAt: tasks only");

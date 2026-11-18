@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8f629dc5-3cf4-4bd6-86b8-054fe1e07c1d",
+  "id": "5b9776d3-4124-4466-aaa5-31f0e9966430",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "completions": {
@@ -439,6 +439,38 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "feature_pot": {
+          "name": "feature_pot",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "feature_wishes": {
+          "name": "feature_wishes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "feature_habits": {
+          "name": "feature_habits",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "feature_tasks": {
+          "name": "feature_tasks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
         },
         "pot_withdrawals": {
           "name": "pot_withdrawals",

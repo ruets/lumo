@@ -333,5 +333,13 @@ export const en = {
 	"pot.payoutTo": "Member",
 	"pot.done": "Done",
 	"errors.pot_locked": "This household does not let you take coins out of its pot.",
+	"features.title": "What this household uses",
+	"features.pot": "Pot",
+	"features.wishes": "Wishes",
+	"features.habits": "Habits",
+	"features.tasks": "Tasks",
+	"features.hint":
+		"Turned-off features are hidden and refused for this household. Your personal space is not affected.",
+	"errors.feature_disabled": "This household turned that feature off.",
 	"errors.unknown": "Something went wrong.",
 } as const satisfies Record<string, string>;

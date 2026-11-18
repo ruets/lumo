@@ -22,6 +22,7 @@ import { showToast } from "../src/store";
 import { Avatar, Button, Chip, Field, font, Screen, T } from "../src/ui";
 
 const ROLES = ["owner", "member"] as const;
+const FEATURES = ["habits", "tasks", "wishes", "pot"] as const;
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
@@ -114,9 +115,27 @@ function SettingsForm({ h }: { h: HouseholdResponse["household"] }) {
 	const [backdate, setBackdate] = useState(String(h.backdateDays ?? 2));
 	const [unlimited, setUnlimited] = useState(h.backdateDays === null);
 	const [potWithdrawals, setPotWithdrawals] = useState(h.potWithdrawals);
+	const [features, setFeatures] = useState(h.features);
 	return (
 		<Section title={t("household.settings.title")}>
 			<Field label={t("household.settings.name")} value={name} onChangeText={setName} maxLength={80} />
+			<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.muted }}>{t("features.title")}</T>
+			{FEATURES.map((f) => (
+				<View
+					key={f}
+					style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}
+				>
+					<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.textSoft, flex: 1 }}>
+						{t(`features.${f}` as const)}
+					</T>
+					<Switch
+						value={features[f]}
+						onValueChange={(v) => setFeatures({ ...features, [f]: v })}
+						trackColor={{ true: colors.primary }}
+					/>
+				</View>
+			))}
+			<T style={{ fontSize: 12, color: colors.muted }}>{t("features.hint")}</T>
 			<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.muted }}>{t("pot.policy")}</T>
 			<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
 				{(["owners", "members", "nobody"] as const).map((p) => (
@@ -152,6 +171,7 @@ function SettingsForm({ h }: { h: HouseholdResponse["household"] }) {
 						{
 							name: name.trim(),
 							potWithdrawals,
+							features,
 							backdateDays: unlimited ? null : Number(backdate),
 						},
 						{ onSuccess: () => showToast(t("household.saved"), 1500) },

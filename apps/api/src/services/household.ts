@@ -16,7 +16,7 @@ import {
 } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { householdView, memberView, updateHouseholdBody, updateMemberBody } from "../schemas.js";
-import type { AccountCtx, HouseholdActorCtx } from "./context.js";
+import { type AccountCtx, featuresOf, type HouseholdActorCtx } from "./context.js";
 import { createHousehold, type DbOrTx, joinHousehold, type Tx } from "./members.js";
 
 type MemberView = z.input<typeof memberView>;
@@ -57,6 +57,7 @@ export function getHousehold(db: DbOrTx, actor: HouseholdActorCtx, now: Date): H
 			name: h.name,
 			backdateDays: h.backdateUnlimited ? null : h.backdateDays,
 			potWithdrawals: h.potWithdrawals,
+			features: featuresOf(h),
 		},
 		members: membersOf(db, actor.householdId),
 		invites: pending.map((i) => ({
@@ -128,6 +129,10 @@ export function updateHousehold(
 			...(input.name !== undefined ? { name: input.name } : {}),
 			// null turns the limit off but keeps the last number, so turning it back on starts from there.
 			...(input.potWithdrawals !== undefined ? { potWithdrawals: input.potWithdrawals } : {}),
+			...(input.features?.pot !== undefined ? { featurePot: input.features.pot } : {}),
+			...(input.features?.wishes !== undefined ? { featureWishes: input.features.wishes } : {}),
+			...(input.features?.habits !== undefined ? { featureHabits: input.features.habits } : {}),
+			...(input.features?.tasks !== undefined ? { featureTasks: input.features.tasks } : {}),
 			...(input.backdateDays === null ? { backdateUnlimited: true } : {}),
 			...(typeof input.backdateDays === "number" ? { backdateDays: input.backdateDays, backdateUnlimited: false } : {}),
 		})

@@ -335,5 +335,13 @@ export const fr: Record<MessageId, string> = {
 	"pot.payoutTo": "Membre",
 	"pot.done": "C'est fait",
 	"errors.pot_locked": "Ce foyer ne vous laisse pas retirer de pièces de sa cagnotte.",
+	"features.title": "Ce que ce foyer utilise",
+	"features.pot": "Cagnotte",
+	"features.wishes": "Envies",
+	"features.habits": "Habitudes",
+	"features.tasks": "Tâches",
+	"features.hint":
+		"Les options désactivées sont masquées et refusées pour ce foyer. Votre espace personnel n'est pas touché.",
+	"errors.feature_disabled": "Ce foyer a désactivé cette option.",
 	"errors.unknown": "Une erreur est survenue.",
 };

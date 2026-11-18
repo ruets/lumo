@@ -271,6 +271,13 @@ export const statsView = z.object({
 	heatmap: z.array(z.object({ date: localDateSchema, done: z.number().int(), expected: z.number().int() })),
 });
 
+export const featuresView = z.object({
+	pot: z.boolean(),
+	wishes: z.boolean(),
+	habits: z.boolean(),
+	tasks: z.boolean(),
+});
+
 // ---- Profile and household --------------------------------------------------------------------
 
 export const meView = z.object({
@@ -284,7 +291,9 @@ export const meView = z.object({
 			id: z.string(),
 			name: z.string(),
 			role: z.enum(["owner", "member"]),
-			pot: z.object({ id: z.string(), balance: z.number().int() }),
+			/** `null` when the household turned its pot off. */
+			pot: z.object({ id: z.string(), balance: z.number().int() }).nullable(),
+			features: featuresView,
 		}),
 	),
 	wallets: z.object({
@@ -314,6 +323,7 @@ export const householdView = z.object({
 		backdateDays: z.number().int().nullable(),
 		/** Who may take coins out of the pot. */
 		potWithdrawals: z.enum(["owners", "members", "nobody"]),
+		features: featuresView,
 	}),
 	members: z.array(memberView),
 	/** Pending invitations (owner only; empty for everyone else). The token is shown only once, at creation. */
@@ -336,6 +346,8 @@ export const updateHouseholdBody = z
 		backdateDays: z.number().int().min(0).max(30).nullable(),
 		/** Who may take coins out of the pot: owners (default), every member, or nobody. */
 		potWithdrawals: z.enum(["owners", "members", "nobody"]),
+		/** Switch pot, wishes, habits or tasks on or off for the household (not for personal items). */
+		features: featuresView.partial().strict(),
 	})
 	.partial()
 	.strict()

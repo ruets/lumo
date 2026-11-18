@@ -982,6 +982,12 @@ export interface operations {
                             pot: {
                                 id: string;
                                 balance: number;
+                            } | null;
+                            features: {
+                                pot: boolean;
+                                wishes: boolean;
+                                habits: boolean;
+                                tasks: boolean;
                             };
                         }[];
                         wallets: {
@@ -1971,6 +1977,12 @@ export interface operations {
                             backdateDays: number | null;
                             /** @enum {string} */
                             potWithdrawals: "owners" | "members" | "nobody";
+                            features: {
+                                pot: boolean;
+                                wishes: boolean;
+                                habits: boolean;
+                                tasks: boolean;
+                            };
                         };
                         members: {
                             userId: string;
@@ -2023,6 +2035,12 @@ export interface operations {
                     backdateDays?: number | null;
                     /** @enum {string} */
                     potWithdrawals?: "owners" | "members" | "nobody";
+                    features?: {
+                        pot?: boolean;
+                        wishes?: boolean;
+                        habits?: boolean;
+                        tasks?: boolean;
+                    };
                 };
             };
         };
@@ -2040,6 +2058,12 @@ export interface operations {
                             backdateDays: number | null;
                             /** @enum {string} */
                             potWithdrawals: "owners" | "members" | "nobody";
+                            features: {
+                                pot: boolean;
+                                wishes: boolean;
+                                habits: boolean;
+                                tasks: boolean;
+                            };
                         };
                         members: {
                             userId: string;
@@ -4044,6 +4068,12 @@ export interface operations {
                             pot: {
                                 id: string;
                                 balance: number;
+                            } | null;
+                            features: {
+                                pot: boolean;
+                                wishes: boolean;
+                                habits: boolean;
+                                tasks: boolean;
                             };
                         }[];
                         wallets: {

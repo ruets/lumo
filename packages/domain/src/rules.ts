@@ -15,7 +15,8 @@ export type DomainErrorCode =
 	| "cannot_target_self"
 	| "last_super_admin"
 	| "already_supervising"
-	| "guardian_cycle";
+	| "guardian_cycle"
+	| "feature_disabled";
 
 /** Business rule violated; the API turns it into a 4xx response with this stable `code`. */
 export class DomainError extends Error {

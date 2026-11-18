@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUID } from "node:crypto";
-import { can, localDate, periodStart, planRedemption } from "@lumo/domain";
+import { assertFeature, can, localDate, periodStart, planRedemption } from "@lumo/domain";
 import { and, eq, gte, inArray, isNull, or } from "drizzle-orm";
 import type { z } from "zod";
 import { ledgerEntries, memberships, redemptions, rewardAssignees, rewards } from "../db/schema.js";
@@ -40,8 +40,9 @@ const toView = (r: RewardRow, assigneeIds: string[], remaining: number | null = 
 	remaining,
 });
 
+/** Wishes the actor can see: their own, and those of the households that have wishes switched on. */
 const accessibleRewards = (actor: ActorCtx) => {
-	const ids = actor.memberships.map((m) => m.householdId);
+	const ids = actor.memberships.filter((m) => m.features.wishes).map((m) => m.householdId);
 	return or(eq(rewards.ownerId, actor.userId), ids.length > 0 ? inArray(rewards.householdId, ids) : undefined);
 };
 
@@ -92,6 +93,9 @@ export function createReward(tx: Tx, actor: ActorCtx, input: z.output<typeof cre
 	if (scope === "household" && !householdId) throw errors.noHousehold();
 	const assigneeIds = [...new Set(input.assigneeIds)];
 	if (householdId) {
+		const as = actorIn(actor, householdId);
+		assertFeature(as.features, "wishes");
+		if (input.fundedFrom === "shared") assertFeature(as.features, "pot");
 		assertMembers(tx, householdId, assigneeIds);
 	} else {
 		// A personal wish is yours alone and paid from your own coins.
@@ -156,6 +160,8 @@ export function updateReward(
 		if (input.assigneeIds && input.assigneeIds.length > 0)
 			throw errors.validation("assigneeIds: a personal wish is yours alone");
 		if (input.fundedFrom === "shared") throw errors.validation("fundedFrom: a personal wish uses your own coins");
+	} else if (input.fundedFrom === "shared") {
+		assertFeature(actorIn(actor, row.householdId).features, "pot");
 	}
 
 	const limitCount = input.limitCount !== undefined ? input.limitCount : row.limitCount;
@@ -196,6 +202,7 @@ export function redeemReward(tx: Tx, actor: ActorCtx, rewardId: string, now: Dat
 	const assigneeIds = assigneesOf(tx, [rewardId]).get(rewardId) ?? [];
 	if (reward.householdId) {
 		const as = actorIn(actor, reward.householdId);
+		if (reward.fundedFrom === "shared") assertFeature(as.features, "pot");
 		if (reward.fundedFrom === "shared" && !can(as, "pot:withdraw")) throw errors.potLocked();
 		if (!can(as, "reward:redeem", { fundedFrom: reward.fundedFrom, assigneeIds })) {
 			throw errors.forbidden("You cannot redeem this wish");

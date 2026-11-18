@@ -42,6 +42,7 @@ const DOMAIN_STATUS: Record<DomainError["code"], number> = {
 	last_super_admin: 409,
 	already_supervising: 409,
 	guardian_cycle: 409,
+	feature_disabled: 403,
 };
 
 export async function buildApp({

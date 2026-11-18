@@ -48,7 +48,7 @@ export function walletBalance(db: DbOrTx, walletId: string): number {
 export function balancesFor(db: DbOrTx, actor: ActorCtx): { personal: number; shared: number | null } {
 	return {
 		personal: walletBalance(db, personalWalletId(db, actor.userId)),
-		shared: actor.householdId ? walletBalance(db, sharedWalletId(db, actor.householdId)) : null,
+		shared: actor.householdId && actor.features.pot ? walletBalance(db, sharedWalletId(db, actor.householdId)) : null,
 	};
 }
 
