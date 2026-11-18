@@ -27,6 +27,7 @@ export interface NewUser {
 	displayName: string;
 	avatarUrl?: string | null;
 	oidcSubject?: string | null;
+	oidcIssuer?: string | null;
 	username?: string | null;
 	email?: string | null;
 	passwordHash?: string | null;
@@ -42,6 +43,7 @@ export function createAccount(tx: Tx, user: NewUser): string {
 			displayName: user.displayName,
 			avatarUrl: user.avatarUrl ?? null,
 			oidcSubject: user.oidcSubject ?? null,
+			oidcIssuer: user.oidcSubject ? (user.oidcIssuer ?? "") : null,
 			username: user.username ?? null,
 			email: user.email ?? null,
 			passwordHash: user.passwordHash ?? null,

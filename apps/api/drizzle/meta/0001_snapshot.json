@@ -1,6 +1,6 @@
 {
-  "id": "55793787-a130-4703-9bb7-e0bf082b8b4e",
-  "prevId": "5b9776d3-4124-4466-aaa5-31f0e9966430",
+  "id": "c6b461d3-8013-4867-ab3f-4aa39d4931b1",
+  "prevId": "bcbdad53-5bb4-4664-bee9-86b62945f253",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -1277,6 +1277,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "link_user_id": {
+          "name": "link_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "expires_at": {
           "name": "expires_at",
           "type": "integer",
@@ -1796,6 +1803,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "oidc_issuer": {
+          "name": "oidc_issuer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "username": {
           "name": "username",
           "type": "text",
@@ -1897,9 +1911,10 @@
         }
       },
       "indexes": {
-        "users_oidc_subject_uq": {
-          "name": "users_oidc_subject_uq",
+        "users_oidc_identity_uq": {
+          "name": "users_oidc_identity_uq",
           "columns": [
+            "oidc_issuer",
             "oidc_subject"
           ],
           "isUnique": true

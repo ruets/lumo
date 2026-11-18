@@ -18,6 +18,7 @@ function accountOverview(db: DbOrTx, userId: string) {
 		user: { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl },
 		isSuperAdmin: account.isSuperAdmin,
 		households: account.households,
+		oidc: user.oidcSubject !== null,
 		timezone: user.timezone,
 		weekStart: user.weekStart,
 		canCreateHousehold: account.isSuperAdmin || getSettings(db).householdCreation === "anyone",

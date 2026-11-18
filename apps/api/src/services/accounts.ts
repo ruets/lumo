@@ -114,6 +114,7 @@ export function deleteUser(tx: Tx, actor: AccountCtx, targetId: string, now: Dat
 			username: null,
 			passwordHash: null,
 			oidcSubject: null,
+			oidcIssuer: null,
 			email: null,
 			isSuperAdmin: false,
 			disabledAt: now,

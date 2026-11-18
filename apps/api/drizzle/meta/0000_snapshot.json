@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5b9776d3-4124-4466-aaa5-31f0e9966430",
+  "id": "bcbdad53-5bb4-4664-bee9-86b62945f253",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "completions": {
@@ -1277,6 +1277,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "link_user_id": {
+          "name": "link_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "expires_at": {
           "name": "expires_at",
           "type": "integer",
@@ -1796,6 +1803,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "oidc_issuer": {
+          "name": "oidc_issuer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "username": {
           "name": "username",
           "type": "text",
@@ -1897,9 +1911,10 @@
         }
       },
       "indexes": {
-        "users_oidc_subject_uq": {
-          "name": "users_oidc_subject_uq",
+        "users_oidc_identity_uq": {
+          "name": "users_oidc_identity_uq",
           "columns": [
+            "oidc_issuer",
             "oidc_subject"
           ],
           "isUnique": true

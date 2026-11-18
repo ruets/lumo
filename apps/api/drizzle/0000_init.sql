@@ -178,6 +178,7 @@ CREATE TABLE `oidc_states` (
 	`nonce` text NOT NULL,
 	`code_verifier` text NOT NULL,
 	`invite_token` text,
+	`link_user_id` text,
 	`expires_at` integer NOT NULL
 );
 --> statement-breakpoint
@@ -251,6 +252,7 @@ CREATE TABLE `users` (
 	`display_name` text NOT NULL,
 	`avatar_url` text,
 	`oidc_subject` text,
+	`oidc_issuer` text,
 	`username` text,
 	`email` text,
 	`password_hash` text,
@@ -266,7 +268,7 @@ CREATE TABLE `users` (
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `users_oidc_subject_uq` ON `users` (`oidc_subject`);--> statement-breakpoint
+CREATE UNIQUE INDEX `users_oidc_identity_uq` ON `users` (`oidc_issuer`,`oidc_subject`);--> statement-breakpoint
 CREATE UNIQUE INDEX `users_username_uq` ON `users` (`username`);--> statement-breakpoint
 CREATE UNIQUE INDEX `users_email_uq` ON `users` (`email`);--> statement-breakpoint
 CREATE TABLE `wallets` (

@@ -8,7 +8,7 @@ import { oidcStates, users } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import { userCount, writeTx } from "../services/members.js";
 import { type AuthContext, SESSION_COOKIE } from "./guard.js";
-import { registerLocal, resolveOidcLogin, setupInstance } from "./identity.js";
+import { linkOidcIdentity, registerLocal, resolveOidcLogin, setupInstance } from "./identity.js";
 import { type OidcProvider, pkce } from "./oidc.js";
 import { hashPassword, MIN_PASSWORD_LENGTH, verifyPassword } from "./passwords.js";
 import { createSession, deleteSession, rotateRefreshToken, WEB_SESSION_TTL_MS } from "./sessions.js";
@@ -134,6 +134,31 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 		return reply.redirect(url);
 	});
 
+	// A signed-in account starts linking an Authentik identity to itself.
+	app.get("/auth/link", { ...limited(30), preHandler: requireAuth }, async (req, reply) => {
+		const provider = requireOidc();
+		const { userId } = req.auth as AuthContext;
+		const state = pkce.state();
+		const nonce = pkce.nonce();
+		const codeVerifier = pkce.codeVerifier();
+		db.insert(oidcStates)
+			.values({
+				state,
+				nonce,
+				codeVerifier,
+				linkUserId: userId,
+				expiresAt: new Date(Date.now() + OIDC_STATE_TTL_MS),
+			})
+			.run();
+		const url = await provider.buildAuthorizationUrl({
+			redirectUri: callbackUri,
+			state,
+			nonce,
+			codeChallenge: await pkce.codeChallenge(codeVerifier),
+		});
+		return reply.redirect(url);
+	});
+
 	app.get("/auth/callback", limited(30), async (req, reply) => {
 		const provider = requireOidc();
 		const fail = (code: string) => reply.redirect(`${config.PUBLIC_URL.replace(/\/$/, "")}/?auth_error=${code}`);
@@ -156,13 +181,20 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 				expectedState: state,
 				expectedNonce: saved.nonce,
 			});
+			if (saved.linkUserId) {
+				linkOidcIdentity(db, config, saved.linkUserId, claims);
+				return reply.redirect(`${config.PUBLIC_URL.replace(/\/$/, "")}/settings?linked=1`);
+			}
 			const { userId } = resolveOidcLogin(db, config, claims, saved.inviteToken);
 			setWebCookie(reply, createSession(db, { userId, kind: "web" }).token);
 			return reply.redirect(`${config.PUBLIC_URL.replace(/\/$/, "")}/`);
 		} catch (err) {
-			if (err instanceof AppError) return fail(err.code);
+			const target = saved.linkUserId ? "/settings" : "/";
+			const to = (code: string) =>
+				reply.redirect(`${config.PUBLIC_URL.replace(/\/$/, "")}${target}?auth_error=${code}`);
+			if (err instanceof AppError) return to(err.code);
 			req.log.warn({ err }, "OIDC exchange failed");
-			return fail("oidc_failed");
+			return to("oidc_failed");
 		}
 	});
 
@@ -187,6 +219,30 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 		}
 		const { userId } = resolveOidcLogin(db, config, claims, body.invite ?? null);
 		return reply.send(await startSession(reply, userId, "mobile"));
+	});
+
+	// Mobile: a signed-in account links an Authentik identity to itself.
+	app.post("/auth/mobile/link", { ...limited(20), preHandler: requireAuth }, async (req, reply) => {
+		const provider = requireOidc();
+		const { userId } = req.auth as AuthContext;
+		const body = parse(schemas.mobileExchange, req.body);
+		const callbackUrl = new URL(body.redirectUri);
+		callbackUrl.searchParams.set("code", body.code);
+		if (body.state) callbackUrl.searchParams.set("state", body.state);
+		let claims: Awaited<ReturnType<OidcProvider["exchange"]>>;
+		try {
+			claims = await provider.exchange({
+				callbackUrl,
+				codeVerifier: body.codeVerifier,
+				expectedState: body.state ?? null,
+				expectedNonce: body.nonce,
+			});
+		} catch (err) {
+			req.log.warn({ err }, "OIDC mobile link failed");
+			throw errors.oidcFailed();
+		}
+		linkOidcIdentity(db, config, userId, claims);
+		return reply.code(204).send();
 	});
 
 	app.post("/auth/refresh", limited(60), async (req) => {

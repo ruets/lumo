@@ -110,13 +110,24 @@ describe("contraintes", () => {
 	});
 
 	it("rejects a duplicate username or OIDC sub", () => {
-		exec("INSERT INTO users (id, display_name, username, oidc_subject) VALUES (?, 'A', 'alice', 'sub1')", randomUUID());
+		exec(
+			"INSERT INTO users (id, display_name, username, oidc_issuer, oidc_subject) VALUES (?, 'A', 'alice', 'https://idp', 'sub1')",
+			randomUUID(),
+		);
 		expect(() => exec("INSERT INTO users (id, display_name, username) VALUES (?, 'B', 'alice')", randomUUID())).toThrow(
 			/UNIQUE/,
 		);
 		expect(() =>
-			exec("INSERT INTO users (id, display_name, oidc_subject) VALUES (?, 'B', 'sub1')", randomUUID()),
+			exec(
+				"INSERT INTO users (id, display_name, oidc_issuer, oidc_subject) VALUES (?, 'B', 'https://idp', 'sub1')",
+				randomUUID(),
+			),
 		).toThrow(/UNIQUE/);
+		// The identity is the pair: the same subject under another issuer is another person.
+		exec(
+			"INSERT INTO users (id, display_name, oidc_issuer, oidc_subject) VALUES (?, 'C', 'https://other', 'sub1')",
+			randomUUID(),
+		);
 	});
 
 	it("rejects a malformed local_date", () => {
