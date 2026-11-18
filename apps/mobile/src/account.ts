@@ -26,6 +26,9 @@ async function wipeLocalData(): Promise<void> {
 	await clearTokens();
 	await setActiveHouseholdId(null);
 	await clearQueue();
-	queryClient.clear();
+	// `clear()` would detach the observers the root screen watches, which would never learn that the account is
+	// gone: mark the account query as signed out first, then drop the rest.
+	queryClient.setQueryData(["account"], null);
+	queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== "account" });
 	await persister.removeClient();
 }
