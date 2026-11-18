@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { CreateItemInput, Item, MeResponse, UpdateItemInput } from "@lumo/api-client";
+import type { CreateItemInput, Item, MeResponse, RewardList, UpdateItemInput } from "@lumo/api-client";
 import { t, weekdayShort } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Switch, View } from "react-native";
+import { Alert, Switch, View } from "react-native";
 import { describeError, useMe, useSupervision } from "./hooks";
 import { api } from "./session";
 import { Button, Chip, Field, font, Sheet, T } from "./ui";
@@ -97,7 +97,9 @@ export function ItemSheet({
 		},
 	);
 	const edited = useSubmit((i: UpdateItemInput) => api.updateItem(item?.id ?? "", i), onClose);
-	const { m, error } = item ? edited : created;
+	const removed = useSubmit<void>(() => api.archiveItem(item?.id ?? ""), onClose);
+	const { m, error: saveError } = item ? edited : created;
+	const error = saveError ?? removed.error;
 
 	function submit() {
 		const common = {
@@ -176,6 +178,21 @@ export function ItemSheet({
 			)}
 			{error && <T style={{ color: colors.danger, fontFamily: font.semi }}>{error}</T>}
 			<View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8 }}>
+				{item && (
+					<View style={{ flex: 1, alignItems: "flex-start" }}>
+						<Button
+							label={t("form.delete")}
+							variant="ghost"
+							disabled={removed.m.isPending}
+							onPress={() =>
+								Alert.alert(t("form.delete"), t("items.deleteConfirm", { name: item.name }), [
+									{ text: t("common.cancel"), style: "cancel" },
+									{ text: t("form.delete"), style: "destructive", onPress: () => removed.m.mutate() },
+								])
+							}
+						/>
+					</View>
+				)}
 				<Button label={t("common.cancel")} variant="ghost" onPress={onClose} />
 				<Button
 					label={t("form.save")}
@@ -191,30 +208,40 @@ export function RewardSheet({
 	visible,
 	onClose,
 	ward,
+	reward,
 }: {
 	visible: boolean;
 	onClose: () => void;
 	ward?: { id: string; me: MeResponse };
+	/** Set to edit this wish instead of creating one (its space cannot change). */
+	reward?: RewardList[number];
 }) {
-	const [name, setName] = useState("");
-	const [cost, setCost] = useState("50");
-	const [link, setLink] = useState("");
-	const [limited, setLimited] = useState(false);
-	const [limitCount, setLimitCount] = useState("1");
-	const [period, setPeriod] = useState<"day" | "week" | "month" | "year">("week");
+	const [name, setName] = useState(reward?.name ?? "");
+	const [cost, setCost] = useState(String(reward?.cost ?? 50));
+	const [link, setLink] = useState(reward?.link ?? "");
+	const [limited, setLimited] = useState(Boolean(reward?.limitCount));
+	const [limitCount, setLimitCount] = useState(String(reward?.limitCount ?? 1));
+	const [period, setPeriod] = useState<"day" | "week" | "month" | "year">(reward?.limitPeriod ?? "week");
 	const { households, dest, setDest, scope } = useTarget(ward);
-	const { m, error } = useSubmit(
+	const created = useSubmit(
 		(i: Parameters<typeof api.createReward>[0]) => (ward ? api.createWardReward(ward.id, i) : api.createReward(i)),
 		() => {
 			setName("");
 			onClose();
 		},
 	);
+	const edited = useSubmit(
+		(i: Parameters<typeof api.updateReward>[1]) => api.updateReward(reward?.id ?? "", i),
+		onClose,
+	);
+	const removed = useSubmit<void>(() => api.updateReward(reward?.id ?? "", { archived: true }), onClose);
+	const { m, error: saveError } = reward ? edited : created;
+	const error = saveError ?? removed.error;
 
 	return (
-		<Sheet title={t("wishes.new")} visible={visible} onClose={onClose}>
+		<Sheet title={reward ? t("wishes.edit") : t("wishes.new")} visible={visible} onClose={onClose}>
 			<Field label={t("form.name")} value={name} onChangeText={setName} maxLength={120} />
-			{households.length > 0 && <ScopeChips dest={dest} onChange={setDest} households={households} />}
+			{!reward && households.length > 0 && <ScopeChips dest={dest} onChange={setDest} households={households} />}
 			<Field label={t("form.cost")} value={cost} onChangeText={setCost} keyboardType="number-pad" />
 			<Field label={t("form.link")} value={link} onChangeText={setLink} autoCapitalize="none" keyboardType="url" />
 			<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
@@ -238,18 +265,41 @@ export function RewardSheet({
 			)}
 			{error && <T style={{ color: colors.danger, fontFamily: font.semi }}>{error}</T>}
 			<View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8 }}>
+				{reward && (
+					<View style={{ flex: 1, alignItems: "flex-start" }}>
+						<Button
+							label={t("form.delete")}
+							variant="ghost"
+							disabled={removed.m.isPending}
+							onPress={() =>
+								Alert.alert(t("form.delete"), t("wishes.deleteConfirm", { name: reward.name }), [
+									{ text: t("common.cancel"), style: "cancel" },
+									{ text: t("form.delete"), style: "destructive", onPress: () => removed.m.mutate() },
+								])
+							}
+						/>
+					</View>
+				)}
 				<Button label={t("common.cancel")} variant="ghost" onPress={onClose} />
 				<Button
 					label={t("form.save")}
 					disabled={m.isPending || name.trim() === ""}
 					onPress={() =>
-						m.mutate({
-							name: name.trim(),
-							cost: Number(cost) || 1,
-							...scope,
-							...(link.trim() ? { link: link.trim() } : {}),
-							...(limited ? { limitCount: Number(limitCount) || 1, limitPeriod: period } : {}),
-						})
+						reward
+							? edited.m.mutate({
+									name: name.trim(),
+									cost: Number(cost) || 1,
+									link: link.trim() || null,
+									limitCount: limited ? Number(limitCount) || 1 : null,
+									limitPeriod: limited ? period : null,
+								})
+							: created.m.mutate({
+									name: name.trim(),
+									cost: Number(cost) || 1,
+									...scope,
+									...(link.trim() ? { link: link.trim() } : {}),
+									...(limited ? { limitCount: Number(limitCount) || 1, limitPeriod: period } : {}),
+								})
 					}
 				/>
 			</View>

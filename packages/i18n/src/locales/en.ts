@@ -210,6 +210,11 @@ export const en = {
 	"form.limitUnit.year": "year",
 	"form.link": "Link (optional)",
 	"form.save": "Save",
+	"form.delete": "Delete",
+	"items.deleteConfirm": "Delete {name}? It leaves your lists; its history and the coins earned are kept.",
+	"wishes.edit": "Edit wish",
+	"wishes.editLabel": "Edit {name}",
+	"wishes.deleteConfirm": "Delete {name}? It leaves your wish list; the coins already spent are kept.",
 	"form.dueAt": "Due date (optional)",
 
 	"errors.target_reached": "Today's goal is already reached.",

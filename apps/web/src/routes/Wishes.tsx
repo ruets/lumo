@@ -25,6 +25,7 @@ export function WishesPage({ me }: { me: MeResponse }) {
 	const redeem = useRedeem();
 	const today = useToday();
 	const [creating, setCreating] = useState(false);
+	const [editing, setEditing] = useState<Reward | null>(null);
 	const filter = useSpaceFilter(me.households);
 	const [last, setLast] = useState<Reward | null>(null);
 	const balance = me.wallets.personal.balance;
@@ -72,23 +73,46 @@ export function WishesPage({ me }: { me: MeResponse }) {
 										{withSpace(spaceLabel(r, me.households, t("space.personal")), meta(r))}
 									</span>
 								</span>
-								{canBuy ? (
+								<div className="flex shrink-0 items-center gap-1">
 									<button
 										type="button"
-										aria-label={t("wishes.redeem", { name: r.name, count: r.cost })}
-										disabled={redeem.isPending}
-										onClick={() => redeem.mutate(r.id, { onSuccess: () => setLast(r) })}
-										className="flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-coin px-4 font-body text-sm font-bold text-bg"
+										aria-label={t("wishes.editLabel", { name: r.name })}
+										onClick={() => setEditing(r)}
+										className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-muted hover:bg-raised hover:text-ink"
 									>
-										<CoinIcon size={16} />
-										{r.cost}
+										<svg
+											aria-hidden="true"
+											width="16"
+											height="16"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth="2"
+											strokeLinecap="round"
+											strokeLinejoin="round"
+										>
+											<path d="M12 20h9" />
+											<path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" />
+										</svg>
 									</button>
-								) : (
-									<span className="flex shrink-0 items-center gap-1.5 px-1 text-sm font-bold text-soft">
-										<CoinIcon size={16} />
-										{r.cost}
-									</span>
-								)}
+									{canBuy ? (
+										<button
+											type="button"
+											aria-label={t("wishes.redeem", { name: r.name, count: r.cost })}
+											disabled={redeem.isPending}
+											onClick={() => redeem.mutate(r.id, { onSuccess: () => setLast(r) })}
+											className="flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-coin px-4 font-body text-sm font-bold text-bg"
+										>
+											<CoinIcon size={16} />
+											{r.cost}
+										</button>
+									) : (
+										<span className="flex shrink-0 items-center gap-1.5 px-1 text-sm font-bold text-soft">
+											<CoinIcon size={16} />
+											{r.cost}
+										</span>
+									)}
+								</div>
 							</div>
 							{!canBuy && (
 								<div className="grid gap-1.5">
@@ -105,6 +129,7 @@ export function WishesPage({ me }: { me: MeResponse }) {
 
 			<AddButton label={t("wishes.new")} onClick={() => setCreating(true)} />
 			{creating && <RewardDialog onClose={() => setCreating(false)} />}
+			{editing && <RewardDialog reward={editing} onClose={() => setEditing(null)} />}
 		</div>
 	);
 }

@@ -3,7 +3,7 @@ import { inSpace, type RewardList, spaceLabel } from "@lumo/api-client";
 import { t } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { RewardSheet } from "../../src/forms";
 import { useBalance, useMe, useRedeem, useRewards, useToday } from "../../src/hooks";
 import { withSpace } from "../../src/itemMeta";
@@ -30,6 +30,7 @@ export default function WishesScreen() {
 	const today = useToday();
 	const refresh = useRefresh();
 	const [creating, setCreating] = useState(false);
+	const [editing, setEditing] = useState<Reward | null>(null);
 	const [last, setLast] = useState<Reward | null>(null);
 	const balance = useBalance(me?.wallets.personal.balance ?? 0);
 	const filter = useSpaceFilter(me?.households ?? []);
@@ -81,12 +82,17 @@ export default function WishesScreen() {
 							}}
 						>
 							<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-								<View style={{ flex: 1, gap: 3 }}>
+								<Pressable
+									accessibilityRole="button"
+									accessibilityLabel={t("wishes.editLabel", { name: r.name })}
+									onPress={() => setEditing(r)}
+									style={{ flex: 1, gap: 3, minHeight: 44, justifyContent: "center" }}
+								>
 									<T style={{ fontFamily: font.bold, fontSize: 16 }}>{r.name}</T>
 									<T style={{ fontSize: 13, color: colors.muted }}>
 										{withSpace(spaceLabel(r, me.households, t("space.personal")), meta(r))}
 									</T>
-								</View>
+								</Pressable>
 								{canBuy ? (
 									<Button
 										variant="coin"
@@ -117,6 +123,7 @@ export default function WishesScreen() {
 
 			<AddButton label={t("wishes.new")} onPress={() => setCreating(true)} />
 			<RewardSheet visible={creating} onClose={() => setCreating(false)} />
+			{editing && <RewardSheet reward={editing} visible onClose={() => setEditing(null)} />}
 		</Screen>
 	);
 }

@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { ApiError, type CreateItemInput, type CreateRewardInput, type Item, type MeResponse } from "@lumo/api-client";
+import {
+	ApiError,
+	type CreateItemInput,
+	type CreateRewardInput,
+	type Item,
+	type MeResponse,
+	type RewardList,
+} from "@lumo/api-client";
 import { t, weekdayShort } from "@lumo/i18n";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
@@ -80,7 +87,9 @@ export function ItemDialog({
 		(input: Parameters<typeof api.updateItem>[1]) => api.updateItem(item?.id ?? "", input),
 		onClose,
 	);
-	const { m, error } = item ? edited : created;
+	const remove = useCreate<void>(() => api.archiveItem(item?.id ?? ""), onClose);
+	const { m, error: saveError } = item ? edited : created;
+	const error = saveError ?? remove.error;
 	const { households, target, setTarget, scope, personal: createPersonal } = useTarget(ward);
 	const personal = item ? item.scope === "personal" : createPersonal;
 	// Approval only concerns a supervised person: the one the item is for (a ward, or me if I have guardians).
@@ -220,6 +229,16 @@ export function ItemDialog({
 					</p>
 				)}
 				<div className="flex justify-end gap-2">
+					{item && (
+						<button
+							type="button"
+							disabled={remove.m.isPending}
+							onClick={() => window.confirm(t("items.deleteConfirm", { name: item.name })) && remove.m.mutate()}
+							className="mr-auto min-h-11 cursor-pointer rounded-full border-0 bg-transparent px-4 font-body text-sm font-bold text-bad"
+						>
+							{t("form.delete")}
+						</button>
+					)}
 					<button
 						type="button"
 						onClick={onClose}
@@ -236,19 +255,45 @@ export function ItemDialog({
 	);
 }
 
-export function RewardDialog({ onClose, ward }: { onClose: () => void; ward?: { id: string; me: MeResponse } }) {
-	const [limited, setLimited] = useState(false);
-	const { m, error } = useCreate(
+export function RewardDialog({
+	onClose,
+	ward,
+	reward,
+}: {
+	onClose: () => void;
+	ward?: { id: string; me: MeResponse };
+	/** Set to edit this wish instead of creating one (its space cannot change). */
+	reward?: RewardList[number];
+}) {
+	const [limited, setLimited] = useState(Boolean(reward?.limitCount));
+	const created = useCreate(
 		(input: CreateRewardInput) => (ward ? api.createWardReward(ward.id, input) : api.createReward(input)),
 		onClose,
 	);
+	const edited = useCreate(
+		(input: Parameters<typeof api.updateReward>[1]) => api.updateReward(reward?.id ?? "", input),
+		onClose,
+	);
+	const remove = useCreate<void>(() => api.updateReward(reward?.id ?? "", { archived: true }), onClose);
+	const { m, error: saveError } = reward ? edited : created;
+	const error = saveError ?? remove.error;
 	const { households, target, setTarget, scope } = useTarget(ward);
 
 	function submit(e: FormEvent<HTMLFormElement>) {
 		e.preventDefault();
 		const f = new FormData(e.currentTarget);
 		const link = String(f.get("link") ?? "").trim();
-		m.mutate({
+		if (reward) {
+			edited.m.mutate({
+				name: String(f.get("name") ?? ""),
+				cost: Number(f.get("cost") ?? 1),
+				link: link || null,
+				limitCount: limited ? Number(f.get("limitCount") ?? 1) : null,
+				limitPeriod: limited ? (String(f.get("limitPeriod")) as "week") : null,
+			});
+			return;
+		}
+		created.m.mutate({
 			name: String(f.get("name") ?? ""),
 			cost: Number(f.get("cost") ?? 1),
 			...scope,
@@ -260,17 +305,17 @@ export function RewardDialog({ onClose, ward }: { onClose: () => void; ward?: { 
 	}
 
 	return (
-		<Dialog title={t("wishes.new")} onClose={onClose}>
+		<Dialog title={reward ? t("wishes.edit") : t("wishes.new")} onClose={onClose}>
 			<form onSubmit={submit} className="grid gap-3">
 				<Field label={t("form.name")}>
-					<input name="name" required maxLength={120} className={fieldClass} />
+					<input name="name" required maxLength={120} defaultValue={reward?.name} className={fieldClass} />
 				</Field>
-				{households.length > 0 && <ScopeField value={target} onChange={setTarget} households={households} />}
+				{!reward && households.length > 0 && <ScopeField value={target} onChange={setTarget} households={households} />}
 				<Field label={t("form.cost")}>
-					<input name="cost" type="number" min={1} defaultValue={50} className={fieldClass} />
+					<input name="cost" type="number" min={1} defaultValue={reward?.cost ?? 50} className={fieldClass} />
 				</Field>
 				<Field label={t("form.link")}>
-					<input name="link" type="url" className={fieldClass} />
+					<input name="link" type="url" defaultValue={reward?.link ?? ""} className={fieldClass} />
 				</Field>
 				<label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-soft">
 					<input type="checkbox" checked={limited} onChange={(e) => setLimited(e.target.checked)} className="size-5" />
@@ -279,10 +324,16 @@ export function RewardDialog({ onClose, ward }: { onClose: () => void; ward?: { 
 				{limited && (
 					<div className="grid grid-cols-2 gap-3">
 						<Field label={t("form.limitCount")}>
-							<input name="limitCount" type="number" min={1} defaultValue={1} className={fieldClass} />
+							<input
+								name="limitCount"
+								type="number"
+								min={1}
+								defaultValue={reward?.limitCount ?? 1}
+								className={fieldClass}
+							/>
 						</Field>
 						<Field label={t("form.limitPeriod")}>
-							<select name="limitPeriod" defaultValue="week" className={fieldClass}>
+							<select name="limitPeriod" defaultValue={reward?.limitPeriod ?? "week"} className={fieldClass}>
 								{(["day", "week", "month", "year"] as const).map((unit) => (
 									<option key={unit} value={unit}>
 										{t(`form.limitUnit.${unit}` as const)}
@@ -298,6 +349,16 @@ export function RewardDialog({ onClose, ward }: { onClose: () => void; ward?: { 
 					</p>
 				)}
 				<div className="flex justify-end gap-2">
+					{reward && (
+						<button
+							type="button"
+							disabled={remove.m.isPending}
+							onClick={() => window.confirm(t("wishes.deleteConfirm", { name: reward.name })) && remove.m.mutate()}
+							className="mr-auto min-h-11 cursor-pointer rounded-full border-0 bg-transparent px-4 font-body text-sm font-bold text-bad"
+						>
+							{t("form.delete")}
+						</button>
+					)}
 					<button
 						type="button"
 						onClick={onClose}
