@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "20ee7ea5-6217-4929-8a9a-1072e53f2665",
+  "id": "8f629dc5-3cf4-4bd6-86b8-054fe1e07c1d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "completions": {
@@ -440,6 +440,14 @@
           "notNull": true,
           "autoincrement": false
         },
+        "pot_withdrawals": {
+          "name": "pot_withdrawals",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'owners'"
+        },
         "backdate_days": {
           "name": "backdate_days",
           "type": "integer",
@@ -473,6 +481,10 @@
         "households_backdate_days_check": {
           "name": "households_backdate_days_check",
           "value": "\"households\".\"backdate_days\" >= 0"
+        },
+        "households_pot_withdrawals_check": {
+          "name": "households_pot_withdrawals_check",
+          "value": "pot_withdrawals IN ('owners', 'members', 'nobody')"
         }
       }
     },

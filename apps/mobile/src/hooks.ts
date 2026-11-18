@@ -149,6 +149,8 @@ export const useUpdateMember = () =>
 	useHouseholdWrite(({ id, input }: { id: string; input: Parameters<typeof api.updateMember>[1] }) =>
 		api.updateMember(id, input),
 	);
+export const usePotWrite = useWrite;
+
 export const useCreateInvite = () => useHouseholdWrite((role: "owner" | "member") => api.createInvite(role));
 export const useRevokeInvite = () => useHouseholdWrite((id: string) => api.revokeInvite(id));
 export const useRemoveMember = () => useHouseholdWrite((id: string) => api.removeMember(id));

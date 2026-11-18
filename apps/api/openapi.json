@@ -2226,9 +2226,13 @@
 															"type": "null"
 														}
 													]
+												},
+												"potWithdrawals": {
+													"type": "string",
+													"enum": ["owners", "members", "nobody"]
 												}
 											},
-											"required": ["id", "name", "backdateDays"],
+											"required": ["id", "name", "backdateDays", "potWithdrawals"],
 											"additionalProperties": false
 										},
 										"members": {
@@ -2361,6 +2365,10 @@
 												"type": "null"
 											}
 										]
+									},
+									"potWithdrawals": {
+										"type": "string",
+										"enum": ["owners", "members", "nobody"]
 									}
 								},
 								"additionalProperties": false
@@ -2396,9 +2404,13 @@
 															"type": "null"
 														}
 													]
+												},
+												"potWithdrawals": {
+													"type": "string",
+													"enum": ["owners", "members", "nobody"]
 												}
 											},
-											"required": ["id", "name", "backdateDays"],
+											"required": ["id", "name", "backdateDays", "potWithdrawals"],
 											"additionalProperties": false
 										},
 										"members": {
@@ -5400,6 +5412,247 @@
 									}
 								},
 								"required": ["amount"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"transferId": {
+											"type": "string"
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
+												}
+											},
+											"required": ["personal", "shared"],
+											"additionalProperties": false
+										}
+									},
+									"required": ["transferId", "balances"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/household/pot/withdrawals": {
+			"post": {
+				"summary": "Take coins out of the household pot into your wallet (when the household policy allows it)",
+				"tags": ["Coins"],
+				"operationId": "postApiV1HouseholdPotWithdrawals",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"amount": {
+										"type": "number"
+									}
+								},
+								"required": ["amount"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"transferId": {
+											"type": "string"
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
+												}
+											},
+											"required": ["personal", "shared"],
+											"additionalProperties": false
+										}
+									},
+									"required": ["transferId", "balances"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/household/pot/payouts": {
+			"post": {
+				"summary": "Pay a member out of the household pot (owner)",
+				"tags": ["Coins"],
+				"operationId": "postApiV1HouseholdPotPayouts",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"userId": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 100
+									},
+									"amount": {
+										"type": "number"
+									}
+								},
+								"required": ["userId", "amount"],
 								"additionalProperties": false
 							}
 						}

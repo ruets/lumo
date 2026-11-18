@@ -4,11 +4,14 @@ import { shortDate, t } from "@lumo/i18n";
 import { useState } from "react";
 import { Avatar } from "../components/AppShell";
 import { Field, fieldClass, PageTitle, PrimaryButton } from "../components/ui";
+import { api } from "../lib/api";
 import {
 	useCreateInvite,
 	useHousehold,
+	usePotWrite,
 	useRemoveMember,
 	useRevokeInvite,
+	useSupervision,
 	useUpdateHousehold,
 	useUpdateMember,
 } from "../lib/hooks";
@@ -91,6 +94,7 @@ function SettingsForm({ h }: { h: Household }) {
 		update.mutate(
 			{
 				name: String(f.get("name") ?? "").trim(),
+				potWithdrawals: String(f.get("potWithdrawals")) as Household["potWithdrawals"],
 				backdateDays: unlimited ? null : Number(f.get("backdateDays")),
 			},
 			{ onSuccess: () => showToast(t("household.saved"), 1500) },
@@ -104,6 +108,16 @@ function SettingsForm({ h }: { h: Household }) {
 				<Field label={t("household.settings.name")}>
 					<input name="name" defaultValue={h.name} required maxLength={80} className={fieldClass} />
 				</Field>
+				<Field label={t("pot.policy")}>
+					<select name="potWithdrawals" defaultValue={h.potWithdrawals} className={fieldClass}>
+						{(["owners", "members", "nobody"] as const).map((p) => (
+							<option key={p} value={p}>
+								{t(`pot.policy.${p}` as const)}
+							</option>
+						))}
+					</select>
+				</Field>
+				<p className="m-0 -mt-2 text-xs text-muted">{t("pot.policyHint")}</p>
 				<Field label={t("household.settings.backdate")}>
 					<input
 						name="backdateDays"
@@ -132,6 +146,88 @@ function SettingsForm({ h }: { h: Household }) {
 					</PrimaryButton>
 				</div>
 			</form>
+		</section>
+	);
+}
+
+/** The household pot: take coins out (when the policy allows it) and, for owners, pay a member. */
+function PotSection({ me, members }: { me: MeResponse; members: Member[] }) {
+	const supervision = useSupervision();
+	const policy = useHousehold().data?.household.potWithdrawals ?? "owners";
+	const withdraw = usePotWrite((amount: number) => api.withdrawFromPot(amount));
+	const payout = usePotWrite(({ userId, amount }: { userId: string; amount: number }) =>
+		api.payoutFromPot(userId, amount),
+	);
+	const isOwner = me.role === "owner";
+	const supervised = supervision.data?.rights != null;
+	const canWithdraw = !supervised && (policy === "members" || (policy === "owners" && isOwner));
+	const done = () => showToast(t("pot.done"), 1500);
+	if (!me.wallets.shared) return null;
+	return (
+		<section className="grid gap-2.5">
+			<h2 className="m-0 text-[15px] font-bold text-muted">{t("pot.title")}</h2>
+			<div className="grid gap-3 rounded-[20px] bg-surface p-4">
+				<p className="m-0 text-sm font-bold text-coin">{t("pot.balance", { amount: me.wallets.shared.balance })}</p>
+				{canWithdraw && (
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							const form = e.currentTarget;
+							withdraw.mutate(Number(new FormData(form).get("amount")), {
+								onSuccess: () => {
+									form.reset();
+									done();
+								},
+							});
+						}}
+						className="grid gap-3"
+					>
+						<Field label={t("pot.amount")}>
+							<input name="amount" type="number" min={1} step={1} required className={fieldClass} />
+						</Field>
+						<PrimaryButton type="submit" disabled={withdraw.isPending}>
+							{t("pot.withdraw")}
+						</PrimaryButton>
+					</form>
+				)}
+				{isOwner && (
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							const form = e.currentTarget;
+							const f = new FormData(form);
+							payout.mutate(
+								{ userId: String(f.get("userId")), amount: Number(f.get("amount")) },
+								{
+									onSuccess: () => {
+										form.reset();
+										done();
+									},
+								},
+							);
+						}}
+						className="grid gap-3 border-t border-line pt-3"
+					>
+						<Field label={t("pot.payoutTo")}>
+							<select name="userId" required className={fieldClass}>
+								{members
+									.filter((m) => m.userId !== me.user.id)
+									.map((m) => (
+										<option key={m.userId} value={m.userId}>
+											{m.displayName}
+										</option>
+									))}
+							</select>
+						</Field>
+						<Field label={t("pot.amount")}>
+							<input name="amount" type="number" min={1} step={1} required className={fieldClass} />
+						</Field>
+						<PrimaryButton type="submit" disabled={payout.isPending}>
+							{t("pot.payout")}
+						</PrimaryButton>
+					</form>
+				)}
+			</div>
 		</section>
 	);
 }
@@ -246,6 +342,7 @@ export function HouseholdPage({ me }: { me: MeResponse }) {
 					))}
 				</ul>
 			</section>
+			<PotSection me={me} members={household.data?.members ?? []} />
 			{canManage && <InviteSection />}
 			{canManage && <SettingsSection />}
 		</div>

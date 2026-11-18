@@ -7,6 +7,7 @@ import {
 	idParams,
 	ledgerEntryView,
 	ledgerQuery,
+	potPayoutBody,
 	redemptionResult,
 	rewardView,
 	statsQuery,
@@ -16,7 +17,7 @@ import {
 } from "../schemas.js";
 import { getStats } from "../services/progress.js";
 import { createReward, listRewards, redeemReward, undoRedemption, updateReward } from "../services/rewards.js";
-import { adjust, listLedger, transferToShared } from "../services/wallet.js";
+import { adjust, listLedger, payoutFromPot, transferToShared, withdrawFromPot } from "../services/wallet.js";
 import { route } from "./define.js";
 
 export const rewardRoutes = [
@@ -84,6 +85,26 @@ export const walletRoutes = [
 		response: z.object({ transferId: z.string(), balances: balancesView }),
 		status: 201,
 		handler: ({ db, actor, body, now }) => transferToShared(db, actor, body.amount, now),
+	}),
+	route({
+		method: "post",
+		url: "/household/pot/withdrawals",
+		summary: "Take coins out of the household pot into your wallet (when the household policy allows it)",
+		tag: "Coins",
+		body: transferBody,
+		response: z.object({ transferId: z.string(), balances: balancesView }),
+		status: 201,
+		handler: ({ db, actor, body, now }) => withdrawFromPot(db, actor, body.amount, now),
+	}),
+	route({
+		method: "post",
+		url: "/household/pot/payouts",
+		summary: "Pay a member out of the household pot (owner)",
+		tag: "Coins",
+		body: potPayoutBody,
+		response: z.object({ transferId: z.string(), balances: balancesView }),
+		status: 201,
+		handler: ({ db, actor, body, now }) => payoutFromPot(db, actor, body.userId, body.amount, now),
 	}),
 	route({
 		scope: "account",

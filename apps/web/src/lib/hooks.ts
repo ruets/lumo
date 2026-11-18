@@ -198,6 +198,16 @@ export const useUpdateMember = () =>
 	useHouseholdWrite(({ id, input }: { id: string; input: Parameters<typeof api.updateMember>[1] }) =>
 		api.updateMember(id, input),
 	);
+/** Coins move between wallets: refresh everything that shows a balance. */
+export function usePotWrite<V, R>(fn: (v: V) => Promise<R>) {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: fn,
+		onError: (err) => showToast(describeError(err)),
+		onSettled: () => void qc.invalidateQueries(),
+	});
+}
+
 export const useCreateInvite = () => useHouseholdWrite((role: "owner" | "member") => api.createInvite(role));
 export const useRevokeInvite = () => useHouseholdWrite((id: string) => api.revokeInvite(id));
 export const useRemoveMember = () => useHouseholdWrite((id: string) => api.removeMember(id));
