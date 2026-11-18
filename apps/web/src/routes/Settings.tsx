@@ -88,6 +88,13 @@ export function SettingsPage({ me }: { me: MeResponse }) {
 					<HouseholdAccess account={account} hint={!me.household} />
 				</Section>
 			)}
+			<Link
+				to="/supervision"
+				className="flex min-h-12 items-center justify-between rounded-[20px] bg-surface px-4 font-semibold text-ink no-underline hover:bg-raised"
+			>
+				{t("supervision.open")}
+				<span aria-hidden="true">›</span>
+			</Link>
 			{isSuperAdmin && (
 				<Link
 					to="/admin"

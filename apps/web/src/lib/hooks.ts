@@ -269,3 +269,23 @@ export function useAdminWrite<V, R>(fn: (v: V) => Promise<R>) {
 		onSettled: () => void qc.invalidateQueries(),
 	});
 }
+
+export const useSupervision = () => useQuery({ queryKey: ["supervision"], queryFn: () => api.getSupervision() });
+export const useWardMe = (id: string) =>
+	useQuery({ queryKey: ["supervision", id, "me"], queryFn: () => api.getWardMe(id) });
+export const useWardItems = (id: string) =>
+	useQuery({ queryKey: ["supervision", id, "items"], queryFn: () => api.listWardItems(id) });
+export const useWardRewards = (id: string) =>
+	useQuery({ queryKey: ["supervision", id, "rewards"], queryFn: () => api.listWardRewards(id) });
+export const useWardPending = (id: string) =>
+	useQuery({ queryKey: ["supervision", id, "pending"], queryFn: () => api.getWardPending(id) });
+
+/** Supervision writes can change what the person sees everywhere: refetch everything. */
+export function useSupervisionWrite<V, R>(fn: (v: V) => Promise<R>) {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: fn,
+		onError: (err) => showToast(describeError(err)),
+		onSettled: () => void qc.invalidateQueries(),
+	});
+}

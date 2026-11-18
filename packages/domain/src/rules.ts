@@ -13,7 +13,9 @@ export type DomainErrorCode =
 	| "last_owner"
 	| "cannot_remove_self"
 	| "cannot_target_self"
-	| "last_super_admin";
+	| "last_super_admin"
+	| "already_supervising"
+	| "guardian_cycle";
 
 /** Business rule violated; the API turns it into a 4xx response with this stable `code`. */
 export class DomainError extends Error {

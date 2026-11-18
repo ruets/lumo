@@ -7,7 +7,7 @@ import { itemAssignees, items, memberships } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { createItemBody, itemView, updateItemBody } from "../schemas.js";
 import type { ActorCtx } from "./context.js";
-import { actorIn } from "./context.js";
+import { actorIn, requireRight } from "./context.js";
 import type { DbOrTx, Tx } from "./members.js";
 
 export type ItemRow = typeof items.$inferSelect;
@@ -74,6 +74,7 @@ function assertMembers(db: DbOrTx, householdId: string, ids: string[]) {
 const unique = (ids: string[]) => [...new Set(ids)];
 
 export function createItem(tx: Tx, actor: ActorCtx, input: z.output<typeof createItemBody>, now: Date): ItemView {
+	requireRight(actor, "create");
 	const scope = input.scope ?? (actor.householdId ? "household" : "personal");
 	const householdId = scope === "household" ? (input.householdId ?? actor.householdId) : null;
 	if (scope === "household" && !householdId) throw errors.noHousehold();
@@ -156,6 +157,7 @@ export function listItems(db: DbOrTx, actor: ActorCtx, includeArchived: boolean)
 }
 
 export function updateItem(tx: Tx, actor: ActorCtx, id: string, input: z.output<typeof updateItemBody>): ItemView {
+	requireRight(actor, "modify");
 	const row = getActiveItem(tx, actor, id);
 	const as = actorIn(actor, row.householdId);
 	if (!can(as, "item:update", { createdBy: row.createdBy })) throw errors.forbidden("Update not allowed");
@@ -195,6 +197,7 @@ export function updateItem(tx: Tx, actor: ActorCtx, id: string, input: z.output<
 
 /** Archiving (never deleted: the coin history stays readable). Idempotent. */
 export function archiveItem(tx: Tx, actor: ActorCtx, id: string, now: Date): void {
+	requireRight(actor, "delete");
 	const row = tx
 		.select()
 		.from(items)

@@ -576,6 +576,366 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/supervision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who supervises me and who I supervise */
+        get: operations["getApiV1Supervision"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a one-time code: to supervise whoever uses it, or to be supervised by whoever uses it */
+        post: operations["postApiV1SupervisionCodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Use a code made by someone else: this completes the consent */
+        post: operations["postApiV1SupervisionRedeem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a local account that I supervise (for a child) */
+        post: operations["postApiV1SupervisionWards"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Stop supervising an account (the account becomes unsupervised when its last guardian stops) */
+        delete: operations["deleteApiV1SupervisionWardsWardId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/rights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Set what a ward may do by themselves */
+        patch: operations["patchApiV1SupervisionWardsWardIdRights"];
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add or remove coins on a ward's balance, with a note (never on your own) */
+        post: operations["postApiV1SupervisionWardsWardIdAdjustments"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A ward's completions waiting for approval */
+        get: operations["getApiV1SupervisionWardsWardIdPending"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/completions/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a ward's completion */
+        post: operations["postApiV1SupervisionWardsWardIdCompletionsIdApprove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/completions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a ward's completion */
+        post: operations["postApiV1SupervisionWardsWardIdCompletionsIdReject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Profile, household, role and balances */
+        get: operations["getApiV1SupervisionWardsWardIdMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the visible items */
+        get: operations["getApiV1SupervisionWardsWardIdItems"];
+        put?: never;
+        /** Create a habit or a task */
+        post: operations["postApiV1SupervisionWardsWardIdItems"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/items/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Archive an item */
+        delete: operations["deleteApiV1SupervisionWardsWardIdItemsId"];
+        options?: never;
+        head?: never;
+        /** Update an item */
+        patch: operations["patchApiV1SupervisionWardsWardIdItemsId"];
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Items due that day with their progress */
+        get: operations["getApiV1SupervisionWardsWardIdToday"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/completions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Undo a completion (counter-entry in the ledger) */
+        delete: operations["deleteApiV1SupervisionWardsWardIdCompletionsId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/rewards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the wishes */
+        get: operations["getApiV1SupervisionWardsWardIdRewards"];
+        put?: never;
+        /** Create a wish (owner and adults) */
+        post: operations["postApiV1SupervisionWardsWardIdRewards"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/rewards/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update or archive a wish */
+        patch: operations["patchApiV1SupervisionWardsWardIdRewardsId"];
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/redemptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Undo a wish redemption (refund by counter-entry) */
+        delete: operations["deleteApiV1SupervisionWardsWardIdRedemptionsId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transfer coins from your wallet to the shared pot */
+        post: operations["postApiV1SupervisionWardsWardIdTransfers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A wallet's history, cursor-paginated */
+        get: operations["getApiV1SupervisionWardsWardIdLedger"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/wards/{wardId}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Streaks, success rates and heatmap */
+        get: operations["getApiV1SupervisionWardsWardIdStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3056,6 +3416,1566 @@ export interface operations {
             };
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        from: string;
+                        to: string;
+                        habits: {
+                            itemId: string;
+                            name: string;
+                            streak: {
+                                current: number;
+                                best: number;
+                            };
+                            week: {
+                                done: number;
+                                expected: number;
+                                rate: number | null;
+                            };
+                            month: {
+                                done: number;
+                                expected: number;
+                                rate: number | null;
+                            };
+                        }[];
+                        heatmap: {
+                            date: string;
+                            done: number;
+                            expected: number;
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1Supervision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        guardians: {
+                            id: string;
+                            displayName: string;
+                        }[];
+                        rights: {
+                            canCreate: boolean;
+                            canModify: boolean;
+                            canDelete: boolean;
+                            canTransfer: boolean;
+                        } | null;
+                        wards: {
+                            id: string;
+                            displayName: string;
+                            rights: {
+                                canCreate: boolean;
+                                canModify: boolean;
+                                canDelete: boolean;
+                                canTransfer: boolean;
+                            };
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1SupervisionCodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    kind: "supervise" | "be_supervised";
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        token: string;
+                        expiresAt: string;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1SupervisionRedeem: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        guardians: {
+                            id: string;
+                            displayName: string;
+                        }[];
+                        rights: {
+                            canCreate: boolean;
+                            canModify: boolean;
+                            canDelete: boolean;
+                            canTransfer: boolean;
+                        } | null;
+                        wards: {
+                            id: string;
+                            displayName: string;
+                            rights: {
+                                canCreate: boolean;
+                                canModify: boolean;
+                                canDelete: boolean;
+                                canTransfer: boolean;
+                            };
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1SupervisionWards: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    displayName: string;
+                    username: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        displayName: string;
+                        rights: {
+                            canCreate: boolean;
+                            canModify: boolean;
+                            canDelete: boolean;
+                            canTransfer: boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1SupervisionWardsWardId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    patchApiV1SupervisionWardsWardIdRights: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    canCreate?: boolean;
+                    canModify?: boolean;
+                    canDelete?: boolean;
+                    canTransfer?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        displayName: string;
+                        rights: {
+                            canCreate: boolean;
+                            canModify: boolean;
+                            canDelete: boolean;
+                            canTransfer: boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1SupervisionWardsWardIdAdjustments: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    amount: number;
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        balance: number;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1SupervisionWardsWardIdPending: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        completions: {
+                            id: string;
+                            itemId: string;
+                            userId: string;
+                            localDate: string;
+                            /** @enum {string} */
+                            status: "pending" | "approved" | "rejected";
+                            approvedBy: string | null;
+                            completedAt: string;
+                            undoneAt: string | null;
+                            itemName: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1SupervisionWardsWardIdCompletionsIdApprove: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                wardId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        completion: {
+                            id: string;
+                            itemId: string;
+                            userId: string;
+                            localDate: string;
+                            /** @enum {string} */
+                            status: "pending" | "approved" | "rejected";
+                            approvedBy: string | null;
+                            completedAt: string;
+                            undoneAt: string | null;
+                        };
+                        balances: {
+                            personal: number;
+                            shared: number | null;
+                        };
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1SupervisionWardsWardIdCompletionsIdReject: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                wardId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        completion: {
+                            id: string;
+                            itemId: string;
+                            userId: string;
+                            localDate: string;
+                            /** @enum {string} */
+                            status: "pending" | "approved" | "rejected";
+                            approvedBy: string | null;
+                            completedAt: string;
+                            undoneAt: string | null;
+                        };
+                        balances: {
+                            personal: number;
+                            shared: number | null;
+                        };
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1SupervisionWardsWardIdMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            id: string;
+                            displayName: string;
+                            avatarUrl: string | null;
+                        };
+                        household: {
+                            id: string;
+                            name: string;
+                        } | null;
+                        role: ("owner" | "adult" | "child") | null;
+                        households: {
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            role: "owner" | "adult" | "child";
+                            pot: {
+                                id: string;
+                                balance: number;
+                            };
+                        }[];
+                        wallets: {
+                            personal: {
+                                id: string;
+                                balance: number;
+                            };
+                            shared: {
+                                id: string;
+                                balance: number;
+                            } | null;
+                        };
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1SupervisionWardsWardIdItems: {
+        parameters: {
+            query?: {
+                includeArchived?: "true" | "false";
+            };
+            header?: never;
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            /** @enum {string} */
+                            kind: "habit" | "task";
+                            name: string;
+                            description: string | null;
+                            schedule: ({
+                                /** @constant */
+                                type: "daily";
+                            } | {
+                                /** @constant */
+                                type: "weekly";
+                                days: number[];
+                            } | {
+                                /** @constant */
+                                type: "timesPerWeek";
+                                count: number;
+                            } | {
+                                /** @constant */
+                                type: "monthly";
+                                day: number;
+                            }) | null;
+                            targetPerPeriod: number;
+                            reward: number;
+                            /** @enum {string} */
+                            creditsTo: "personal" | "shared";
+                            dueAt: string | null;
+                            pinned: boolean;
+                            requiresApproval: boolean;
+                            archivedAt: string | null;
+                            createdBy: string;
+                            assigneeIds: string[];
+                            /** @enum {string} */
+                            scope: "personal" | "household";
+                            householdId: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1SupervisionWardsWardIdItems: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @constant */
+                    kind: "habit";
+                    schedule: {
+                        /** @constant */
+                        type: "daily";
+                    } | {
+                        /** @constant */
+                        type: "weekly";
+                        days: number[];
+                    } | {
+                        /** @constant */
+                        type: "timesPerWeek";
+                        count: number;
+                    } | {
+                        /** @constant */
+                        type: "monthly";
+                        day: number;
+                    };
+                    /** @default 1 */
+                    targetPerPeriod?: number;
+                    name: string;
+                    description?: string | null;
+                    /** @default 0 */
+                    reward?: number;
+                    /**
+                     * @default personal
+                     * @enum {string}
+                     */
+                    creditsTo?: "personal" | "shared";
+                    /** @default false */
+                    pinned?: boolean;
+                    /** @default false */
+                    requiresApproval?: boolean;
+                    assigneeIds?: string[];
+                    /** @enum {string} */
+                    scope?: "personal" | "household";
+                    householdId?: string;
+                } | {
+                    /** @constant */
+                    kind: "task";
+                    dueAt?: string | null;
+                    targetPerPeriod?: number;
+                    name: string;
+                    description?: string | null;
+                    /** @default 0 */
+                    reward?: number;
+                    /**
+                     * @default personal
+                     * @enum {string}
+                     */
+                    creditsTo?: "personal" | "shared";
+                    /** @default false */
+                    pinned?: boolean;
+                    /** @default false */
+                    requiresApproval?: boolean;
+                    assigneeIds?: string[];
+                    /** @enum {string} */
+                    scope?: "personal" | "household";
+                    householdId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        /** @enum {string} */
+                        kind: "habit" | "task";
+                        name: string;
+                        description: string | null;
+                        schedule: ({
+                            /** @constant */
+                            type: "daily";
+                        } | {
+                            /** @constant */
+                            type: "weekly";
+                            days: number[];
+                        } | {
+                            /** @constant */
+                            type: "timesPerWeek";
+                            count: number;
+                        } | {
+                            /** @constant */
+                            type: "monthly";
+                            day: number;
+                        }) | null;
+                        targetPerPeriod: number;
+                        reward: number;
+                        /** @enum {string} */
+                        creditsTo: "personal" | "shared";
+                        dueAt: string | null;
+                        pinned: boolean;
+                        requiresApproval: boolean;
+                        archivedAt: string | null;
+                        createdBy: string;
+                        assigneeIds: string[];
+                        /** @enum {string} */
+                        scope: "personal" | "household";
+                        householdId: string | null;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1SupervisionWardsWardIdItemsId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    patchApiV1SupervisionWardsWardIdItemsId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string | null;
+                    schedule?: {
+                        /** @constant */
+                        type: "daily";
+                    } | {
+                        /** @constant */
+                        type: "weekly";
+                        days: number[];
+                    } | {
+                        /** @constant */
+                        type: "timesPerWeek";
+                        count: number;
+                    } | {
+                        /** @constant */
+                        type: "monthly";
+                        day: number;
+                    };
+                    targetPerPeriod?: number;
+                    reward?: number;
+                    /** @enum {string} */
+                    creditsTo?: "personal" | "shared";
+                    dueAt?: string | null;
+                    pinned?: boolean;
+                    requiresApproval?: boolean;
+                    assigneeIds?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        /** @enum {string} */
+                        kind: "habit" | "task";
+                        name: string;
+                        description: string | null;
+                        schedule: ({
+                            /** @constant */
+                            type: "daily";
+                        } | {
+                            /** @constant */
+                            type: "weekly";
+                            days: number[];
+                        } | {
+                            /** @constant */
+                            type: "timesPerWeek";
+                            count: number;
+                        } | {
+                            /** @constant */
+                            type: "monthly";
+                            day: number;
+                        }) | null;
+                        targetPerPeriod: number;
+                        reward: number;
+                        /** @enum {string} */
+                        creditsTo: "personal" | "shared";
+                        dueAt: string | null;
+                        pinned: boolean;
+                        requiresApproval: boolean;
+                        archivedAt: string | null;
+                        createdBy: string;
+                        assigneeIds: string[];
+                        /** @enum {string} */
+                        scope: "personal" | "household";
+                        householdId: string | null;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1SupervisionWardsWardIdToday: {
+        parameters: {
+            query?: {
+                date?: string;
+            };
+            header?: never;
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        date: string;
+                        items: {
+                            item: {
+                                id: string;
+                                /** @enum {string} */
+                                kind: "habit" | "task";
+                                name: string;
+                                description: string | null;
+                                schedule: ({
+                                    /** @constant */
+                                    type: "daily";
+                                } | {
+                                    /** @constant */
+                                    type: "weekly";
+                                    days: number[];
+                                } | {
+                                    /** @constant */
+                                    type: "timesPerWeek";
+                                    count: number;
+                                } | {
+                                    /** @constant */
+                                    type: "monthly";
+                                    day: number;
+                                }) | null;
+                                targetPerPeriod: number;
+                                reward: number;
+                                /** @enum {string} */
+                                creditsTo: "personal" | "shared";
+                                dueAt: string | null;
+                                pinned: boolean;
+                                requiresApproval: boolean;
+                                archivedAt: string | null;
+                                createdBy: string;
+                                assigneeIds: string[];
+                                /** @enum {string} */
+                                scope: "personal" | "household";
+                                householdId: string | null;
+                            };
+                            approved: number;
+                            pending: number;
+                            target: number;
+                            done: boolean;
+                            completionIds: string[];
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1SupervisionWardsWardIdCompletionsId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        completion: {
+                            id: string;
+                            itemId: string;
+                            userId: string;
+                            localDate: string;
+                            /** @enum {string} */
+                            status: "pending" | "approved" | "rejected";
+                            approvedBy: string | null;
+                            completedAt: string;
+                            undoneAt: string | null;
+                        };
+                        balances: {
+                            personal: number;
+                            shared: number | null;
+                        };
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1SupervisionWardsWardIdRewards: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        rewards: {
+                            id: string;
+                            name: string;
+                            description: string | null;
+                            cost: number;
+                            /** @enum {string} */
+                            fundedFrom: "personal" | "shared";
+                            limitCount: number | null;
+                            limitPeriod: ("day" | "week" | "month" | "year") | null;
+                            link: string | null;
+                            archivedAt: string | null;
+                            assigneeIds: string[];
+                            /** @enum {string} */
+                            scope: "personal" | "household";
+                            householdId: string | null;
+                            remaining: number | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1SupervisionWardsWardIdRewards: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string | null;
+                    cost: number;
+                    /**
+                     * @default personal
+                     * @enum {string}
+                     */
+                    fundedFrom?: "personal" | "shared";
+                    /** @enum {string} */
+                    scope?: "personal" | "household";
+                    householdId?: string;
+                    link?: string | null;
+                    /** @default [] */
+                    assigneeIds?: string[];
+                    limitCount?: number | null;
+                    limitPeriod?: ("day" | "week" | "month" | "year") | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        cost: number;
+                        /** @enum {string} */
+                        fundedFrom: "personal" | "shared";
+                        limitCount: number | null;
+                        limitPeriod: ("day" | "week" | "month" | "year") | null;
+                        link: string | null;
+                        archivedAt: string | null;
+                        assigneeIds: string[];
+                        /** @enum {string} */
+                        scope: "personal" | "household";
+                        householdId: string | null;
+                        remaining: number | null;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    patchApiV1SupervisionWardsWardIdRewardsId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string | null;
+                    cost?: number;
+                    /** @enum {string} */
+                    fundedFrom?: "personal" | "shared";
+                    link?: string | null;
+                    assigneeIds?: string[];
+                    limitCount?: number | null;
+                    limitPeriod?: ("day" | "week" | "month" | "year") | null;
+                    archived?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        cost: number;
+                        /** @enum {string} */
+                        fundedFrom: "personal" | "shared";
+                        limitCount: number | null;
+                        limitPeriod: ("day" | "week" | "month" | "year") | null;
+                        link: string | null;
+                        archivedAt: string | null;
+                        assigneeIds: string[];
+                        /** @enum {string} */
+                        scope: "personal" | "household";
+                        householdId: string | null;
+                        remaining: number | null;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1SupervisionWardsWardIdRedemptionsId: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        redemption: {
+                            id: string;
+                            rewardId: string;
+                            userId: string;
+                            walletId: string;
+                            redeemedAt: string;
+                            undoneAt: string | null;
+                        };
+                        balances: {
+                            personal: number;
+                            shared: number | null;
+                        };
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1SupervisionWardsWardIdTransfers: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    amount: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        transferId: string;
+                        balances: {
+                            personal: number;
+                            shared: number | null;
+                        };
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1SupervisionWardsWardIdLedger: {
+        parameters: {
+            query?: {
+                wallet?: "personal" | "shared";
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wardId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        wallet: "personal" | "shared";
+                        walletId: string;
+                        balance: number;
+                        entries: {
+                            id: string;
+                            walletId: string;
+                            amount: number;
+                            /** @enum {string} */
+                            reason: "completion" | "undo" | "redemption" | "transfer" | "adjustment";
+                            refId: string | null;
+                            transferId: string | null;
+                            note: string | null;
+                            createdBy: string;
+                            createdAt: string;
+                            label: string | null;
+                        }[];
+                        nextCursor: string | null;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1SupervisionWardsWardIdStats: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path: {
+                wardId: string;
+            };
             cookie?: never;
         };
         requestBody?: never;

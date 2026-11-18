@@ -6428,6 +6428,4413 @@
 					}
 				]
 			}
+		},
+		"/api/v1/supervision": {
+			"get": {
+				"summary": "Who supervises me and who I supervise",
+				"tags": ["Supervision"],
+				"operationId": "getApiV1Supervision",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"guardians": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"displayName": {
+														"type": "string"
+													}
+												},
+												"required": ["id", "displayName"],
+												"additionalProperties": false
+											}
+										},
+										"rights": {
+											"anyOf": [
+												{
+													"type": "object",
+													"properties": {
+														"canCreate": {
+															"type": "boolean"
+														},
+														"canModify": {
+															"type": "boolean"
+														},
+														"canDelete": {
+															"type": "boolean"
+														},
+														"canTransfer": {
+															"type": "boolean"
+														}
+													},
+													"required": ["canCreate", "canModify", "canDelete", "canTransfer"],
+													"additionalProperties": false
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"wards": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"displayName": {
+														"type": "string"
+													},
+													"rights": {
+														"type": "object",
+														"properties": {
+															"canCreate": {
+																"type": "boolean"
+															},
+															"canModify": {
+																"type": "boolean"
+															},
+															"canDelete": {
+																"type": "boolean"
+															},
+															"canTransfer": {
+																"type": "boolean"
+															}
+														},
+														"required": ["canCreate", "canModify", "canDelete", "canTransfer"],
+														"additionalProperties": false
+													}
+												},
+												"required": ["id", "displayName", "rights"],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["guardians", "rights", "wards"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/codes": {
+			"post": {
+				"summary": "Create a one-time code: to supervise whoever uses it, or to be supervised by whoever uses it",
+				"tags": ["Supervision"],
+				"operationId": "postApiV1SupervisionCodes",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"kind": {
+										"type": "string",
+										"enum": ["supervise", "be_supervised"]
+									}
+								},
+								"required": ["kind"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"token": {
+											"type": "string"
+										},
+										"expiresAt": {
+											"type": "string"
+										}
+									},
+									"required": ["token", "expiresAt"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/redeem": {
+			"post": {
+				"summary": "Use a code made by someone else: this completes the consent",
+				"tags": ["Supervision"],
+				"operationId": "postApiV1SupervisionRedeem",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"code": {
+										"type": "string",
+										"minLength": 10,
+										"maxLength": 200
+									}
+								},
+								"required": ["code"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"guardians": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"displayName": {
+														"type": "string"
+													}
+												},
+												"required": ["id", "displayName"],
+												"additionalProperties": false
+											}
+										},
+										"rights": {
+											"anyOf": [
+												{
+													"type": "object",
+													"properties": {
+														"canCreate": {
+															"type": "boolean"
+														},
+														"canModify": {
+															"type": "boolean"
+														},
+														"canDelete": {
+															"type": "boolean"
+														},
+														"canTransfer": {
+															"type": "boolean"
+														}
+													},
+													"required": ["canCreate", "canModify", "canDelete", "canTransfer"],
+													"additionalProperties": false
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"wards": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"displayName": {
+														"type": "string"
+													},
+													"rights": {
+														"type": "object",
+														"properties": {
+															"canCreate": {
+																"type": "boolean"
+															},
+															"canModify": {
+																"type": "boolean"
+															},
+															"canDelete": {
+																"type": "boolean"
+															},
+															"canTransfer": {
+																"type": "boolean"
+															}
+														},
+														"required": ["canCreate", "canModify", "canDelete", "canTransfer"],
+														"additionalProperties": false
+													}
+												},
+												"required": ["id", "displayName", "rights"],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["guardians", "rights", "wards"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards": {
+			"post": {
+				"summary": "Create a local account that I supervise (for a child)",
+				"tags": ["Supervision"],
+				"operationId": "postApiV1SupervisionWards",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"displayName": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 80
+									},
+									"username": {
+										"type": "string",
+										"pattern": "^[a-z0-9._-]{3,32}$"
+									},
+									"password": {
+										"type": "string",
+										"minLength": 10,
+										"maxLength": 200
+									}
+								},
+								"required": ["displayName", "username", "password"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"displayName": {
+											"type": "string"
+										},
+										"rights": {
+											"type": "object",
+											"properties": {
+												"canCreate": {
+													"type": "boolean"
+												},
+												"canModify": {
+													"type": "boolean"
+												},
+												"canDelete": {
+													"type": "boolean"
+												},
+												"canTransfer": {
+													"type": "boolean"
+												}
+											},
+											"required": ["canCreate", "canModify", "canDelete", "canTransfer"],
+											"additionalProperties": false
+										}
+									},
+									"required": ["id", "displayName", "rights"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}": {
+			"delete": {
+				"summary": "Stop supervising an account (the account becomes unsupervised when its last guardian stops)",
+				"tags": ["Supervision"],
+				"operationId": "deleteApiV1SupervisionWardsWardId",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "No content"
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/rights": {
+			"patch": {
+				"summary": "Set what a ward may do by themselves",
+				"tags": ["Supervision"],
+				"operationId": "patchApiV1SupervisionWardsWardIdRights",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"canCreate": {
+										"type": "boolean"
+									},
+									"canModify": {
+										"type": "boolean"
+									},
+									"canDelete": {
+										"type": "boolean"
+									},
+									"canTransfer": {
+										"type": "boolean"
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"displayName": {
+											"type": "string"
+										},
+										"rights": {
+											"type": "object",
+											"properties": {
+												"canCreate": {
+													"type": "boolean"
+												},
+												"canModify": {
+													"type": "boolean"
+												},
+												"canDelete": {
+													"type": "boolean"
+												},
+												"canTransfer": {
+													"type": "boolean"
+												}
+											},
+											"required": ["canCreate", "canModify", "canDelete", "canTransfer"],
+											"additionalProperties": false
+										}
+									},
+									"required": ["id", "displayName", "rights"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/adjustments": {
+			"post": {
+				"summary": "Add or remove coins on a ward's balance, with a note (never on your own)",
+				"tags": ["Supervision"],
+				"operationId": "postApiV1SupervisionWardsWardIdAdjustments",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"amount": {
+										"type": "integer",
+										"minimum": -9007199254740991,
+										"maximum": 9007199254740991
+									},
+									"note": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 500
+									}
+								},
+								"required": ["amount", "note"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"balance": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										}
+									},
+									"required": ["balance"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/pending": {
+			"get": {
+				"summary": "A ward's completions waiting for approval",
+				"tags": ["Supervision"],
+				"operationId": "getApiV1SupervisionWardsWardIdPending",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"completions": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"itemId": {
+														"type": "string"
+													},
+													"userId": {
+														"type": "string"
+													},
+													"localDate": {
+														"type": "string",
+														"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+													},
+													"status": {
+														"type": "string",
+														"enum": ["pending", "approved", "rejected"]
+													},
+													"approvedBy": {
+														"type": ["string", "null"]
+													},
+													"completedAt": {
+														"type": "string"
+													},
+													"undoneAt": {
+														"type": ["string", "null"]
+													},
+													"itemName": {
+														"type": "string"
+													}
+												},
+												"required": [
+													"id",
+													"itemId",
+													"userId",
+													"localDate",
+													"status",
+													"approvedBy",
+													"completedAt",
+													"undoneAt",
+													"itemName"
+												],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["completions"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/completions/{id}/approve": {
+			"post": {
+				"summary": "Approve a ward's completion",
+				"tags": ["Supervision"],
+				"operationId": "postApiV1SupervisionWardsWardIdCompletionsIdApprove",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"completion": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"itemId": {
+													"type": "string"
+												},
+												"userId": {
+													"type": "string"
+												},
+												"localDate": {
+													"type": "string",
+													"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+												},
+												"status": {
+													"type": "string",
+													"enum": ["pending", "approved", "rejected"]
+												},
+												"approvedBy": {
+													"type": ["string", "null"]
+												},
+												"completedAt": {
+													"type": "string"
+												},
+												"undoneAt": {
+													"type": ["string", "null"]
+												}
+											},
+											"required": [
+												"id",
+												"itemId",
+												"userId",
+												"localDate",
+												"status",
+												"approvedBy",
+												"completedAt",
+												"undoneAt"
+											],
+											"additionalProperties": false
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
+												}
+											},
+											"required": ["personal", "shared"],
+											"additionalProperties": false
+										}
+									},
+									"required": ["completion", "balances"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/completions/{id}/reject": {
+			"post": {
+				"summary": "Reject a ward's completion",
+				"tags": ["Supervision"],
+				"operationId": "postApiV1SupervisionWardsWardIdCompletionsIdReject",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"completion": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"itemId": {
+													"type": "string"
+												},
+												"userId": {
+													"type": "string"
+												},
+												"localDate": {
+													"type": "string",
+													"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+												},
+												"status": {
+													"type": "string",
+													"enum": ["pending", "approved", "rejected"]
+												},
+												"approvedBy": {
+													"type": ["string", "null"]
+												},
+												"completedAt": {
+													"type": "string"
+												},
+												"undoneAt": {
+													"type": ["string", "null"]
+												}
+											},
+											"required": [
+												"id",
+												"itemId",
+												"userId",
+												"localDate",
+												"status",
+												"approvedBy",
+												"completedAt",
+												"undoneAt"
+											],
+											"additionalProperties": false
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
+												}
+											},
+											"required": ["personal", "shared"],
+											"additionalProperties": false
+										}
+									},
+									"required": ["completion", "balances"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/me": {
+			"get": {
+				"summary": "Profile, household, role and balances",
+				"tags": ["Supervision"],
+				"operationId": "getApiV1SupervisionWardsWardIdMe",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"user": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"displayName": {
+													"type": "string"
+												},
+												"avatarUrl": {
+													"type": ["string", "null"]
+												}
+											},
+											"required": ["id", "displayName", "avatarUrl"],
+											"additionalProperties": false
+										},
+										"household": {
+											"anyOf": [
+												{
+													"type": "object",
+													"properties": {
+														"id": {
+															"type": "string"
+														},
+														"name": {
+															"type": "string"
+														}
+													},
+													"required": ["id", "name"],
+													"additionalProperties": false
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"role": {
+											"anyOf": [
+												{
+													"type": "string",
+													"enum": ["owner", "adult", "child"]
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"households": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"role": {
+														"type": "string",
+														"enum": ["owner", "adult", "child"]
+													},
+													"pot": {
+														"type": "object",
+														"properties": {
+															"id": {
+																"type": "string"
+															},
+															"balance": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															}
+														},
+														"required": ["id", "balance"],
+														"additionalProperties": false
+													}
+												},
+												"required": ["id", "name", "role", "pot"],
+												"additionalProperties": false
+											}
+										},
+										"wallets": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "object",
+													"properties": {
+														"id": {
+															"type": "string"
+														},
+														"balance": {
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														}
+													},
+													"required": ["id", "balance"],
+													"additionalProperties": false
+												},
+												"shared": {
+													"anyOf": [
+														{
+															"type": "object",
+															"properties": {
+																"id": {
+																	"type": "string"
+																},
+																"balance": {
+																	"type": "integer",
+																	"minimum": -9007199254740991,
+																	"maximum": 9007199254740991
+																}
+															},
+															"required": ["id", "balance"],
+															"additionalProperties": false
+														},
+														{
+															"type": "null"
+														}
+													]
+												}
+											},
+											"required": ["personal", "shared"],
+											"additionalProperties": false
+										}
+									},
+									"required": ["user", "household", "role", "households", "wallets"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/items": {
+			"post": {
+				"summary": "Create a habit or a task",
+				"tags": ["Supervision"],
+				"operationId": "postApiV1SupervisionWardsWardIdItems",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"oneOf": [
+									{
+										"type": "object",
+										"properties": {
+											"kind": {
+												"type": "string",
+												"const": "habit"
+											},
+											"schedule": {
+												"oneOf": [
+													{
+														"type": "object",
+														"properties": {
+															"type": {
+																"type": "string",
+																"const": "daily"
+															}
+														},
+														"required": ["type"]
+													},
+													{
+														"type": "object",
+														"properties": {
+															"type": {
+																"type": "string",
+																"const": "weekly"
+															},
+															"days": {
+																"minItems": 1,
+																"type": "array",
+																"items": {
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 7
+																}
+															}
+														},
+														"required": ["type", "days"]
+													},
+													{
+														"type": "object",
+														"properties": {
+															"type": {
+																"type": "string",
+																"const": "timesPerWeek"
+															},
+															"count": {
+																"type": "integer",
+																"minimum": 1,
+																"maximum": 7
+															}
+														},
+														"required": ["type", "count"]
+													},
+													{
+														"type": "object",
+														"properties": {
+															"type": {
+																"type": "string",
+																"const": "monthly"
+															},
+															"day": {
+																"type": "integer",
+																"minimum": 1,
+																"maximum": 31
+															}
+														},
+														"required": ["type", "day"]
+													}
+												]
+											},
+											"targetPerPeriod": {
+												"default": 1,
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 100
+											},
+											"name": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 120
+											},
+											"description": {
+												"anyOf": [
+													{
+														"type": "string",
+														"maxLength": 1000
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"reward": {
+												"default": 0,
+												"type": "integer",
+												"minimum": 0,
+												"maximum": 100000
+											},
+											"creditsTo": {
+												"default": "personal",
+												"type": "string",
+												"enum": ["personal", "shared"]
+											},
+											"pinned": {
+												"default": false,
+												"type": "boolean"
+											},
+											"requiresApproval": {
+												"default": false,
+												"type": "boolean"
+											},
+											"assigneeIds": {
+												"minItems": 1,
+												"maxItems": 30,
+												"type": "array",
+												"items": {
+													"type": "string",
+													"minLength": 1,
+													"maxLength": 100
+												}
+											},
+											"scope": {
+												"type": "string",
+												"enum": ["personal", "household"]
+											},
+											"householdId": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 100
+											}
+										},
+										"required": ["kind", "schedule", "name"],
+										"additionalProperties": false
+									},
+									{
+										"type": "object",
+										"properties": {
+											"kind": {
+												"type": "string",
+												"const": "task"
+											},
+											"dueAt": {
+												"anyOf": [
+													{
+														"type": "string",
+														"format": "date-time",
+														"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"targetPerPeriod": {
+												"type": "integer",
+												"minimum": -9007199254740991,
+												"maximum": 9007199254740991
+											},
+											"name": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 120
+											},
+											"description": {
+												"anyOf": [
+													{
+														"type": "string",
+														"maxLength": 1000
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"reward": {
+												"default": 0,
+												"type": "integer",
+												"minimum": 0,
+												"maximum": 100000
+											},
+											"creditsTo": {
+												"default": "personal",
+												"type": "string",
+												"enum": ["personal", "shared"]
+											},
+											"pinned": {
+												"default": false,
+												"type": "boolean"
+											},
+											"requiresApproval": {
+												"default": false,
+												"type": "boolean"
+											},
+											"assigneeIds": {
+												"minItems": 1,
+												"maxItems": 30,
+												"type": "array",
+												"items": {
+													"type": "string",
+													"minLength": 1,
+													"maxLength": 100
+												}
+											},
+											"scope": {
+												"type": "string",
+												"enum": ["personal", "household"]
+											},
+											"householdId": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 100
+											}
+										},
+										"required": ["kind", "name"],
+										"additionalProperties": false
+									}
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"kind": {
+											"type": "string",
+											"enum": ["habit", "task"]
+										},
+										"name": {
+											"type": "string"
+										},
+										"description": {
+											"type": ["string", "null"]
+										},
+										"schedule": {
+											"anyOf": [
+												{
+													"oneOf": [
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "daily"
+																}
+															},
+															"required": ["type"],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "weekly"
+																},
+																"days": {
+																	"minItems": 1,
+																	"type": "array",
+																	"items": {
+																		"type": "integer",
+																		"minimum": 1,
+																		"maximum": 7
+																	}
+																}
+															},
+															"required": ["type", "days"],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "timesPerWeek"
+																},
+																"count": {
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 7
+																}
+															},
+															"required": ["type", "count"],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "monthly"
+																},
+																"day": {
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 31
+																}
+															},
+															"required": ["type", "day"],
+															"additionalProperties": false
+														}
+													]
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"targetPerPeriod": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"reward": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"creditsTo": {
+											"type": "string",
+											"enum": ["personal", "shared"]
+										},
+										"dueAt": {
+											"type": ["string", "null"]
+										},
+										"pinned": {
+											"type": "boolean"
+										},
+										"requiresApproval": {
+											"type": "boolean"
+										},
+										"archivedAt": {
+											"type": ["string", "null"]
+										},
+										"createdBy": {
+											"type": "string"
+										},
+										"assigneeIds": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										},
+										"scope": {
+											"type": "string",
+											"enum": ["personal", "household"]
+										},
+										"householdId": {
+											"type": ["string", "null"]
+										}
+									},
+									"required": [
+										"id",
+										"kind",
+										"name",
+										"description",
+										"schedule",
+										"targetPerPeriod",
+										"reward",
+										"creditsTo",
+										"dueAt",
+										"pinned",
+										"requiresApproval",
+										"archivedAt",
+										"createdBy",
+										"assigneeIds",
+										"scope",
+										"householdId"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"get": {
+				"summary": "List the visible items",
+				"tags": ["Supervision"],
+				"operationId": "getApiV1SupervisionWardsWardIdItems",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "includeArchived",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"default": "false",
+							"type": "string",
+							"enum": ["true", "false"]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"items": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"kind": {
+														"type": "string",
+														"enum": ["habit", "task"]
+													},
+													"name": {
+														"type": "string"
+													},
+													"description": {
+														"type": ["string", "null"]
+													},
+													"schedule": {
+														"anyOf": [
+															{
+																"oneOf": [
+																	{
+																		"type": "object",
+																		"properties": {
+																			"type": {
+																				"type": "string",
+																				"const": "daily"
+																			}
+																		},
+																		"required": ["type"],
+																		"additionalProperties": false
+																	},
+																	{
+																		"type": "object",
+																		"properties": {
+																			"type": {
+																				"type": "string",
+																				"const": "weekly"
+																			},
+																			"days": {
+																				"minItems": 1,
+																				"type": "array",
+																				"items": {
+																					"type": "integer",
+																					"minimum": 1,
+																					"maximum": 7
+																				}
+																			}
+																		},
+																		"required": ["type", "days"],
+																		"additionalProperties": false
+																	},
+																	{
+																		"type": "object",
+																		"properties": {
+																			"type": {
+																				"type": "string",
+																				"const": "timesPerWeek"
+																			},
+																			"count": {
+																				"type": "integer",
+																				"minimum": 1,
+																				"maximum": 7
+																			}
+																		},
+																		"required": ["type", "count"],
+																		"additionalProperties": false
+																	},
+																	{
+																		"type": "object",
+																		"properties": {
+																			"type": {
+																				"type": "string",
+																				"const": "monthly"
+																			},
+																			"day": {
+																				"type": "integer",
+																				"minimum": 1,
+																				"maximum": 31
+																			}
+																		},
+																		"required": ["type", "day"],
+																		"additionalProperties": false
+																	}
+																]
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"targetPerPeriod": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"reward": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"creditsTo": {
+														"type": "string",
+														"enum": ["personal", "shared"]
+													},
+													"dueAt": {
+														"type": ["string", "null"]
+													},
+													"pinned": {
+														"type": "boolean"
+													},
+													"requiresApproval": {
+														"type": "boolean"
+													},
+													"archivedAt": {
+														"type": ["string", "null"]
+													},
+													"createdBy": {
+														"type": "string"
+													},
+													"assigneeIds": {
+														"type": "array",
+														"items": {
+															"type": "string"
+														}
+													},
+													"scope": {
+														"type": "string",
+														"enum": ["personal", "household"]
+													},
+													"householdId": {
+														"type": ["string", "null"]
+													}
+												},
+												"required": [
+													"id",
+													"kind",
+													"name",
+													"description",
+													"schedule",
+													"targetPerPeriod",
+													"reward",
+													"creditsTo",
+													"dueAt",
+													"pinned",
+													"requiresApproval",
+													"archivedAt",
+													"createdBy",
+													"assigneeIds",
+													"scope",
+													"householdId"
+												],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["items"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/items/{id}": {
+			"patch": {
+				"summary": "Update an item",
+				"tags": ["Supervision"],
+				"operationId": "patchApiV1SupervisionWardsWardIdItemsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 120
+									},
+									"description": {
+										"anyOf": [
+											{
+												"type": "string",
+												"maxLength": 1000
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"schedule": {
+										"oneOf": [
+											{
+												"type": "object",
+												"properties": {
+													"type": {
+														"type": "string",
+														"const": "daily"
+													}
+												},
+												"required": ["type"]
+											},
+											{
+												"type": "object",
+												"properties": {
+													"type": {
+														"type": "string",
+														"const": "weekly"
+													},
+													"days": {
+														"minItems": 1,
+														"type": "array",
+														"items": {
+															"type": "integer",
+															"minimum": 1,
+															"maximum": 7
+														}
+													}
+												},
+												"required": ["type", "days"]
+											},
+											{
+												"type": "object",
+												"properties": {
+													"type": {
+														"type": "string",
+														"const": "timesPerWeek"
+													},
+													"count": {
+														"type": "integer",
+														"minimum": 1,
+														"maximum": 7
+													}
+												},
+												"required": ["type", "count"]
+											},
+											{
+												"type": "object",
+												"properties": {
+													"type": {
+														"type": "string",
+														"const": "monthly"
+													},
+													"day": {
+														"type": "integer",
+														"minimum": 1,
+														"maximum": 31
+													}
+												},
+												"required": ["type", "day"]
+											}
+										]
+									},
+									"targetPerPeriod": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 100
+									},
+									"reward": {
+										"type": "integer",
+										"minimum": 0,
+										"maximum": 100000
+									},
+									"creditsTo": {
+										"type": "string",
+										"enum": ["personal", "shared"]
+									},
+									"dueAt": {
+										"anyOf": [
+											{
+												"type": "string",
+												"format": "date-time",
+												"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"pinned": {
+										"type": "boolean"
+									},
+									"requiresApproval": {
+										"type": "boolean"
+									},
+									"assigneeIds": {
+										"minItems": 1,
+										"maxItems": 30,
+										"type": "array",
+										"items": {
+											"type": "string",
+											"minLength": 1,
+											"maxLength": 100
+										}
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"kind": {
+											"type": "string",
+											"enum": ["habit", "task"]
+										},
+										"name": {
+											"type": "string"
+										},
+										"description": {
+											"type": ["string", "null"]
+										},
+										"schedule": {
+											"anyOf": [
+												{
+													"oneOf": [
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "daily"
+																}
+															},
+															"required": ["type"],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "weekly"
+																},
+																"days": {
+																	"minItems": 1,
+																	"type": "array",
+																	"items": {
+																		"type": "integer",
+																		"minimum": 1,
+																		"maximum": 7
+																	}
+																}
+															},
+															"required": ["type", "days"],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "timesPerWeek"
+																},
+																"count": {
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 7
+																}
+															},
+															"required": ["type", "count"],
+															"additionalProperties": false
+														},
+														{
+															"type": "object",
+															"properties": {
+																"type": {
+																	"type": "string",
+																	"const": "monthly"
+																},
+																"day": {
+																	"type": "integer",
+																	"minimum": 1,
+																	"maximum": 31
+																}
+															},
+															"required": ["type", "day"],
+															"additionalProperties": false
+														}
+													]
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"targetPerPeriod": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"reward": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"creditsTo": {
+											"type": "string",
+											"enum": ["personal", "shared"]
+										},
+										"dueAt": {
+											"type": ["string", "null"]
+										},
+										"pinned": {
+											"type": "boolean"
+										},
+										"requiresApproval": {
+											"type": "boolean"
+										},
+										"archivedAt": {
+											"type": ["string", "null"]
+										},
+										"createdBy": {
+											"type": "string"
+										},
+										"assigneeIds": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										},
+										"scope": {
+											"type": "string",
+											"enum": ["personal", "household"]
+										},
+										"householdId": {
+											"type": ["string", "null"]
+										}
+									},
+									"required": [
+										"id",
+										"kind",
+										"name",
+										"description",
+										"schedule",
+										"targetPerPeriod",
+										"reward",
+										"creditsTo",
+										"dueAt",
+										"pinned",
+										"requiresApproval",
+										"archivedAt",
+										"createdBy",
+										"assigneeIds",
+										"scope",
+										"householdId"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"delete": {
+				"summary": "Archive an item",
+				"tags": ["Supervision"],
+				"operationId": "deleteApiV1SupervisionWardsWardIdItemsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "No content"
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/today": {
+			"get": {
+				"summary": "Items due that day with their progress",
+				"tags": ["Supervision"],
+				"operationId": "getApiV1SupervisionWardsWardIdToday",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "date",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"date": {
+											"type": "string",
+											"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+										},
+										"items": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"item": {
+														"type": "object",
+														"properties": {
+															"id": {
+																"type": "string"
+															},
+															"kind": {
+																"type": "string",
+																"enum": ["habit", "task"]
+															},
+															"name": {
+																"type": "string"
+															},
+															"description": {
+																"type": ["string", "null"]
+															},
+															"schedule": {
+																"anyOf": [
+																	{
+																		"oneOf": [
+																			{
+																				"type": "object",
+																				"properties": {
+																					"type": {
+																						"type": "string",
+																						"const": "daily"
+																					}
+																				},
+																				"required": ["type"],
+																				"additionalProperties": false
+																			},
+																			{
+																				"type": "object",
+																				"properties": {
+																					"type": {
+																						"type": "string",
+																						"const": "weekly"
+																					},
+																					"days": {
+																						"minItems": 1,
+																						"type": "array",
+																						"items": {
+																							"type": "integer",
+																							"minimum": 1,
+																							"maximum": 7
+																						}
+																					}
+																				},
+																				"required": ["type", "days"],
+																				"additionalProperties": false
+																			},
+																			{
+																				"type": "object",
+																				"properties": {
+																					"type": {
+																						"type": "string",
+																						"const": "timesPerWeek"
+																					},
+																					"count": {
+																						"type": "integer",
+																						"minimum": 1,
+																						"maximum": 7
+																					}
+																				},
+																				"required": ["type", "count"],
+																				"additionalProperties": false
+																			},
+																			{
+																				"type": "object",
+																				"properties": {
+																					"type": {
+																						"type": "string",
+																						"const": "monthly"
+																					},
+																					"day": {
+																						"type": "integer",
+																						"minimum": 1,
+																						"maximum": 31
+																					}
+																				},
+																				"required": ["type", "day"],
+																				"additionalProperties": false
+																			}
+																		]
+																	},
+																	{
+																		"type": "null"
+																	}
+																]
+															},
+															"targetPerPeriod": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"reward": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"creditsTo": {
+																"type": "string",
+																"enum": ["personal", "shared"]
+															},
+															"dueAt": {
+																"type": ["string", "null"]
+															},
+															"pinned": {
+																"type": "boolean"
+															},
+															"requiresApproval": {
+																"type": "boolean"
+															},
+															"archivedAt": {
+																"type": ["string", "null"]
+															},
+															"createdBy": {
+																"type": "string"
+															},
+															"assigneeIds": {
+																"type": "array",
+																"items": {
+																	"type": "string"
+																}
+															},
+															"scope": {
+																"type": "string",
+																"enum": ["personal", "household"]
+															},
+															"householdId": {
+																"type": ["string", "null"]
+															}
+														},
+														"required": [
+															"id",
+															"kind",
+															"name",
+															"description",
+															"schedule",
+															"targetPerPeriod",
+															"reward",
+															"creditsTo",
+															"dueAt",
+															"pinned",
+															"requiresApproval",
+															"archivedAt",
+															"createdBy",
+															"assigneeIds",
+															"scope",
+															"householdId"
+														],
+														"additionalProperties": false
+													},
+													"approved": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"pending": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"target": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"done": {
+														"type": "boolean"
+													},
+													"completionIds": {
+														"type": "array",
+														"items": {
+															"type": "string"
+														}
+													}
+												},
+												"required": ["item", "approved", "pending", "target", "done", "completionIds"],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["date", "items"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/completions/{id}": {
+			"delete": {
+				"summary": "Undo a completion (counter-entry in the ledger)",
+				"tags": ["Supervision"],
+				"operationId": "deleteApiV1SupervisionWardsWardIdCompletionsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"completion": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"itemId": {
+													"type": "string"
+												},
+												"userId": {
+													"type": "string"
+												},
+												"localDate": {
+													"type": "string",
+													"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+												},
+												"status": {
+													"type": "string",
+													"enum": ["pending", "approved", "rejected"]
+												},
+												"approvedBy": {
+													"type": ["string", "null"]
+												},
+												"completedAt": {
+													"type": "string"
+												},
+												"undoneAt": {
+													"type": ["string", "null"]
+												}
+											},
+											"required": [
+												"id",
+												"itemId",
+												"userId",
+												"localDate",
+												"status",
+												"approvedBy",
+												"completedAt",
+												"undoneAt"
+											],
+											"additionalProperties": false
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
+												}
+											},
+											"required": ["personal", "shared"],
+											"additionalProperties": false
+										}
+									},
+									"required": ["completion", "balances"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/rewards": {
+			"get": {
+				"summary": "List the wishes",
+				"tags": ["Supervision"],
+				"operationId": "getApiV1SupervisionWardsWardIdRewards",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"rewards": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"description": {
+														"type": ["string", "null"]
+													},
+													"cost": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"fundedFrom": {
+														"type": "string",
+														"enum": ["personal", "shared"]
+													},
+													"limitCount": {
+														"anyOf": [
+															{
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"limitPeriod": {
+														"anyOf": [
+															{
+																"type": "string",
+																"enum": ["day", "week", "month", "year"]
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"link": {
+														"type": ["string", "null"]
+													},
+													"archivedAt": {
+														"type": ["string", "null"]
+													},
+													"assigneeIds": {
+														"type": "array",
+														"items": {
+															"type": "string"
+														}
+													},
+													"scope": {
+														"type": "string",
+														"enum": ["personal", "household"]
+													},
+													"householdId": {
+														"type": ["string", "null"]
+													},
+													"remaining": {
+														"anyOf": [
+															{
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															{
+																"type": "null"
+															}
+														]
+													}
+												},
+												"required": [
+													"id",
+													"name",
+													"description",
+													"cost",
+													"fundedFrom",
+													"limitCount",
+													"limitPeriod",
+													"link",
+													"archivedAt",
+													"assigneeIds",
+													"scope",
+													"householdId",
+													"remaining"
+												],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["rewards"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"post": {
+				"summary": "Create a wish (owner and adults)",
+				"tags": ["Supervision"],
+				"operationId": "postApiV1SupervisionWardsWardIdRewards",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 120
+									},
+									"description": {
+										"anyOf": [
+											{
+												"type": "string",
+												"maxLength": 1000
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"cost": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 1000000
+									},
+									"fundedFrom": {
+										"default": "personal",
+										"type": "string",
+										"enum": ["personal", "shared"]
+									},
+									"scope": {
+										"type": "string",
+										"enum": ["personal", "household"]
+									},
+									"householdId": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 100
+									},
+									"link": {
+										"anyOf": [
+											{
+												"type": "string",
+												"maxLength": 500,
+												"format": "uri"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"assigneeIds": {
+										"default": [],
+										"maxItems": 30,
+										"type": "array",
+										"items": {
+											"type": "string",
+											"minLength": 1,
+											"maxLength": 100
+										}
+									},
+									"limitCount": {
+										"anyOf": [
+											{
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 1000
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"limitPeriod": {
+										"anyOf": [
+											{
+												"type": "string",
+												"enum": ["day", "week", "month", "year"]
+											},
+											{
+												"type": "null"
+											}
+										]
+									}
+								},
+								"required": ["name", "cost"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"description": {
+											"type": ["string", "null"]
+										},
+										"cost": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"fundedFrom": {
+											"type": "string",
+											"enum": ["personal", "shared"]
+										},
+										"limitCount": {
+											"anyOf": [
+												{
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"limitPeriod": {
+											"anyOf": [
+												{
+													"type": "string",
+													"enum": ["day", "week", "month", "year"]
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"link": {
+											"type": ["string", "null"]
+										},
+										"archivedAt": {
+											"type": ["string", "null"]
+										},
+										"assigneeIds": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										},
+										"scope": {
+											"type": "string",
+											"enum": ["personal", "household"]
+										},
+										"householdId": {
+											"type": ["string", "null"]
+										},
+										"remaining": {
+											"anyOf": [
+												{
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												{
+													"type": "null"
+												}
+											]
+										}
+									},
+									"required": [
+										"id",
+										"name",
+										"description",
+										"cost",
+										"fundedFrom",
+										"limitCount",
+										"limitPeriod",
+										"link",
+										"archivedAt",
+										"assigneeIds",
+										"scope",
+										"householdId",
+										"remaining"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/rewards/{id}": {
+			"patch": {
+				"summary": "Update or archive a wish",
+				"tags": ["Supervision"],
+				"operationId": "patchApiV1SupervisionWardsWardIdRewardsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 120
+									},
+									"description": {
+										"anyOf": [
+											{
+												"type": "string",
+												"maxLength": 1000
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"cost": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 1000000
+									},
+									"fundedFrom": {
+										"type": "string",
+										"enum": ["personal", "shared"]
+									},
+									"link": {
+										"anyOf": [
+											{
+												"type": "string",
+												"maxLength": 500,
+												"format": "uri"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"assigneeIds": {
+										"maxItems": 30,
+										"type": "array",
+										"items": {
+											"type": "string",
+											"minLength": 1,
+											"maxLength": 100
+										}
+									},
+									"limitCount": {
+										"anyOf": [
+											{
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 1000
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"limitPeriod": {
+										"anyOf": [
+											{
+												"type": "string",
+												"enum": ["day", "week", "month", "year"]
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"archived": {
+										"type": "boolean"
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"description": {
+											"type": ["string", "null"]
+										},
+										"cost": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"fundedFrom": {
+											"type": "string",
+											"enum": ["personal", "shared"]
+										},
+										"limitCount": {
+											"anyOf": [
+												{
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"limitPeriod": {
+											"anyOf": [
+												{
+													"type": "string",
+													"enum": ["day", "week", "month", "year"]
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"link": {
+											"type": ["string", "null"]
+										},
+										"archivedAt": {
+											"type": ["string", "null"]
+										},
+										"assigneeIds": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										},
+										"scope": {
+											"type": "string",
+											"enum": ["personal", "household"]
+										},
+										"householdId": {
+											"type": ["string", "null"]
+										},
+										"remaining": {
+											"anyOf": [
+												{
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												{
+													"type": "null"
+												}
+											]
+										}
+									},
+									"required": [
+										"id",
+										"name",
+										"description",
+										"cost",
+										"fundedFrom",
+										"limitCount",
+										"limitPeriod",
+										"link",
+										"archivedAt",
+										"assigneeIds",
+										"scope",
+										"householdId",
+										"remaining"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/redemptions/{id}": {
+			"delete": {
+				"summary": "Undo a wish redemption (refund by counter-entry)",
+				"tags": ["Supervision"],
+				"operationId": "deleteApiV1SupervisionWardsWardIdRedemptionsId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"redemption": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"rewardId": {
+													"type": "string"
+												},
+												"userId": {
+													"type": "string"
+												},
+												"walletId": {
+													"type": "string"
+												},
+												"redeemedAt": {
+													"type": "string"
+												},
+												"undoneAt": {
+													"type": ["string", "null"]
+												}
+											},
+											"required": ["id", "rewardId", "userId", "walletId", "redeemedAt", "undoneAt"],
+											"additionalProperties": false
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
+												}
+											},
+											"required": ["personal", "shared"],
+											"additionalProperties": false
+										}
+									},
+									"required": ["redemption", "balances"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/transfers": {
+			"post": {
+				"summary": "Transfer coins from your wallet to the shared pot",
+				"tags": ["Supervision"],
+				"operationId": "postApiV1SupervisionWardsWardIdTransfers",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"amount": {
+										"type": "number"
+									}
+								},
+								"required": ["amount"],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"transferId": {
+											"type": "string"
+										},
+										"balances": {
+											"type": "object",
+											"properties": {
+												"personal": {
+													"type": "integer",
+													"minimum": -9007199254740991,
+													"maximum": 9007199254740991
+												},
+												"shared": {
+													"anyOf": [
+														{
+															"type": "integer",
+															"minimum": -9007199254740991,
+															"maximum": 9007199254740991
+														},
+														{
+															"type": "null"
+														}
+													]
+												}
+											},
+											"required": ["personal", "shared"],
+											"additionalProperties": false
+										}
+									},
+									"required": ["transferId", "balances"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/ledger": {
+			"get": {
+				"summary": "A wallet's history, cursor-paginated",
+				"tags": ["Supervision"],
+				"operationId": "getApiV1SupervisionWardsWardIdLedger",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "wallet",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"default": "personal",
+							"type": "string",
+							"enum": ["personal", "shared"]
+						}
+					},
+					{
+						"name": "cursor",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"default": 50,
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 200
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"wallet": {
+											"type": "string",
+											"enum": ["personal", "shared"]
+										},
+										"walletId": {
+											"type": "string"
+										},
+										"balance": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"entries": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"walletId": {
+														"type": "string"
+													},
+													"amount": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"reason": {
+														"type": "string",
+														"enum": ["completion", "undo", "redemption", "transfer", "adjustment"]
+													},
+													"refId": {
+														"type": ["string", "null"]
+													},
+													"transferId": {
+														"type": ["string", "null"]
+													},
+													"note": {
+														"type": ["string", "null"]
+													},
+													"createdBy": {
+														"type": "string"
+													},
+													"createdAt": {
+														"type": "string"
+													},
+													"label": {
+														"type": ["string", "null"]
+													}
+												},
+												"required": [
+													"id",
+													"walletId",
+													"amount",
+													"reason",
+													"refId",
+													"transferId",
+													"note",
+													"createdBy",
+													"createdAt",
+													"label"
+												],
+												"additionalProperties": false
+											}
+										},
+										"nextCursor": {
+											"type": ["string", "null"]
+										}
+									},
+									"required": ["wallet", "walletId", "balance", "entries", "nextCursor"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
+		"/api/v1/supervision/wards/{wardId}/stats": {
+			"get": {
+				"summary": "Streaks, success rates and heatmap",
+				"tags": ["Supervision"],
+				"operationId": "getApiV1SupervisionWardsWardIdStats",
+				"parameters": [
+					{
+						"name": "wardId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "from",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+						}
+					},
+					{
+						"name": "to",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"from": {
+											"type": "string",
+											"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+										},
+										"to": {
+											"type": "string",
+											"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+										},
+										"habits": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"itemId": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"streak": {
+														"type": "object",
+														"properties": {
+															"current": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"best": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															}
+														},
+														"required": ["current", "best"],
+														"additionalProperties": false
+													},
+													"week": {
+														"type": "object",
+														"properties": {
+															"done": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"expected": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"rate": {
+																"type": ["number", "null"]
+															}
+														},
+														"required": ["done", "expected", "rate"],
+														"additionalProperties": false
+													},
+													"month": {
+														"type": "object",
+														"properties": {
+															"done": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"expected": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															},
+															"rate": {
+																"type": ["number", "null"]
+															}
+														},
+														"required": ["done", "expected", "rate"],
+														"additionalProperties": false
+													}
+												},
+												"required": ["itemId", "name", "streak", "week", "month"],
+												"additionalProperties": false
+											}
+										},
+										"heatmap": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"date": {
+														"type": "string",
+														"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+													},
+													"done": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													},
+													"expected": {
+														"type": "integer",
+														"minimum": -9007199254740991,
+														"maximum": 9007199254740991
+													}
+												},
+												"required": ["date", "done", "expected"],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["from", "to", "habits", "heatmap"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
 		}
 	},
 	"components": {

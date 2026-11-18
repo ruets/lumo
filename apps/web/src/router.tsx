@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { t } from "@lumo/i18n";
-import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+import { createRootRoute, createRoute, createRouter, useParams } from "@tanstack/react-router";
 import { AppShell } from "./components/AppShell";
 import { useAccount, useAuthConfig, useMe } from "./lib/hooks";
 import { AdminPage } from "./routes/Admin";
@@ -9,7 +9,9 @@ import { HouseholdPage } from "./routes/Household";
 import { Login } from "./routes/Login";
 import { ProgressPage } from "./routes/Progress";
 import { SettingsPage } from "./routes/Settings";
+import { SupervisionPage } from "./routes/Supervision";
 import { TodayPage } from "./routes/Today";
+import { WardPanel } from "./routes/WardPanel";
 import { WishesPage } from "./routes/Wishes";
 
 /** Entry point: loads the account, shows the sign-in, the no-household screen or the app shell. */
@@ -46,7 +48,18 @@ function page<P extends string>(
 	});
 }
 
+const wardRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/supervision/$wardId",
+	component: function WardPage() {
+		const { wardId } = useParams({ from: "/supervision/$wardId" });
+		return <WardPanel wardId={wardId} />;
+	},
+});
+
 const routeTree = rootRoute.addChildren([
+	wardRoute,
+	page("/supervision", () => <SupervisionPage />),
 	page("/", TodayPage),
 	page("/habits", HabitsPage),
 	page("/progress", ProgressPage),

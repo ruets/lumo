@@ -19,6 +19,7 @@ import { type ActorCtx, actorIn, type HouseholdActorCtx } from "./context.js";
 import { accessibleItems, getActiveItem } from "./items.js";
 import { addEntry, balancesFor, walletFor } from "./ledger.js";
 import type { DbOrTx, Tx } from "./members.js";
+import { assertGuardian } from "./supervision.js";
 
 type CompletionRow = typeof completions.$inferSelect;
 export type CompletionView = z.input<typeof completionView>;
@@ -114,7 +115,12 @@ export function createCompletion(
 	// A task is completed only once, whatever the date.
 	assertUnderTarget(countActive(tx, itemId, actor.userId, item.kind === "habit" ? date : null), item.targetPerPeriod);
 
-	const plan = planCompletion({ actorRole: as.role, requiresApproval: item.requiresApproval, reward: item.reward });
+	// A supervised account needs approval like a child does.
+	const plan = planCompletion({
+		actorRole: actor.supervised ? "child" : as.role,
+		requiresApproval: item.requiresApproval,
+		reward: item.reward,
+	});
 	const id = randomUUID();
 	let ledgerEntryId: string | null = null;
 	if (plan.credit > 0) {
@@ -165,13 +171,8 @@ function pendingOnly(c: CompletionRow) {
 	if (c.status !== "pending" || c.undoneAt) throw errors.conflict("not_pending", "This completion is not pending");
 }
 
-export function approveCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date) {
-	const { c, i } = getCompletion(tx, actor, id);
-	if (!can(actorIn(actor, i.householdId), "completion:approve", { userId: c.userId })) {
-		throw errors.forbidden("Approval not allowed");
-	}
-	pendingOnly(c);
-
+/** Credits the reward of a pending completion to the wallet of whoever completed it, then marks it approved. */
+function applyApproval(tx: Tx, approverId: string, c: CompletionRow, i: typeof items.$inferSelect, now: Date) {
 	let ledgerEntryId: string | null = null;
 	if (i.reward > 0) {
 		ledgerEntryId = addEntry(tx, {
@@ -180,16 +181,41 @@ export function approveCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date
 			walletId: walletFor(tx, i.creditsTo, c.userId, i.householdId),
 			amount: i.reward,
 			reason: "completion",
-			refId: id,
-			createdBy: actor.userId,
+			refId: c.id,
+			createdBy: approverId,
 			now,
 		});
 	}
 	tx.update(completions)
-		.set({ status: "approved", approvedBy: actor.userId, ledgerEntryId })
-		.where(eq(completions.id, id))
+		.set({ status: "approved", approvedBy: approverId, ledgerEntryId })
+		.where(eq(completions.id, c.id))
 		.run();
+}
+
+export function approveCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date) {
+	const { c, i } = getCompletion(tx, actor, id);
+	if (!can(actorIn(actor, i.householdId), "completion:approve", { userId: c.userId })) {
+		throw errors.forbidden("Approval not allowed");
+	}
+	pendingOnly(c);
+	applyApproval(tx, actor.userId, c, i, now);
 	return result(tx, actor, tx.select().from(completions).where(eq(completions.id, id)).get() as CompletionRow);
+}
+
+/** A guardian approves or rejects a completion of their ward, whichever household the item belongs to. */
+export function reviewAsGuardian(tx: Tx, guardianId: string, ward: ActorCtx, id: string, approve: boolean, now: Date) {
+	assertGuardian(tx, guardianId, ward.userId);
+	const row = tx
+		.select({ c: completions, i: items })
+		.from(completions)
+		.innerJoin(items, eq(items.id, completions.itemId))
+		.where(and(eq(completions.id, id), eq(completions.userId, ward.userId)))
+		.get();
+	if (!row) throw new AppError(404, "not_found", "Completion not found");
+	pendingOnly(row.c);
+	if (approve) applyApproval(tx, guardianId, row.c, row.i, now);
+	else tx.update(completions).set({ status: "rejected", approvedBy: guardianId }).where(eq(completions.id, id)).run();
+	return result(tx, ward, tx.select().from(completions).where(eq(completions.id, id)).get() as CompletionRow);
 }
 
 export function rejectCompletion(tx: Tx, actor: ActorCtx, id: string) {

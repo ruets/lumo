@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { ApiError, type CreateItemInput, type CreateRewardInput } from "@lumo/api-client";
+import { ApiError, type CreateItemInput, type CreateRewardInput, type MeResponse } from "@lumo/api-client";
 import { t, weekdayShort } from "@lumo/i18n";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
@@ -46,8 +46,9 @@ function ScopeField({
 }
 
 /** Where a new item or wish goes: `personal` by default without a household, else the active household. */
-function useTarget() {
-	const me = useMe().data;
+function useTarget(ward?: { id: string; me: MeResponse }) {
+	const mine = useMe().data;
+	const me = ward ? ward.me : mine;
 	const households = me?.households ?? [];
 	const [target, setTarget] = useState<string>(me?.household?.id ?? "personal");
 	const scope =
@@ -55,11 +56,23 @@ function useTarget() {
 	return { households, target, setTarget, scope, personal: target === "personal" };
 }
 
-export function ItemDialog({ kind, onClose }: { kind: "habit" | "task"; onClose: () => void }) {
+export function ItemDialog({
+	kind,
+	onClose,
+	ward,
+}: {
+	kind: "habit" | "task";
+	onClose: () => void;
+	/** A guardian creating for someone they supervise. */
+	ward?: { id: string; me: MeResponse };
+}) {
 	const [freq, setFreq] = useState<"daily" | "timesPerWeek" | "weekly" | "monthly">("daily");
 	const [days, setDays] = useState<number[]>([1]);
-	const { m, error } = useCreate((input: CreateItemInput) => api.createItem(input), onClose);
-	const { households, target, setTarget, scope, personal } = useTarget();
+	const { m, error } = useCreate(
+		(input: CreateItemInput) => (ward ? api.createWardItem(ward.id, input) : api.createItem(input)),
+		onClose,
+	);
+	const { households, target, setTarget, scope, personal } = useTarget(ward);
 
 	function submit(e: FormEvent<HTMLFormElement>) {
 		e.preventDefault();
@@ -175,10 +188,13 @@ export function ItemDialog({ kind, onClose }: { kind: "habit" | "task"; onClose:
 	);
 }
 
-export function RewardDialog({ onClose }: { onClose: () => void }) {
+export function RewardDialog({ onClose, ward }: { onClose: () => void; ward?: { id: string; me: MeResponse } }) {
 	const [limited, setLimited] = useState(false);
-	const { m, error } = useCreate((input: CreateRewardInput) => api.createReward(input), onClose);
-	const { households, target, setTarget, scope } = useTarget();
+	const { m, error } = useCreate(
+		(input: CreateRewardInput) => (ward ? api.createWardReward(ward.id, input) : api.createReward(input)),
+		onClose,
+	);
+	const { households, target, setTarget, scope } = useTarget(ward);
 
 	function submit(e: FormEvent<HTMLFormElement>) {
 		e.preventDefault();

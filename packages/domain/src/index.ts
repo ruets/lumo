@@ -8,3 +8,4 @@ export * from "./roles.js";
 export * from "./rules.js";
 export * from "./schedule.js";
 export * from "./streaks.js";
+export * from "./supervision.js";
