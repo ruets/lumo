@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUID } from "node:crypto";
 import {
+	assertFeature,
 	assertUnderTarget,
 	can,
 	checkCompletionDate,
@@ -104,6 +105,9 @@ export function createCompletion(
 	}
 	// A task is completed only once, whatever the date.
 	assertUnderTarget(countActive(tx, itemId, actor.userId, item.kind === "habit" ? date : null), item.targetPerPeriod);
+
+	// An item that pays the pot cannot be completed while its household has the pot switched off.
+	if (item.householdId && item.creditsTo === "shared" && item.reward > 0) assertFeature(as.features, "pot");
 
 	// A supervised account needs its guardians' approval on items that ask for it.
 	const plan = planCompletion({

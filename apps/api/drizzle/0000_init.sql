@@ -59,6 +59,10 @@ CREATE INDEX `guardianships_ward_idx` ON `guardianships` (`ward_id`);--> stateme
 CREATE TABLE `households` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
+	`feature_pot` integer DEFAULT true NOT NULL,
+	`feature_wishes` integer DEFAULT true NOT NULL,
+	`feature_habits` integer DEFAULT true NOT NULL,
+	`feature_tasks` integer DEFAULT true NOT NULL,
 	`pot_withdrawals` text DEFAULT 'owners' NOT NULL,
 	`backdate_days` integer DEFAULT 2 NOT NULL,
 	`backdate_unlimited` integer DEFAULT false NOT NULL,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUID } from "node:crypto";
-import { can, planTransfer } from "@lumo/domain";
+import { assertFeature, can, planTransfer } from "@lumo/domain";
 import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 import type { z } from "zod";
 import { completions, items, ledgerEntries, memberships, redemptions, rewards } from "../db/schema.js";
@@ -65,6 +65,7 @@ function labelsFor(db: DbOrTx, rows: EntryRow[]): Map<string, string> {
 /** Personal → pot transfer: two entries linked by `transfer_id`, balance checked in the same transaction. */
 export function transferToShared(tx: Tx, actor: HouseholdActorCtx, amount: number, now: Date) {
 	if (!can(actor, "transfer:create")) throw errors.forbidden();
+	assertFeature(actor.features, "pot");
 	requireRight(actor, "transfer");
 	const from = personalWalletId(tx, actor.userId);
 	const to = sharedWalletId(tx, actor.householdId);
@@ -92,6 +93,7 @@ export function transferToShared(tx: Tx, actor: HouseholdActorCtx, amount: numbe
  * Two entries linked by `transfer_id`, balance checked in the same transaction.
  */
 export function withdrawFromPot(tx: Tx, actor: HouseholdActorCtx, amount: number, now: Date) {
+	assertFeature(actor.features, "pot");
 	if (!can(actor, "pot:withdraw")) throw errors.potLocked();
 	const from = sharedWalletId(tx, actor.householdId);
 	const to = personalWalletId(tx, actor.userId);
@@ -100,6 +102,7 @@ export function withdrawFromPot(tx: Tx, actor: HouseholdActorCtx, amount: number
 
 /** An owner pays a member out of the pot: never yourself (that is a withdrawal, governed by the policy). */
 export function payoutFromPot(tx: Tx, actor: HouseholdActorCtx, userId: string, amount: number, now: Date) {
+	assertFeature(actor.features, "pot");
 	if (!can(actor, "pot:payout")) throw errors.forbidden("Only an owner can pay out of the pot");
 	if (userId === actor.userId) throw errors.validation("userId: paying yourself is a withdrawal");
 	const member = tx
@@ -143,6 +146,7 @@ export function adjust(
 	if (!can(actor, "ledger:adjust")) throw errors.forbidden("Owner only");
 	let walletId: string;
 	if (input.userId === null) {
+		assertFeature(actor.features, "pot");
 		walletId = sharedWalletId(tx, actor.householdId);
 	} else {
 		const member = tx
@@ -181,6 +185,7 @@ export function listLedger(
 	q: { wallet: "personal" | "shared"; cursor?: string | undefined; limit: number },
 ) {
 	if (q.wallet === "shared" && !actor.householdId) throw errors.noHousehold();
+	if (q.wallet === "shared") assertFeature(actor.features, "pot");
 	const walletId =
 		q.wallet === "shared" && actor.householdId
 			? sharedWalletId(db, actor.householdId)

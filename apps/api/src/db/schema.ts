@@ -34,6 +34,11 @@ export const households = sqliteTable(
 	{
 		id: id(),
 		name: text("name").notNull(),
+		/** What the household switched off (see `FEATURES` in the domain package). */
+		featurePot: integer("feature_pot", { mode: "boolean" }).notNull().default(true),
+		featureWishes: integer("feature_wishes", { mode: "boolean" }).notNull().default(true),
+		featureHabits: integer("feature_habits", { mode: "boolean" }).notNull().default(true),
+		featureTasks: integer("feature_tasks", { mode: "boolean" }).notNull().default(true),
 		/** Who may take coins out of the pot: its owners, all members, or nobody. */
 		potWithdrawals: text("pot_withdrawals", { enum: POT_POLICIES }).notNull().default("owners"),
 		backdateDays: integer("backdate_days").notNull().default(2),

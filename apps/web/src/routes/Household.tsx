@@ -20,6 +20,7 @@ import { showToast } from "../lib/toast";
 type Household = HouseholdResponse["household"];
 
 const ROLES = ["owner", "member"] as const;
+const FEATURES = ["habits", "tasks", "wishes", "pot"] as const;
 
 function MemberRow({ member, isYou, canManage }: { member: Member; isYou: boolean; canManage: boolean }) {
 	const update = useUpdateMember();
@@ -87,6 +88,7 @@ function SettingsSection() {
 function SettingsForm({ h }: { h: Household }) {
 	const update = useUpdateHousehold();
 	const [unlimited, setUnlimited] = useState(h.backdateDays === null);
+	const [features, setFeatures] = useState(h.features);
 
 	function submit(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault();
@@ -95,6 +97,7 @@ function SettingsForm({ h }: { h: Household }) {
 			{
 				name: String(f.get("name") ?? "").trim(),
 				potWithdrawals: String(f.get("potWithdrawals")) as Household["potWithdrawals"],
+				features,
 				backdateDays: unlimited ? null : Number(f.get("backdateDays")),
 			},
 			{ onSuccess: () => showToast(t("household.saved"), 1500) },
@@ -108,6 +111,21 @@ function SettingsForm({ h }: { h: Household }) {
 				<Field label={t("household.settings.name")}>
 					<input name="name" defaultValue={h.name} required maxLength={80} className={fieldClass} />
 				</Field>
+				<fieldset className="m-0 grid min-w-0 gap-1 border-0 p-0">
+					<legend className="mb-1 p-0 text-sm font-semibold text-muted">{t("features.title")}</legend>
+					{FEATURES.map((f) => (
+						<label key={f} className="flex min-h-11 items-center gap-2 text-sm font-semibold text-soft">
+							<input
+								type="checkbox"
+								checked={features[f]}
+								onChange={(e) => setFeatures({ ...features, [f]: e.target.checked })}
+								className="size-5"
+							/>
+							{t(`features.${f}` as const)}
+						</label>
+					))}
+				</fieldset>
+				<p className="m-0 -mt-2 text-xs text-muted">{t("features.hint")}</p>
 				<Field label={t("pot.policy")}>
 					<select name="potWithdrawals" defaultValue={h.potWithdrawals} className={fieldClass}>
 						{(["owners", "members", "nobody"] as const).map((p) => (

@@ -33,7 +33,8 @@ export const meRoutes = [
 					id: m.householdId,
 					name: names.get(m.householdId) ?? "",
 					role: m.role,
-					pot: { id: potId, balance: walletBalance(db, potId) },
+					pot: m.features.pot ? { id: potId, balance: walletBalance(db, potId) } : null,
+					features: m.features,
 				};
 			});
 			const active = list.find((h) => h.id === actor.householdId) ?? null;
