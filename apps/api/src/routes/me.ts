@@ -2,7 +2,7 @@
 import { can } from "@lumo/domain";
 import { eq } from "drizzle-orm";
 import { createInvite } from "../auth/invites.js";
-import { households, users } from "../db/schema.js";
+import { users } from "../db/schema.js";
 import { errors } from "../errors.js";
 import { inviteBody, inviteView, meView } from "../schemas.js";
 import { personalWalletId, sharedWalletId, walletBalance } from "../services/ledger.js";
@@ -20,18 +20,11 @@ export const meRoutes = [
 		handler: ({ db, actor }) => {
 			const user = db.select().from(users).where(eq(users.id, actor.userId)).get();
 			if (!user) throw errors.unauthenticated();
-			const names = new Map(
-				db
-					.select({ id: households.id, name: households.name })
-					.from(households)
-					.all()
-					.map((h) => [h.id, h.name]),
-			);
 			const list = actor.memberships.map((m) => {
 				const potId = sharedWalletId(db, m.householdId);
 				return {
 					id: m.householdId,
-					name: names.get(m.householdId) ?? "",
+					name: m.name,
 					role: m.role,
 					pot: m.features.pot ? { id: potId, balance: walletBalance(db, potId) } : null,
 					features: m.features,

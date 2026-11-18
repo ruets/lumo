@@ -355,5 +355,7 @@ export const fr: Record<MessageId, string> = {
 	"admin.invite.code": "Code",
 	"supervision.codeHint":
 		"Marche pour quelqu'un qui a déjà un compte comme pour quelqu'un qui n'en a pas : il le crée avec ce code.",
+	"errors.household_has_history": "Ce foyer a un historique de pièces et ne peut pas être supprimé.",
+	"errors.account_exists": "Ce compte Authentik existe déjà : utilisez plutôt le code depuis la page Supervision.",
 	"errors.unknown": "Une erreur est survenue.",
 };

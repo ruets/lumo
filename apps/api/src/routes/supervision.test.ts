@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { completions, guardianships } from "../db/schema.js";
 import {
 	type api,
 	balances,
@@ -233,5 +235,49 @@ describe("what a guardian can do for a ward", () => {
 		).toBe(404);
 		expect((await h.kid.api.patch(`${base(h.adult)}/rights`, { canCreate: true })).statusCode).toBe(404);
 		expect((await h.owner.api.patch(`${base(h.adult)}/rights`, {})).statusCode).toBe(400);
+	});
+});
+
+describe("leaving supervision behind", () => {
+	const kidApproval = async () => {
+		const item = await makeHabit(h.adult, { assigneeIds: [h.kid.userId], requiresApproval: true });
+		const pending = (await h.kid.api.post(`/items/${item.id}/completions`)).json().completion;
+		return { item, pending };
+	};
+
+	it("ending the last supervision rejects what waited for approval, and frees the day's goal", async () => {
+		const { item, pending } = await kidApproval();
+		expect((await h.kid.api.post(`/items/${item.id}/completions`)).json().code).toBe("target_reached");
+		expect((await h.owner.api.del(base(h.kid))).statusCode).toBe(204);
+		const rows = ctx.db.select().from(completions).where(eq(completions.id, pending.id)).all();
+		expect(rows[0]?.status).toBe("rejected");
+		expect((await balances(h.kid)).personal).toBe(0);
+		// The account is no longer supervised, so the item no longer needs approval and the day is free again.
+		expect((await h.kid.api.post(`/items/${item.id}/completions`)).statusCode).toBe(201);
+	});
+
+	it("with another guardian left, pending completions keep waiting", async () => {
+		const code = (await h.adult.api.post("/supervision/codes", { kind: "supervise" })).json();
+		expect((await h.kid.api.post("/supervision/redeem", { code: code.token })).statusCode).toBe(201);
+		const { pending } = await kidApproval();
+		await h.owner.api.del(base(h.kid));
+		expect(ctx.db.select().from(completions).where(eq(completions.id, pending.id)).get()?.status).toBe("pending");
+		const list = (await h.adult.api.get("/supervision/pending")).json().completions;
+		expect(list.map((c: { id: string }) => c.id)).toEqual([pending.id]);
+	});
+
+	it("deleting a guardian ends their supervisions and releases wards left without one", async () => {
+		const { pending } = await kidApproval();
+		const second = await newLoneAccount(ctx, h.owner, "zoe");
+		await h.owner.api.patch(`/admin/users/${second.id}`, { isSuperAdmin: true });
+		expect((await second.api.del(`/admin/users/${h.owner.userId}`)).statusCode).toBe(204);
+		expect(ctx.db.select().from(guardianships).all()).toEqual([]);
+		expect((await h.kid.api.get("/supervision")).json()).toMatchObject({ guardians: [], rights: null });
+		expect(ctx.db.select().from(completions).where(eq(completions.id, pending.id)).get()?.status).toBe("rejected");
+	});
+
+	it("deleting a ward removes them from their guardian's list", async () => {
+		expect((await h.owner.api.del(`/admin/users/${h.kid.userId}`)).statusCode).toBe(204);
+		expect((await h.owner.api.get("/supervision")).json().wards).toEqual([]);
 	});
 });

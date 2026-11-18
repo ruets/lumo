@@ -201,10 +201,9 @@ export const redemptionResult = z.object({
 export const transferBody = z.object({ amount: z.number() }).strict();
 export const potPayoutBody = z.object({ userId: z.string().min(1).max(100), amount: z.number() }).strict();
 
+/** A household owner corrects the household pot. Personal wallets are never adjusted by a household owner. */
 export const adjustmentBody = z
 	.object({
-		/** `null`: adjust the household pot. */
-		userId: z.string().min(1).max(100).nullable(),
 		amount: z
 			.number()
 			.int()
@@ -459,7 +458,8 @@ export const supervisionView = z.object({
 export const wardView = z.object({ id: z.string(), displayName: z.string(), rights: wardRightsView });
 
 export const guardianshipCodeBody = z.object({ kind: z.enum(["supervise", "be_supervised"]) }).strict();
-export const guardianshipCodeView = z.object({ token: z.string(), expiresAt: z.string() });
+/** A one-time code and when it stops working (guardian codes and account invitations). */
+export const oneTimeCodeView = z.object({ token: z.string(), expiresAt: z.string() });
 export const redeemCodeBody = z.object({ code: z.string().min(10).max(200) }).strict();
 export const wardParams = z.object({ wardId: z.string().min(1).max(100) });
 export const wardCompletionParams = z.object({ wardId: z.string().min(1).max(100), id: z.string().min(1).max(100) });

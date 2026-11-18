@@ -270,6 +270,14 @@ describe("admin: households", () => {
 		expect((await h.owner.api.get("/admin/households")).json().households).toHaveLength(1);
 	});
 
+	it("refuses to delete a household that has coin history: the ledger is append-only", async () => {
+		const created = (await h.owner.api.post("/admin/households", { name: "Flat 3" })).json();
+		await h.owner.api.post(`/admin/households/${created.id}/pot/adjustments`, { amount: 5, note: "seed" });
+		const res = await h.owner.api.del(`/admin/households/${created.id}`);
+		expect(res.statusCode).toBe(409);
+		expect(res.json().code).toBe("household_has_history");
+	});
+
 	it("refuses to delete a household that still has members", async () => {
 		const smiths = (await h.owner.api.get("/admin/households")).json().households[0].id;
 		const res = await h.owner.api.del(`/admin/households/${smiths}`);

@@ -5,7 +5,7 @@ import {
 	completionResult,
 	guardianPendingView,
 	guardianshipCodeBody,
-	guardianshipCodeView,
+	oneTimeCodeView,
 	potAdjustmentBody,
 	potBalanceView,
 	redeemCodeBody,
@@ -17,14 +17,14 @@ import {
 	wardView,
 } from "../schemas.js";
 import { reviewAsGuardian, toCompletionView } from "../services/completions.js";
-import { loadActor } from "../services/context.js";
+import type { Tx } from "../services/members.js";
 import {
 	adjustWard,
-	assertGuardian,
 	createCode,
 	endSupervision,
 	listPendingForGuardian,
 	listWardPending,
+	loadWardActor,
 	redeemCode,
 	updateWardRights,
 	supervisionView as viewOf,
@@ -64,7 +64,7 @@ export const supervisionRoutes = [
 		url: "/supervision/codes",
 		summary: "Create a one-time code: to supervise whoever uses it, or to be supervised by whoever uses it",
 		body: guardianshipCodeBody,
-		response: guardianshipCodeView,
+		response: oneTimeCodeView,
 		status: 201,
 		idempotent: false,
 		handler: ({ db, account, body, now }) => createCode(db, account.userId, body.kind, now),
@@ -147,14 +147,13 @@ export const supervisionRoutes = [
 ];
 
 function review(
-	db: Parameters<typeof assertGuardian>[0] & Parameters<typeof reviewAsGuardian>[0],
+	db: Tx,
 	guardianId: string,
 	params: z.output<typeof wardCompletionParams>,
 	approve: boolean,
 	now: Date,
 ) {
-	assertGuardian(db, guardianId, params.wardId);
-	const ward = loadActor(db, params.wardId);
+	const ward = loadWardActor(db, guardianId, params.wardId);
 	if (!ward) throw errors.notFound("Ward");
 	return reviewAsGuardian(db, guardianId, ward, params.id, approve, now);
 }

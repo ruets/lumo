@@ -353,5 +353,7 @@ export const en = {
 	"admin.invite.code": "Code",
 	"supervision.codeHint":
 		"Works for someone who already has an account and for someone who does not: they create it with this code.",
+	"errors.household_has_history": "This household has coin history and cannot be deleted.",
+	"errors.account_exists": "This Authentik account already exists: use the code from the Supervision page instead.",
 	"errors.unknown": "Something went wrong.",
 } as const satisfies Record<string, string>;

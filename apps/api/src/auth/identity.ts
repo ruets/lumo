@@ -10,13 +10,17 @@ import {
 	createHousehold,
 	createMember,
 	joinHousehold,
+	type Tx,
 	userCount,
 	usernameTaken,
 	writeTx,
 } from "../services/members.js";
 import { markInviteUsed } from "./invites.js";
 import type { OidcClaims } from "./oidc.js";
-import { createAccountFromSignup, findSignupToken, resolveSignupToken } from "./signup.js";
+import { createAccountFromSignup, joinSupervision, resolveSignupToken } from "./signup.js";
+
+const emailIsFree = (tx: Tx, email: string | null | undefined): boolean =>
+	!email || !tx.select({ id: users.id }).from(users).where(eq(users.email, email)).get();
 
 const adminGroup = (config: Config) => config.OIDC_ADMIN_GROUP ?? null;
 
@@ -53,14 +57,18 @@ export function resolveOidcLogin(
 			if (isSuperAdmin !== existing.isSuperAdmin) set.isSuperAdmin = isSuperAdmin;
 			if (claims.picture && claims.picture !== existing.avatarUrl) set.avatarUrl = claims.picture;
 			if (Object.keys(set).length > 0) tx.update(users).set(set).where(eq(users.id, existing.id)).run();
-			// An account without a household that follows a household invitation link joins that household.
-			const signup = inviteToken ? findSignupToken(tx, inviteToken, now) : null;
-			if (
-				signup?.type === "household" &&
-				!tx.select().from(memberships).where(eq(memberships.userId, existing.id)).get()
-			) {
-				joinHousehold(tx, { householdId: signup.invite.householdId, userId: existing.id, role: signup.invite.role });
-				markInviteUsed(tx, signup.invite.id, existing.id, now);
+			// A code given to a known identity is applied where it makes sense, and never silently dropped.
+			const signup = inviteToken ? resolveSignupToken(tx, inviteToken, now) : null;
+			if (signup?.type === "household") {
+				if (!tx.select().from(memberships).where(eq(memberships.userId, existing.id)).get()) {
+					joinHousehold(tx, { householdId: signup.invite.householdId, userId: existing.id, role: signup.invite.role });
+					markInviteUsed(tx, signup.invite.id, existing.id, now);
+				}
+			} else if (signup?.type === "supervise") {
+				// Following a guardian's link while signing in is the consent to be supervised.
+				joinSupervision(tx, signup.code, existing.id, now);
+			} else if (signup) {
+				throw errors.conflict("account_exists", "This identity already has an account");
 			}
 			return { userId: existing.id };
 		}
@@ -71,7 +79,8 @@ export function resolveOidcLogin(
 			avatarUrl: claims.picture,
 			oidcSubject: claims.sub,
 			oidcIssuer: issuer,
-			email: claims.email,
+			// The e-mail is only informative and unique: never take one another account already holds.
+			email: emailIsFree(tx, claims.email) ? claims.email : null,
 		};
 
 		if (inviteToken) {
@@ -113,13 +122,7 @@ export function linkOidcIdentity(db: Db, config: Config, userId: string, claims:
 		};
 		if (claims.picture && !user.avatarUrl) set.avatarUrl = claims.picture;
 		// The e-mail is only informative and unique: never take one another account already holds.
-		if (
-			claims.email &&
-			!user.email &&
-			!tx.select({ id: users.id }).from(users).where(eq(users.email, claims.email)).get()
-		) {
-			set.email = claims.email;
-		}
+		if (claims.email && !user.email && emailIsFree(tx, claims.email)) set.email = claims.email;
 		tx.update(users).set(set).where(eq(users.id, userId)).run();
 	});
 }

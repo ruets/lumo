@@ -7,6 +7,7 @@ import {
 	balances,
 	createHousehold,
 	createTestContext,
+	giveCoins,
 	makeHabit,
 	type TestContext,
 } from "../test/helpers.js";
@@ -389,7 +390,7 @@ describe("wishes and redemptions", () => {
 	});
 
 	it("per-period usage limit: 1 per week, then possible again the following week", async () => {
-		await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 20, note: "bonus" });
+		giveCoins(ctx, h.kid.userId, 20);
 		const reward = (await makeReward(h.adult, { cost: 1, limitCount: 1, limitPeriod: "week" })).json();
 		const remaining = async () =>
 			(await h.kid.api.get("/rewards")).json().rewards.find((r: { id: string }) => r.id === reward.id).remaining;
@@ -506,7 +507,7 @@ describe("undoing a wish redemption", () => {
 	});
 
 	it("rights: you undo your own; an owner undoes anybody's; another member cannot", async () => {
-		await h.owner.api.post("/ledger/adjustments", { userId: h.adult.userId, amount: 20, note: "test" });
+		giveCoins(ctx, h.adult.userId, 20);
 		const cheap = (await makeReward({ cost: 1 })).json();
 		const adults = await redeem(h.adult, cheap.id);
 		expect((await h.kid.api.del(`/redemptions/${adults}`)).statusCode).toBe(403);
@@ -532,48 +533,37 @@ describe("undoing a wish redemption", () => {
 });
 
 describe("ledger and adjustments", () => {
-	it("manual adjustment: owner only, note required, positive or negative", async () => {
-		const ok = await h.owner.api.post("/ledger/adjustments", {
-			userId: h.kid.userId,
-			amount: 10,
-			note: "Exceptional reward",
-		});
+	it("manual adjustment: pot only, owner only, note required, positive or negative", async () => {
+		const ok = await h.owner.api.post("/ledger/adjustments", { amount: 10, note: "Exceptional gift" });
 		expect(ok.statusCode).toBe(201);
 		expect(ok.json().entry).toMatchObject({
 			amount: 10,
 			reason: "adjustment",
-			note: "Exceptional reward",
+			note: "Exceptional gift",
 			createdBy: h.owner.userId,
 		});
-		expect((await balances(h.kid)).personal).toBe(10);
+		expect((await balances(h.kid)).shared).toBe(10);
+		expect((await h.owner.api.post("/ledger/adjustments", { amount: -4, note: "Correction" })).statusCode).toBe(201);
+		expect((await balances(h.kid)).shared).toBe(6);
 
-		expect(
-			(await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: -4, note: "Correction" }))
-				.statusCode,
-		).toBe(201);
-		expect((await balances(h.kid)).personal).toBe(6);
-
-		expect(
-			(await h.adult.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 1, note: "x" })).statusCode,
-		).toBe(403);
-		expect((await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 1 })).statusCode).toBe(400);
-		expect(
-			(await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 0, note: "x" })).statusCode,
-		).toBe(400);
-		expect(
-			(await h.owner.api.post("/ledger/adjustments", { userId: "inconnu", amount: 1, note: "x" })).statusCode,
-		).toBe(400);
+		expect((await h.adult.api.post("/ledger/adjustments", { amount: 1, note: "x" })).statusCode).toBe(403);
+		expect((await h.owner.api.post("/ledger/adjustments", { amount: 1 })).statusCode).toBe(400);
+		expect((await h.owner.api.post("/ledger/adjustments", { amount: 0, note: "x" })).statusCode).toBe(400);
 	});
 
-	it("adjusts the pot with a null userId", async () => {
-		await h.owner.api.post("/ledger/adjustments", { userId: null, amount: 7, note: "Don" });
-		expect((await balances(h.kid)).shared).toBe(7);
+	it("nobody adjusts a personal wallet through a household, not even their own", async () => {
+		for (const userId of [h.kid.userId, h.owner.userId]) {
+			const res = await h.owner.api.post("/ledger/adjustments", { userId, amount: 100, note: "mint" });
+			expect(res.statusCode).toBe(400);
+		}
+		expect((await balances(h.owner)).personal).toBe(0);
+		expect((await balances(h.kid)).personal).toBe(0);
 	});
 
 	it("cursor-paginated history, newest first, no duplicate or gap", async () => {
 		for (let i = 1; i <= 5; i++) {
 			ctx.clock.now = new Date(ctx.clock.now.getTime() + 1000);
-			await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: i, note: `n${i}` });
+			giveCoins(ctx, h.kid.userId, i);
 		}
 		const seen: number[] = [];
 		let cursor: string | null = null;
@@ -592,8 +582,8 @@ describe("ledger and adjustments", () => {
 	});
 
 	it("everyone only reads their own wallet and the pot; the balance is the sum of the ledger", async () => {
-		await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 8, note: "a" });
-		await h.owner.api.post("/ledger/adjustments", { userId: h.owner.userId, amount: 3, note: "b" });
+		giveCoins(ctx, h.kid.userId, 8);
+		giveCoins(ctx, h.owner.userId, 3);
 		const mine = (await h.kid.api.get("/ledger?wallet=personal")).json();
 		expect(mine.entries).toHaveLength(1);
 		expect(mine.balance).toBe(8);

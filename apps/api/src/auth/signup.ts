@@ -61,6 +61,12 @@ export function resolveSignupToken(tx: Tx, token: string, now: Date): SignupToke
 	return found;
 }
 
+/** An existing account becomes the ward of the guardian who made the code. */
+export function joinSupervision(tx: Tx, code: typeof guardianshipCodes.$inferSelect, userId: string, now: Date): void {
+	startSupervision(tx, code.createdBy, userId);
+	tx.update(guardianshipCodes).set({ usedAt: now, usedBy: userId }).where(eq(guardianshipCodes.id, code.id)).run();
+}
+
 /**
  * Creates the account of a person who came with a code, and applies what the code was for: join the household,
  * become the ward of the guardian who made it, or simply exist. Local or OIDC: the caller supplies the identity.
@@ -71,11 +77,7 @@ export function createAccountFromSignup(tx: Tx, signup: SignupToken, user: NewUs
 		joinHousehold(tx, { householdId: signup.invite.householdId, userId, role: signup.invite.role });
 		tx.update(invites).set({ usedAt: now, usedBy: userId }).where(eq(invites.id, signup.invite.id)).run();
 	} else if (signup.type === "supervise") {
-		startSupervision(tx, signup.code.createdBy, userId);
-		tx.update(guardianshipCodes)
-			.set({ usedAt: now, usedBy: userId })
-			.where(eq(guardianshipCodes.id, signup.code.id))
-			.run();
+		joinSupervision(tx, signup.code, userId, now);
 	} else {
 		tx.update(accountInvites).set({ usedAt: now, usedBy: userId }).where(eq(accountInvites.id, signup.invite.id)).run();
 	}

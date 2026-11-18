@@ -11,7 +11,7 @@ import { type AuthContext, SESSION_COOKIE } from "./guard.js";
 import { linkOidcIdentity, registerLocal, resolveOidcLogin, setupInstance } from "./identity.js";
 import { type OidcProvider, pkce } from "./oidc.js";
 import { hashPassword, MIN_PASSWORD_LENGTH, verifyPassword } from "./passwords.js";
-import { createSession, deleteSession, rotateRefreshToken, WEB_SESSION_TTL_MS } from "./sessions.js";
+import { createSession, deleteSession, findWebSession, rotateRefreshToken, WEB_SESSION_TTL_MS } from "./sessions.js";
 import { ACCESS_TOKEN_TTL_SECONDS, signAccessToken } from "./tokens.js";
 
 const OIDC_STATE_TTL_MS = 10 * 60 * 1000;
@@ -182,6 +182,11 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 				expectedNonce: saved.nonce,
 			});
 			if (saved.linkUserId) {
+				// The browser finishing the flow must be the one that started it: otherwise someone could get a victim
+				// to complete their own link request and attach the victim's Authentik identity to the attacker's account.
+				const cookie = req.cookies[SESSION_COOKIE];
+				const session = cookie ? findWebSession(db, cookie) : null;
+				if (session?.userId !== saved.linkUserId) throw errors.forbidden("Not the browser that started the link");
 				linkOidcIdentity(db, config, saved.linkUserId, claims);
 				return reply.redirect(`${config.PUBLIC_URL.replace(/\/$/, "")}/settings?linked=1`);
 			}
