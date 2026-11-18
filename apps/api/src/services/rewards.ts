@@ -6,7 +6,7 @@ import type { z } from "zod";
 import { ledgerEntries, memberships, redemptions, rewardAssignees, rewards } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { createRewardBody, rewardView, updateRewardBody } from "../schemas.js";
-import { type ActorCtx, inHousehold } from "./context.js";
+import { type ActorCtx, actorIn } from "./context.js";
 import { addEntry, balancesFor, walletBalance, walletFor } from "./ledger.js";
 import type { DbOrTx, Tx } from "./members.js";
 
@@ -36,11 +36,14 @@ const toView = (r: RewardRow, assigneeIds: string[], remaining: number | null = 
 	archivedAt: r.archivedAt?.toISOString() ?? null,
 	assigneeIds,
 	scope: r.householdId ? "household" : "personal",
+	householdId: r.householdId,
 	remaining,
 });
 
-const accessibleRewards = (actor: ActorCtx) =>
-	or(eq(rewards.ownerId, actor.userId), actor.householdId ? eq(rewards.householdId, actor.householdId) : undefined);
+const accessibleRewards = (actor: ActorCtx) => {
+	const ids = actor.memberships.map((m) => m.householdId);
+	return or(eq(rewards.ownerId, actor.userId), ids.length > 0 ? inArray(rewards.householdId, ids) : undefined);
+};
 
 /** The actor's redemptions in the current limit period (household local days). */
 function usedInPeriodOf(db: DbOrTx, actor: ActorCtx, reward: RewardRow, now: Date): number {
@@ -83,12 +86,13 @@ function getRewardRow(db: DbOrTx, actor: ActorCtx, id: string, opts: { allowArch
 }
 
 export function createReward(tx: Tx, actor: ActorCtx, input: z.output<typeof createRewardBody>, now: Date): RewardView {
-	const scope = input.scope ?? (inHousehold(actor) ? "household" : "personal");
-	if (scope === "household" && !actor.householdId) throw errors.noHousehold();
+	const scope = input.scope ?? (actor.householdId ? "household" : "personal");
+	const householdId = scope === "household" ? (input.householdId ?? actor.householdId) : null;
+	if (scope === "household" && !householdId) throw errors.noHousehold();
 	const assigneeIds = [...new Set(input.assigneeIds)];
-	if (scope === "household") {
-		if (!can(actor, "reward:manage")) throw errors.forbidden("Adults only");
-		assertMembers(tx, actor.householdId as string, assigneeIds);
+	if (householdId) {
+		if (!can(actorIn(actor, householdId), "reward:manage")) throw errors.forbidden("Adults only");
+		assertMembers(tx, householdId, assigneeIds);
 	} else {
 		// A personal wish is yours alone and paid from your own coins.
 		if (assigneeIds.length > 0) throw errors.validation("assigneeIds: a personal wish is yours alone");
@@ -98,8 +102,8 @@ export function createReward(tx: Tx, actor: ActorCtx, input: z.output<typeof cre
 	tx.insert(rewards)
 		.values({
 			id,
-			householdId: scope === "household" ? actor.householdId : null,
-			ownerId: scope === "personal" ? actor.userId : null,
+			householdId,
+			ownerId: householdId === null ? actor.userId : null,
 			name: input.name,
 			description: input.description ?? null,
 			cost: input.cost,
@@ -138,9 +142,9 @@ export function listRewards(db: DbOrTx, actor: ActorCtx, now: Date): RewardView[
 		)
 		.filter(
 			(v) =>
-				v.scope === "personal" ||
-				actor.role !== "child" ||
-				can(actor, "reward:redeem", { fundedFrom: v.fundedFrom, assigneeIds: v.assigneeIds }),
+				v.householdId === null ||
+				actorIn(actor, v.householdId).role !== "child" ||
+				can(actorIn(actor, v.householdId), "reward:redeem", { fundedFrom: v.fundedFrom, assigneeIds: v.assigneeIds }),
 		)
 		.sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name, "fr"));
 }
@@ -153,7 +157,7 @@ export function updateReward(
 	now: Date,
 ): RewardView {
 	const row = getRewardRow(tx, actor, id, { allowArchived: true });
-	if (row.householdId && !can(actor, "reward:manage")) throw errors.forbidden("Adults only");
+	if (row.householdId && !can(actorIn(actor, row.householdId), "reward:manage")) throw errors.forbidden("Adults only");
 	if (!row.householdId) {
 		if (input.assigneeIds && input.assigneeIds.length > 0)
 			throw errors.validation("assigneeIds: a personal wish is yours alone");
@@ -196,13 +200,16 @@ export function updateReward(
 export function redeemReward(tx: Tx, actor: ActorCtx, rewardId: string, now: Date) {
 	const reward = getRewardRow(tx, actor, rewardId);
 	const assigneeIds = assigneesOf(tx, [rewardId]).get(rewardId) ?? [];
-	if (reward.householdId && !can(actor, "reward:redeem", { fundedFrom: reward.fundedFrom, assigneeIds })) {
+	if (
+		reward.householdId &&
+		!can(actorIn(actor, reward.householdId), "reward:redeem", { fundedFrom: reward.fundedFrom, assigneeIds })
+	) {
 		throw errors.forbidden("You cannot redeem this wish");
 	}
 
 	const usedInPeriod = usedInPeriodOf(tx, actor, reward, now);
 
-	const walletId = walletFor(tx, reward.fundedFrom, actor.userId, actor.householdId);
+	const walletId = walletFor(tx, reward.fundedFrom, actor.userId, reward.householdId);
 	const { amount } = planRedemption({
 		cost: reward.cost,
 		balance: walletBalance(tx, walletId),
@@ -233,15 +240,23 @@ export function redeemReward(tx: Tx, actor: ActorCtx, rewardId: string, now: Dat
  */
 export function undoRedemption(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 	const row = tx
-		.select({ r: redemptions })
+		.select({ r: redemptions, reward: rewards })
 		.from(redemptions)
 		.innerJoin(rewards, eq(rewards.id, redemptions.rewardId))
 		.where(and(eq(redemptions.id, id), accessibleRewards(actor)))
 		.get();
 	if (!row) throw notFound();
-	const { r } = row;
-	const owner = tx.select().from(memberships).where(eq(memberships.userId, r.userId)).get();
-	if (!can(actor, "redemption:undo", { userId: r.userId, userRole: owner?.role ?? "adult" })) {
+	const { r, reward } = row;
+	const owner = reward.householdId
+		? tx
+				.select()
+				.from(memberships)
+				.where(and(eq(memberships.userId, r.userId), eq(memberships.householdId, reward.householdId)))
+				.get()
+		: undefined;
+	if (
+		!can(actorIn(actor, reward.householdId), "redemption:undo", { userId: r.userId, userRole: owner?.role ?? "adult" })
+	) {
 		throw errors.forbidden("Undo not allowed");
 	}
 	if (r.undoneAt) throw errors.conflict("already_undone", "This redemption is already undone");

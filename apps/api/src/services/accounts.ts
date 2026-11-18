@@ -20,14 +20,14 @@ import {
 const notFound = (what: string) => new AppError(404, "not_found", `${what} not found`);
 const iso = (d: Date) => d.toISOString();
 
-function householdOf(db: DbOrTx, userId: string) {
-	const row = db
+function householdsOf(db: DbOrTx, userId: string) {
+	return db
 		.select({ id: households.id, name: households.name, role: memberships.role })
 		.from(memberships)
 		.innerJoin(households, eq(households.id, memberships.householdId))
 		.where(eq(memberships.userId, userId))
-		.get();
-	return row ?? null;
+		.orderBy(memberships.createdAt, households.id)
+		.all();
 }
 
 function userView(db: DbOrTx, u: typeof users.$inferSelect) {
@@ -38,7 +38,7 @@ function userView(db: DbOrTx, u: typeof users.$inferSelect) {
 		oidc: u.oidcSubject !== null,
 		isSuperAdmin: u.isSuperAdmin,
 		disabled: u.disabledAt !== null,
-		household: householdOf(db, u.id),
+		households: householdsOf(db, u.id),
 		createdAt: iso(u.createdAt),
 	};
 }
@@ -106,8 +106,7 @@ export function deleteUser(tx: Tx, actor: AccountCtx, targetId: string, now: Dat
 		targetIsSuperAdmin: target.isSuperAdmin,
 		superAdminCount: superAdminCount(tx),
 	});
-	const home = householdOf(tx, targetId);
-	if (home) detachFromHousehold(tx, home.id, targetId);
+	for (const home of householdsOf(tx, targetId)) detachFromHousehold(tx, home.id, targetId);
 	tx.delete(sessions).where(eq(sessions.userId, targetId)).run();
 	tx.delete(devices).where(eq(devices.userId, targetId)).run();
 	tx.update(users)
@@ -126,7 +125,7 @@ export function deleteUser(tx: Tx, actor: AccountCtx, targetId: string, now: Dat
 
 export function assignHousehold(tx: Tx, targetId: string, input: { householdId: string; role: Role }) {
 	const target = liveUser(tx, targetId);
-	if (householdOf(tx, targetId)) throw errors.alreadyInHousehold();
+	if (householdsOf(tx, targetId).some((h) => h.id === input.householdId)) throw errors.alreadyMember();
 	if (!tx.select({ id: households.id }).from(households).where(eq(households.id, input.householdId)).get()) {
 		throw notFound("Household");
 	}
@@ -134,11 +133,10 @@ export function assignHousehold(tx: Tx, targetId: string, input: { householdId: 
 	return userView(tx, target);
 }
 
-export function removeFromHousehold(tx: Tx, targetId: string) {
+export function removeFromHousehold(tx: Tx, targetId: string, householdId: string) {
 	liveUser(tx, targetId);
-	const home = householdOf(tx, targetId);
-	if (!home) return;
-	detachFromHousehold(tx, home.id, targetId);
+	if (!householdsOf(tx, targetId).some((h) => h.id === householdId)) throw notFound("Membership");
+	detachFromHousehold(tx, householdId, targetId);
 }
 
 // ---- Households -------------------------------------------------------------------------
@@ -198,4 +196,17 @@ export function adjustPot(
 		now,
 	});
 	return { balance: walletBalance(tx, walletId) };
+}
+
+/** The person's own settings: name, time zone, first weekday. */
+export function updateAccount(
+	tx: Tx,
+	userId: string,
+	input: { displayName?: string | undefined; timezone?: string | undefined; weekStart?: number | undefined },
+) {
+	const set: Partial<typeof users.$inferInsert> = {};
+	if (input.displayName !== undefined) set.displayName = input.displayName;
+	if (input.timezone !== undefined) set.timezone = input.timezone;
+	if (input.weekStart !== undefined) set.weekStart = input.weekStart;
+	if (Object.keys(set).length > 0) tx.update(users).set(set).where(eq(users.id, userId)).run();
 }

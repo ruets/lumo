@@ -54,12 +54,9 @@
 														},
 														"name": {
 															"type": "string"
-														},
-														"timezone": {
-															"type": "string"
 														}
 													},
-													"required": ["id", "name", "timezone"],
+													"required": ["id", "name"],
 													"additionalProperties": false
 												},
 												{
@@ -77,6 +74,41 @@
 													"type": "null"
 												}
 											]
+										},
+										"households": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"role": {
+														"type": "string",
+														"enum": ["owner", "adult", "child"]
+													},
+													"pot": {
+														"type": "object",
+														"properties": {
+															"id": {
+																"type": "string"
+															},
+															"balance": {
+																"type": "integer",
+																"minimum": -9007199254740991,
+																"maximum": 9007199254740991
+															}
+														},
+														"required": ["id", "balance"],
+														"additionalProperties": false
+													}
+												},
+												"required": ["id", "name", "role", "pot"],
+												"additionalProperties": false
+											}
 										},
 										"wallets": {
 											"type": "object",
@@ -123,7 +155,7 @@
 											"additionalProperties": false
 										}
 									},
-									"required": ["user", "household", "role", "wallets"],
+									"required": ["user", "household", "role", "households", "wallets"],
 									"additionalProperties": false
 								}
 							}
@@ -289,35 +321,189 @@
 										"isSuperAdmin": {
 											"type": "boolean"
 										},
-										"household": {
-											"anyOf": [
-												{
-													"type": "object",
-													"properties": {
-														"id": {
-															"type": "string"
-														},
-														"name": {
-															"type": "string"
-														},
-														"role": {
-															"type": "string",
-															"enum": ["owner", "adult", "child"]
-														}
+										"households": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
 													},
-													"required": ["id", "name", "role"],
-													"additionalProperties": false
+													"name": {
+														"type": "string"
+													},
+													"role": {
+														"type": "string",
+														"enum": ["owner", "adult", "child"]
+													}
 												},
-												{
-													"type": "null"
-												}
-											]
+												"required": ["id", "name", "role"],
+												"additionalProperties": false
+											}
+										},
+										"timezone": {
+											"type": "string"
+										},
+										"weekStart": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										},
 										"canCreateHousehold": {
 											"type": "boolean"
 										}
 									},
-									"required": ["user", "isSuperAdmin", "household", "canCreateHousehold"],
+									"required": ["user", "isSuperAdmin", "households", "timezone", "weekStart", "canCreateHousehold"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			},
+			"patch": {
+				"summary": "Change your name, time zone or first day of the week",
+				"tags": ["Account"],
+				"operationId": "patchApiV1Account",
+				"parameters": [
+					{
+						"name": "Idempotency-Key",
+						"in": "header",
+						"required": true,
+						"description": "Unique UUID per request; a duplicate returns the response already stored.",
+						"schema": {
+							"type": "string",
+							"maxLength": 200
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"displayName": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 80
+									},
+									"timezone": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 64
+									},
+									"weekStart": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 7
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"user": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												},
+												"displayName": {
+													"type": "string"
+												},
+												"avatarUrl": {
+													"type": ["string", "null"]
+												}
+											},
+											"required": ["id", "displayName", "avatarUrl"],
+											"additionalProperties": false
+										},
+										"isSuperAdmin": {
+											"type": "boolean"
+										},
+										"households": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"role": {
+														"type": "string",
+														"enum": ["owner", "adult", "child"]
+													}
+												},
+												"required": ["id", "name", "role"],
+												"additionalProperties": false
+											}
+										},
+										"timezone": {
+											"type": "string"
+										},
+										"weekStart": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
+										},
+										"canCreateHousehold": {
+											"type": "boolean"
+										}
+									},
+									"required": ["user", "isSuperAdmin", "households", "timezone", "weekStart", "canCreateHousehold"],
 									"additionalProperties": false
 								}
 							}
@@ -403,7 +589,21 @@
 				},
 				"responses": {
 					"201": {
-						"description": "Success"
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"householdId": {
+											"type": "string"
+										}
+									},
+									"required": ["householdId"],
+									"additionalProperties": false
+								}
+							}
+						}
 					},
 					"default": {
 						"description": "Error (RFC 9457) with a stable `code`",
@@ -485,7 +685,21 @@
 				},
 				"responses": {
 					"201": {
-						"description": "Success"
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"householdId": {
+											"type": "string"
+										}
+									},
+									"required": ["householdId"],
+									"additionalProperties": false
+								}
+							}
+						}
 					},
 					"default": {
 						"description": "Error (RFC 9457) with a stable `code`",
@@ -628,29 +842,25 @@
 													"disabled": {
 														"type": "boolean"
 													},
-													"household": {
-														"anyOf": [
-															{
-																"type": "object",
-																"properties": {
-																	"id": {
-																		"type": "string"
-																	},
-																	"name": {
-																		"type": "string"
-																	},
-																	"role": {
-																		"type": "string",
-																		"enum": ["owner", "adult", "child"]
-																	}
+													"households": {
+														"type": "array",
+														"items": {
+															"type": "object",
+															"properties": {
+																"id": {
+																	"type": "string"
 																},
-																"required": ["id", "name", "role"],
-																"additionalProperties": false
+																"name": {
+																	"type": "string"
+																},
+																"role": {
+																	"type": "string",
+																	"enum": ["owner", "adult", "child"]
+																}
 															},
-															{
-																"type": "null"
-															}
-														]
+															"required": ["id", "name", "role"],
+															"additionalProperties": false
+														}
 													},
 													"createdAt": {
 														"type": "string"
@@ -663,7 +873,7 @@
 													"oidc",
 													"isSuperAdmin",
 													"disabled",
-													"household",
+													"households",
 													"createdAt"
 												],
 												"additionalProperties": false
@@ -787,29 +997,25 @@
 										"disabled": {
 											"type": "boolean"
 										},
-										"household": {
-											"anyOf": [
-												{
-													"type": "object",
-													"properties": {
-														"id": {
-															"type": "string"
-														},
-														"name": {
-															"type": "string"
-														},
-														"role": {
-															"type": "string",
-															"enum": ["owner", "adult", "child"]
-														}
+										"households": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
 													},
-													"required": ["id", "name", "role"],
-													"additionalProperties": false
+													"name": {
+														"type": "string"
+													},
+													"role": {
+														"type": "string",
+														"enum": ["owner", "adult", "child"]
+													}
 												},
-												{
-													"type": "null"
-												}
-											]
+												"required": ["id", "name", "role"],
+												"additionalProperties": false
+											}
 										},
 										"createdAt": {
 											"type": "string"
@@ -822,7 +1028,7 @@
 										"oidc",
 										"isSuperAdmin",
 										"disabled",
-										"household",
+										"households",
 										"createdAt"
 									],
 									"additionalProperties": false
@@ -944,29 +1150,25 @@
 										"disabled": {
 											"type": "boolean"
 										},
-										"household": {
-											"anyOf": [
-												{
-													"type": "object",
-													"properties": {
-														"id": {
-															"type": "string"
-														},
-														"name": {
-															"type": "string"
-														},
-														"role": {
-															"type": "string",
-															"enum": ["owner", "adult", "child"]
-														}
+										"households": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
 													},
-													"required": ["id", "name", "role"],
-													"additionalProperties": false
+													"name": {
+														"type": "string"
+													},
+													"role": {
+														"type": "string",
+														"enum": ["owner", "adult", "child"]
+													}
 												},
-												{
-													"type": "null"
-												}
-											]
+												"required": ["id", "name", "role"],
+												"additionalProperties": false
+											}
 										},
 										"createdAt": {
 											"type": "string"
@@ -979,7 +1181,7 @@
 										"oidc",
 										"isSuperAdmin",
 										"disabled",
-										"household",
+										"households",
 										"createdAt"
 									],
 									"additionalProperties": false
@@ -1100,11 +1302,11 @@
 				]
 			}
 		},
-		"/api/v1/admin/users/{id}/household": {
+		"/api/v1/admin/users/{id}/households": {
 			"post": {
-				"summary": "Put an account without a household into one",
+				"summary": "Put an account into a household",
 				"tags": ["Admin"],
-				"operationId": "postApiV1AdminUsersIdHousehold",
+				"operationId": "postApiV1AdminUsersIdHouseholds",
 				"parameters": [
 					{
 						"name": "id",
@@ -1176,29 +1378,25 @@
 										"disabled": {
 											"type": "boolean"
 										},
-										"household": {
-											"anyOf": [
-												{
-													"type": "object",
-													"properties": {
-														"id": {
-															"type": "string"
-														},
-														"name": {
-															"type": "string"
-														},
-														"role": {
-															"type": "string",
-															"enum": ["owner", "adult", "child"]
-														}
+										"households": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
 													},
-													"required": ["id", "name", "role"],
-													"additionalProperties": false
+													"name": {
+														"type": "string"
+													},
+													"role": {
+														"type": "string",
+														"enum": ["owner", "adult", "child"]
+													}
 												},
-												{
-													"type": "null"
-												}
-											]
+												"required": ["id", "name", "role"],
+												"additionalProperties": false
+											}
 										},
 										"createdAt": {
 											"type": "string"
@@ -1211,7 +1409,7 @@
 										"oidc",
 										"isSuperAdmin",
 										"disabled",
-										"household",
+										"households",
 										"createdAt"
 									],
 									"additionalProperties": false
@@ -1259,14 +1457,26 @@
 						"bearer": []
 					}
 				]
-			},
+			}
+		},
+		"/api/v1/admin/users/{id}/households/{householdId}": {
 			"delete": {
-				"summary": "Take an account out of its household, keeping the account",
+				"summary": "Take an account out of a household, keeping the account",
 				"tags": ["Admin"],
-				"operationId": "deleteApiV1AdminUsersIdHousehold",
+				"operationId": "deleteApiV1AdminUsersIdHouseholdsHouseholdId",
 				"parameters": [
 					{
 						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						}
+					},
+					{
+						"name": "householdId",
 						"in": "path",
 						"required": true,
 						"schema": {
@@ -2005,14 +2215,6 @@
 												"name": {
 													"type": "string"
 												},
-												"timezone": {
-													"type": "string"
-												},
-												"weekStart": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
-												},
 												"backdateDays": {
 													"anyOf": [
 														{
@@ -2026,7 +2228,7 @@
 													]
 												}
 											},
-											"required": ["id", "name", "timezone", "weekStart", "backdateDays"],
+											"required": ["id", "name", "backdateDays"],
 											"additionalProperties": false
 										},
 										"members": {
@@ -2151,16 +2353,6 @@
 										"minLength": 1,
 										"maxLength": 80
 									},
-									"timezone": {
-										"type": "string",
-										"minLength": 1,
-										"maxLength": 64
-									},
-									"weekStart": {
-										"type": "integer",
-										"minimum": 1,
-										"maximum": 7
-									},
 									"backdateDays": {
 										"anyOf": [
 											{
@@ -2196,14 +2388,6 @@
 												"name": {
 													"type": "string"
 												},
-												"timezone": {
-													"type": "string"
-												},
-												"weekStart": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
-												},
 												"backdateDays": {
 													"anyOf": [
 														{
@@ -2217,7 +2401,7 @@
 													]
 												}
 											},
-											"required": ["id", "name", "timezone", "weekStart", "backdateDays"],
+											"required": ["id", "name", "backdateDays"],
 											"additionalProperties": false
 										},
 										"members": {
@@ -2723,6 +2907,11 @@
 											"scope": {
 												"type": "string",
 												"enum": ["personal", "household"]
+											},
+											"householdId": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 100
 											}
 										},
 										"required": ["kind", "schedule", "name"],
@@ -2800,6 +2989,11 @@
 											"scope": {
 												"type": "string",
 												"enum": ["personal", "household"]
+											},
+											"householdId": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 100
 											}
 										},
 										"required": ["kind", "name"],
@@ -2943,6 +3137,9 @@
 										"scope": {
 											"type": "string",
 											"enum": ["personal", "household"]
+										},
+										"householdId": {
+											"type": ["string", "null"]
 										}
 									},
 									"required": [
@@ -2960,7 +3157,8 @@
 										"archivedAt",
 										"createdBy",
 										"assigneeIds",
-										"scope"
+										"scope",
+										"householdId"
 									],
 									"additionalProperties": false
 								}
@@ -3162,6 +3360,9 @@
 													"scope": {
 														"type": "string",
 														"enum": ["personal", "household"]
+													},
+													"householdId": {
+														"type": ["string", "null"]
 													}
 												},
 												"required": [
@@ -3179,7 +3380,8 @@
 													"archivedAt",
 													"createdBy",
 													"assigneeIds",
-													"scope"
+													"scope",
+													"householdId"
 												],
 												"additionalProperties": false
 											}
@@ -3527,6 +3729,9 @@
 										"scope": {
 											"type": "string",
 											"enum": ["personal", "household"]
+										},
+										"householdId": {
+											"type": ["string", "null"]
 										}
 									},
 									"required": [
@@ -3544,7 +3749,8 @@
 										"archivedAt",
 										"createdBy",
 										"assigneeIds",
-										"scope"
+										"scope",
+										"householdId"
 									],
 									"additionalProperties": false
 								}
@@ -3825,6 +4031,9 @@
 															"scope": {
 																"type": "string",
 																"enum": ["personal", "household"]
+															},
+															"householdId": {
+																"type": ["string", "null"]
 															}
 														},
 														"required": [
@@ -3842,7 +4051,8 @@
 															"archivedAt",
 															"createdBy",
 															"assigneeIds",
-															"scope"
+															"scope",
+															"householdId"
 														],
 														"additionalProperties": false
 													},
@@ -4734,6 +4944,9 @@
 														"type": "string",
 														"enum": ["personal", "household"]
 													},
+													"householdId": {
+														"type": ["string", "null"]
+													},
 													"remaining": {
 														"anyOf": [
 															{
@@ -4759,6 +4972,7 @@
 													"archivedAt",
 													"assigneeIds",
 													"scope",
+													"householdId",
 													"remaining"
 												],
 												"additionalProperties": false
@@ -4864,6 +5078,11 @@
 									"scope": {
 										"type": "string",
 										"enum": ["personal", "household"]
+									},
+									"householdId": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 100
 									},
 									"link": {
 										"anyOf": [
@@ -4982,6 +5201,9 @@
 											"type": "string",
 											"enum": ["personal", "household"]
 										},
+										"householdId": {
+											"type": ["string", "null"]
+										},
 										"remaining": {
 											"anyOf": [
 												{
@@ -5007,6 +5229,7 @@
 										"archivedAt",
 										"assigneeIds",
 										"scope",
+										"householdId",
 										"remaining"
 									],
 									"additionalProperties": false
@@ -5233,6 +5456,9 @@
 											"type": "string",
 											"enum": ["personal", "household"]
 										},
+										"householdId": {
+											"type": ["string", "null"]
+										},
 										"remaining": {
 											"anyOf": [
 												{
@@ -5258,6 +5484,7 @@
 										"archivedAt",
 										"assigneeIds",
 										"scope",
+										"householdId",
 										"remaining"
 									],
 									"additionalProperties": false

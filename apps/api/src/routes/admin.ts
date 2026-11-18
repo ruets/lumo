@@ -13,6 +13,7 @@ import {
 	instanceSettingsView,
 	potAdjustmentBody,
 	potBalanceView,
+	removeMembershipParams,
 	updateInstanceSettingsBody,
 } from "../schemas.js";
 import {
@@ -81,8 +82,8 @@ export const adminRoutes = [
 	route({
 		...admin,
 		method: "post",
-		url: "/admin/users/:id/household",
-		summary: "Put an account without a household into one",
+		url: "/admin/users/:id/households",
+		summary: "Put an account into a household",
 		params: idParams,
 		body: adminAssignHouseholdBody,
 		response: adminUserView,
@@ -91,11 +92,11 @@ export const adminRoutes = [
 	route({
 		...admin,
 		method: "delete",
-		url: "/admin/users/:id/household",
-		summary: "Take an account out of its household, keeping the account",
-		params: idParams,
+		url: "/admin/users/:id/households/:householdId",
+		summary: "Take an account out of a household, keeping the account",
+		params: removeMembershipParams,
 		status: 204,
-		handler: ({ db, params }) => removeFromHousehold(db, params.id),
+		handler: ({ db, params }) => removeFromHousehold(db, params.id, params.householdId),
 	}),
 	route({
 		...admin,

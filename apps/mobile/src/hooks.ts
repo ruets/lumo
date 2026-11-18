@@ -4,6 +4,7 @@ import { addDays } from "@lumo/domain";
 import { errorMessage } from "@lumo/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { setActiveHouseholdId } from "./household";
 import { type QueuedCompletion, useQueue } from "./queue";
 import { api } from "./session";
 import { showToast } from "./store";
@@ -163,8 +164,29 @@ export function useUpdateHousehold() {
 }
 
 export const useLeaveHousehold = () => useWrite(() => api.leaveHousehold());
-export const useJoinHousehold = () => useWrite((code: string) => api.joinHousehold(code));
-export const useCreateOwnHousehold = () => useWrite((name: string) => api.createHousehold(name));
+/** Joining or creating a household makes it the active one. */
+export const useJoinHousehold = () =>
+	useWrite(async (code: string) => {
+		const r = await api.joinHousehold(code);
+		await setActiveHouseholdId(r.householdId);
+		return r;
+	});
+export const useCreateOwnHousehold = () =>
+	useWrite(async (name: string) => {
+		const r = await api.createHousehold(name);
+		await setActiveHouseholdId(r.householdId);
+		return r;
+	});
+export const useUpdateAccount = () =>
+	useWrite((input: Parameters<typeof api.updateAccount>[0]) => api.updateAccount(input));
+
+/** Switches the active household and refetches everything that depends on it. */
+export function useSwitchHousehold() {
+	const qc = useQueryClient();
+	return (id: string) => {
+		void setActiveHouseholdId(id).then(() => qc.invalidateQueries());
+	};
+}
 
 export const useAdminUsers = () => useQuery({ queryKey: ["admin", "users"], queryFn: () => api.adminListUsers() });
 export const useAdminHouseholds = () =>

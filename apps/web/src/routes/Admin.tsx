@@ -30,7 +30,8 @@ function UserRow({ user, households }: { user: AdminUser; households: AdminHouse
 	const assign = useAdminWrite((householdId: string) =>
 		api.adminAssignHousehold(user.id, { householdId, role: "adult" }),
 	);
-	const takeOut = useAdminWrite(() => api.adminRemoveFromHousehold(user.id));
+	const takeOut = useAdminWrite((householdId: string) => api.adminRemoveFromHousehold(user.id, householdId));
+	const joinable = households.filter((h) => !user.households.some((m) => m.id === h.id));
 	return (
 		<li className="grid gap-2 border-b border-line py-3 last:border-b-0">
 			<span className="flex flex-wrap items-baseline gap-2">
@@ -40,8 +41,8 @@ function UserRow({ user, households }: { user: AdminUser; households: AdminHouse
 				{user.disabled && <span className="text-xs font-bold text-bad">{t("admin.disabled")}</span>}
 			</span>
 			<span className="text-[13px] text-muted">
-				{user.household
-					? `${user.household.name} · ${t(`role.${user.household.role}` as const)}`
+				{user.households.length > 0
+					? user.households.map((h) => `${h.name} · ${t(`role.${h.role}` as const)}`).join(", ")
 					: t("admin.noHousehold")}
 			</span>
 			<span className="flex flex-wrap gap-2">
@@ -59,26 +60,25 @@ function UserRow({ user, households }: { user: AdminUser; households: AdminHouse
 				>
 					{user.disabled ? t("admin.user.enable") : t("admin.user.disable")}
 				</button>
-				{user.household ? (
-					<button type="button" className={ghost} onClick={() => takeOut.mutate(undefined, { onSuccess: saved })}>
-						{t("admin.user.takeOut")}
+				{user.households.map((h) => (
+					<button key={h.id} type="button" className={ghost} onClick={() => takeOut.mutate(h.id, { onSuccess: saved })}>
+						{t("admin.user.takeOutOf", { name: h.name })}
 					</button>
-				) : (
-					households.length > 0 && (
-						<select
-							aria-label={t("admin.user.assign")}
-							value=""
-							onChange={(e) => e.target.value && assign.mutate(e.target.value, { onSuccess: saved })}
-							className={`${fieldClass} w-auto`}
-						>
-							<option value="">{t("admin.user.assign")}</option>
-							{households.map((h) => (
-								<option key={h.id} value={h.id}>
-									{h.name}
-								</option>
-							))}
-						</select>
-					)
+				))}
+				{joinable.length > 0 && (
+					<select
+						aria-label={t("admin.user.assign")}
+						value=""
+						onChange={(e) => e.target.value && assign.mutate(e.target.value, { onSuccess: saved })}
+						className={`${fieldClass} w-auto`}
+					>
+						<option value="">{t("admin.user.assign")}</option>
+						{joinable.map((h) => (
+							<option key={h.id} value={h.id}>
+								{h.name}
+							</option>
+						))}
+					</select>
 				)}
 				<button
 					type="button"

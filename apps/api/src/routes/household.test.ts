@@ -27,7 +27,7 @@ describe("GET /household", () => {
 	it("any member sees the household settings and the member list", async () => {
 		for (const who of [h.owner, h.adult, h.kid]) {
 			const res = (await who.api.get("/household")).json();
-			expect(res.household).toMatchObject({ name: "The Smiths", timezone: "Europe/Paris", backdateDays: 2 });
+			expect(res.household).toMatchObject({ name: "The Smiths", backdateDays: 2 });
 			expect(res.members).toHaveLength(3);
 		}
 		const members = (await h.kid.api.get("/household")).json().members;
@@ -196,18 +196,14 @@ describe("DELETE /members/:id", () => {
 });
 
 describe("PATCH /household", () => {
-	it("the owner updates the name, time zone, first day of the week and backdate window", async () => {
+	it("the owner updates the name and the backdate window", async () => {
 		const res = await h.owner.api.patch("/household", {
 			name: "The Browns",
-			timezone: "America/New_York",
-			weekStart: 7,
 			backdateDays: 5,
 		});
 		expect(res.statusCode).toBe(200);
 		expect(res.json().household).toMatchObject({
 			name: "The Browns",
-			timezone: "America/New_York",
-			weekStart: 7,
 			backdateDays: 5,
 		});
 		expect((await h.kid.api.get("/household")).json().household.name).toBe("The Browns");
@@ -218,7 +214,6 @@ describe("PATCH /household", () => {
 		await h.owner.api.patch("/household", { backdateDays: 0 });
 		expect((await h.owner.api.get("/household")).json().household).toMatchObject({
 			name: "The Smiths",
-			timezone: "Europe/Paris",
 			backdateDays: 0,
 		});
 	});
@@ -236,7 +231,8 @@ describe("PATCH /household", () => {
 		// 23:30 UTC on the 17th is already the 18th in Paris, still the 17th in New York.
 		ctx.clock.now = new Date("2026-11-17T23:30:00Z");
 		expect((await h.owner.api.get("/today")).json().date).toBe("2026-11-18");
-		await h.owner.api.patch("/household", { timezone: "America/New_York" });
+		// The time zone is the person's own, not the household's.
+		await h.owner.api.patch("/account", { timezone: "America/New_York" });
 		expect((await h.owner.api.get("/today")).json().date).toBe("2026-11-17");
 	});
 

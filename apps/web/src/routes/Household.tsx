@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { HouseholdResponse, Member, MeResponse } from "@lumo/api-client";
-import { shortDate, t, weekdayLong, weekdayNarrow } from "@lumo/i18n";
+import { shortDate, t } from "@lumo/i18n";
 import { useState } from "react";
 import { Avatar } from "../components/AppShell";
 import { Field, fieldClass, PageTitle, PrimaryButton } from "../components/ui";
@@ -99,9 +99,7 @@ function SettingsSection() {
 
 function SettingsForm({ h }: { h: Household }) {
 	const update = useUpdateHousehold();
-	const [weekStart, setWeekStart] = useState(h.weekStart);
 	const [unlimited, setUnlimited] = useState(h.backdateDays === null);
-	const zones = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
 
 	function submit(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault();
@@ -109,8 +107,6 @@ function SettingsForm({ h }: { h: Household }) {
 		update.mutate(
 			{
 				name: String(f.get("name") ?? "").trim(),
-				timezone: String(f.get("timezone") ?? "").trim(),
-				weekStart,
 				backdateDays: unlimited ? null : Number(f.get("backdateDays")),
 			},
 			{ onSuccess: () => showToast(t("household.saved"), 1500) },
@@ -124,44 +120,6 @@ function SettingsForm({ h }: { h: Household }) {
 				<Field label={t("household.settings.name")}>
 					<input name="name" defaultValue={h.name} required maxLength={80} className={fieldClass} />
 				</Field>
-				<Field label={t("household.settings.timezone")}>
-					<input
-						name="timezone"
-						defaultValue={h.timezone}
-						required
-						list="lumo-time-zones"
-						autoComplete="off"
-						className={fieldClass}
-					/>
-				</Field>
-				<datalist id="lumo-time-zones">
-					{zones.map((z) => (
-						<option key={z} value={z} />
-					))}
-				</datalist>
-				<p className="m-0 -mt-2 text-xs text-muted">{t("household.settings.timezoneHint")}</p>
-
-				<fieldset className="m-0 grid min-w-0 gap-1.5 border-0 p-0">
-					<legend className="mb-1.5 p-0 text-sm font-semibold text-muted">{t("household.settings.weekStart")}</legend>
-					<div className="flex gap-1.5">
-						{[1, 2, 3, 4, 5, 6, 7].map((d) => (
-							<button
-								key={d}
-								type="button"
-								aria-pressed={weekStart === d}
-								aria-label={weekdayLong(d)}
-								title={weekdayLong(d)}
-								onClick={() => setWeekStart(d)}
-								className={`grid size-11 cursor-pointer place-items-center rounded-full border-0 font-body text-sm font-bold ${
-									weekStart === d ? "bg-primary text-white" : "bg-raised text-soft hover:bg-edge"
-								}`}
-							>
-								{weekdayNarrow(d)}
-							</button>
-						))}
-					</div>
-				</fieldset>
-
 				<Field label={t("household.settings.backdate")}>
 					<input
 						name="backdateDays"

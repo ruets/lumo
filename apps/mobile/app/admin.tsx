@@ -34,7 +34,8 @@ function UserRow({ user, households }: { user: AdminUser; households: AdminHouse
 		api.adminUpdateUser(user.id, input),
 	);
 	const remove = useAdminWrite(() => api.adminDeleteUser(user.id));
-	const takeOut = useAdminWrite(() => api.adminRemoveFromHousehold(user.id));
+	const takeOut = useAdminWrite((householdId: string) => api.adminRemoveFromHousehold(user.id, householdId));
+	const joinable = households.filter((h) => !user.households.some((m) => m.id === h.id));
 	const assign = useAdminWrite((householdId: string) =>
 		api.adminAssignHousehold(user.id, { householdId, role: "adult" }),
 	);
@@ -48,8 +49,8 @@ function UserRow({ user, households }: { user: AdminUser; households: AdminHouse
 				{user.disabled ? `  · ${t("admin.disabled")}` : ""}
 			</T>
 			<T style={{ color: colors.muted, fontSize: 13 }}>
-				{user.household
-					? `${user.household.name} · ${t(`role.${user.household.role}` as const)}`
+				{user.households.length > 0
+					? user.households.map((h) => `${h.name} · ${t(`role.${h.role}` as const)}`).join(", ")
 					: t("admin.noHousehold")}
 			</T>
 			<Button
@@ -62,37 +63,37 @@ function UserRow({ user, households }: { user: AdminUser; households: AdminHouse
 				label={user.disabled ? t("admin.user.enable") : t("admin.user.disable")}
 				onPress={() => update.mutate({ disabled: !user.disabled }, { onSuccess: saved })}
 			/>
-			{user.household ? (
+			{user.households.map((h) => (
 				<Button
+					key={h.id}
 					variant="ghost"
-					label={t("admin.user.takeOut")}
-					onPress={() => takeOut.mutate(undefined, { onSuccess: saved })}
+					label={t("admin.user.takeOutOf", { name: h.name })}
+					onPress={() => takeOut.mutate(h.id, { onSuccess: saved })}
 				/>
-			) : (
-				households.length > 0 && (
-					<>
-						<Button variant="ghost" label={t("admin.user.assign")} onPress={() => setPicking((v) => !v)} />
-						{picking && (
-							<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-								{households.map((h) => (
-									<Chip
-										key={h.id}
-										label={h.name}
-										on={false}
-										onPress={() =>
-											assign.mutate(h.id, {
-												onSuccess: () => {
-													setPicking(false);
-													saved();
-												},
-											})
-										}
-									/>
-								))}
-							</View>
-						)}
-					</>
-				)
+			))}
+			{joinable.length > 0 && (
+				<>
+					<Button variant="ghost" label={t("admin.user.assign")} onPress={() => setPicking((v) => !v)} />
+					{picking && (
+						<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+							{joinable.map((h) => (
+								<Chip
+									key={h.id}
+									label={h.name}
+									on={false}
+									onPress={() =>
+										assign.mutate(h.id, {
+											onSuccess: () => {
+												setPicking(false);
+												saved();
+											},
+										})
+									}
+								/>
+							))}
+						</View>
+					)}
+				</>
 			)}
 			<Button
 				variant="ghost"

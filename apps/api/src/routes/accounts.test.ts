@@ -51,9 +51,9 @@ describe("super admin", () => {
 
 	it("GET /account works with and without a household", async () => {
 		const mine = (await h.owner.api.get("/account")).json();
-		expect(mine.household).toMatchObject({ name: "The Smiths", role: "owner" });
+		expect(mine.households).toEqual([expect.objectContaining({ name: "The Smiths", role: "owner" })]);
 		const bare = await newAccount("zoe");
-		expect((await bare.api.get("/account")).json()).toMatchObject({ isSuperAdmin: false, household: null });
+		expect((await bare.api.get("/account")).json()).toMatchObject({ isSuperAdmin: false, households: [] });
 	});
 
 	it("a household owner is not a super admin: the admin routes are closed to them", async () => {
@@ -79,7 +79,7 @@ describe("accounts without a household", () => {
 		expect((await h.owner.api.del(`/members/${h.kid.userId}`)).statusCode).toBe(204);
 
 		// Still signed in, still able to sign in again, but without access to the household.
-		expect((await h.kid.api.get("/account")).json().household).toBeNull();
+		expect((await h.kid.api.get("/account")).json().households).toEqual([]);
 		// The app still works for them, on their own: no household, no pot.
 		expect((await h.kid.api.get("/me")).json()).toMatchObject({
 			household: null,
@@ -103,7 +103,7 @@ describe("accounts without a household", () => {
 		expect((await balances(h.kid)).personal).toBe(5);
 	});
 
-	it("joins another household with a code, and only without a household", async () => {
+	it("joins a household with a code, also a second one, but never the same twice", async () => {
 		const zoe = await newAccount("zoe");
 		const invite = (await h.owner.api.post("/household/invites", { role: "adult" })).json();
 		expect((await zoe.api.post("/household/join", { code: "not-a-real-invitation-code" })).json().code).toBe(
@@ -113,16 +113,16 @@ describe("accounts without a household", () => {
 		expect(ok.statusCode).toBe(201);
 		expect((await zoe.api.get("/me")).json()).toMatchObject({ role: "adult", household: { name: "The Smiths" } });
 
-		// Already in a household: cannot join another one (single membership for now).
+		// Already a member of that household: refused.
 		const second = (await h.owner.api.post("/household/invites", { role: "adult" })).json();
 		const again = await zoe.api.post("/household/join", { code: second.token });
 		expect(again.statusCode).toBe(409);
-		expect(again.json().code).toBe("already_in_household");
+		expect(again.json().code).toBe("already_member");
 	});
 
 	it("leaving a household keeps the account; the last owner cannot leave", async () => {
 		expect((await h.kid.api.post("/household/leave")).statusCode).toBe(204);
-		expect((await h.kid.api.get("/account")).json().household).toBeNull();
+		expect((await h.kid.api.get("/account")).json().households).toEqual([]);
 
 		const last = await h.owner.api.post("/household/leave");
 		expect(last.statusCode).toBe(409);
@@ -137,8 +137,9 @@ describe("accounts without a household", () => {
 		const res = await zoe.api.post("/households", { name: "Zoe's flat" });
 		expect(res.statusCode).toBe(201);
 		expect((await zoe.api.get("/me")).json()).toMatchObject({ role: "owner", household: { name: "Zoe's flat" } });
-		// An account that already has a household cannot create another one (single membership for now).
-		expect((await zoe.api.post("/households", { name: "Second" })).json().code).toBe("already_in_household");
+		// An account can own several households.
+		expect((await zoe.api.post("/households", { name: "Second" })).statusCode).toBe(201);
+		expect((await zoe.api.get("/account")).json().households).toHaveLength(2);
 	});
 
 	it("household creation can be restricted to super admins", async () => {
@@ -163,7 +164,7 @@ describe("admin: accounts", () => {
 			displayName: "bob",
 			isSuperAdmin: false,
 			disabled: false,
-			household: { name: "The Smiths", role: "adult" },
+			households: [expect.objectContaining({ name: "The Smiths", role: "adult" })],
 		});
 		expect(res.body).not.toContain("Secret habit");
 	});
@@ -171,7 +172,7 @@ describe("admin: accounts", () => {
 	it("creates a local account without a household; the username must be free and the password strong", async () => {
 		const ok = await h.owner.api.post("/admin/users", { displayName: "Zoe", username: "zoe", password: PASSWORD });
 		expect(ok.statusCode).toBe(201);
-		expect(ok.json()).toMatchObject({ displayName: "Zoe", household: null, isSuperAdmin: false });
+		expect(ok.json()).toMatchObject({ displayName: "Zoe", households: [], isSuperAdmin: false });
 		expect(
 			(await h.owner.api.post("/admin/users", { displayName: "Z", username: "zoe", password: PASSWORD })).statusCode,
 		).toBe(409);
@@ -239,17 +240,17 @@ describe("admin: accounts", () => {
 		const zoe = await newAccount("zoe");
 		const households = (await h.owner.api.get("/admin/households")).json().households;
 		const smiths = households[0].id;
-		const put = await h.owner.api.post(`/admin/users/${zoe.id}/household`, { householdId: smiths, role: "adult" });
+		const put = await h.owner.api.post(`/admin/users/${zoe.id}/households`, { householdId: smiths, role: "adult" });
 		expect(put.statusCode).toBe(200);
-		expect(put.json().household).toMatchObject({ id: smiths, role: "adult" });
+		expect(put.json().households).toEqual([expect.objectContaining({ id: smiths, role: "adult" })]);
 		expect((await zoe.api.get("/me")).statusCode).toBe(200);
-		// Already in a household: refused.
+		// Already a member of that household: refused.
 		expect(
-			(await h.owner.api.post(`/admin/users/${zoe.id}/household`, { householdId: smiths, role: "adult" })).statusCode,
+			(await h.owner.api.post(`/admin/users/${zoe.id}/households`, { householdId: smiths, role: "adult" })).statusCode,
 		).toBe(409);
 
-		expect((await h.owner.api.del(`/admin/users/${zoe.id}/household`)).statusCode).toBe(204);
-		expect((await zoe.api.get("/account")).json().household).toBeNull();
+		expect((await h.owner.api.del(`/admin/users/${zoe.id}/households/${smiths}`)).statusCode).toBe(204);
+		expect((await zoe.api.get("/account")).json().households).toEqual([]);
 	});
 });
 

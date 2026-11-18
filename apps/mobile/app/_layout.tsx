@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { AppState } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useAccount } from "../src/hooks";
+import { loadActiveHousehold } from "../src/household";
 import { LocaleBoundary, loadLocale, useLocaleState } from "../src/locale";
 import { persister, queryClient } from "../src/query";
 import { flushQueue, loadQueue } from "../src/queue";
@@ -23,6 +24,7 @@ function Routes() {
 
 	useEffect(() => {
 		void loadServer();
+		void loadActiveHousehold();
 	}, []);
 
 	// Offline queue: sent at startup, when the app returns to the foreground and when the network comes back.

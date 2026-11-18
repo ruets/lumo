@@ -32,12 +32,9 @@ CREATE INDEX `devices_user_idx` ON `devices` (`user_id`);--> statement-breakpoin
 CREATE TABLE `households` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
-	`timezone` text DEFAULT 'Europe/Paris' NOT NULL,
-	`week_start` integer DEFAULT 1 NOT NULL,
 	`backdate_days` integer DEFAULT 2 NOT NULL,
 	`backdate_unlimited` integer DEFAULT false NOT NULL,
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
-	CONSTRAINT "households_week_start_check" CHECK("households"."week_start" BETWEEN 1 AND 7),
 	CONSTRAINT "households_backdate_days_check" CHECK("households"."backdate_days" >= 0)
 );
 --> statement-breakpoint
@@ -143,7 +140,7 @@ CREATE TABLE `memberships` (
 	CONSTRAINT "memberships_role_check" CHECK(role IN ('owner', 'adult', 'child'))
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `memberships_user_uq` ON `memberships` (`user_id`);--> statement-breakpoint
+CREATE INDEX `memberships_user_idx` ON `memberships` (`user_id`);--> statement-breakpoint
 CREATE TABLE `oidc_states` (
 	`state` text PRIMARY KEY NOT NULL,
 	`nonce` text NOT NULL,

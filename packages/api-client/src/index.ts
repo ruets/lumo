@@ -52,6 +52,7 @@ export type StatsResponse = Response<"/api/v1/stats", "get", 200>;
 export type AccountResponse = Response<"/api/v1/account", "get", 200>;
 export type AdminUser = Response<"/api/v1/admin/users", "get", 200>["users"][number];
 export type AdminHousehold = Response<"/api/v1/admin/households", "get", 200>["households"][number];
+export type UpdateAccountInput = BodyOf<"/api/v1/account", "patch">;
 export type InstanceSettings = Response<"/api/v1/admin/settings", "get", 200>;
 export type UpdateInstanceSettingsInput = BodyOf<"/api/v1/admin/settings", "patch">;
 export type CreateAdminUserInput = BodyOf<"/api/v1/admin/users", "post">;
@@ -104,6 +105,8 @@ export interface ClientOptions {
 	baseUrl: string | (() => string);
 	/** Access token (mobile). Absent on the web: the session cookie is enough. */
 	getAccessToken?: () => string | null | Promise<string | null>;
+	/** Active household, sent as `X-Household-Id` (the server falls back to the oldest membership). */
+	getHouseholdId?: () => string | null;
 	fetch?: typeof fetch;
 }
 
@@ -115,6 +118,8 @@ export function createClient(options: ClientOptions) {
 		const headers: Record<string, string> = { accept: "application/json" };
 		const token = await options.getAccessToken?.();
 		if (token) headers.authorization = `Bearer ${token}`;
+		const householdId = options.getHouseholdId?.();
+		if (householdId) headers["x-household-id"] = householdId;
 		if (body !== undefined) headers["content-type"] = "application/json";
 		if (method !== "GET") headers["idempotency-key"] = opts.idempotencyKey ?? newKey();
 
@@ -188,17 +193,19 @@ export function createClient(options: ClientOptions) {
 		leaveHousehold: () => request<void>("POST", "/household/leave"),
 		// --- Account without (or with) a household
 		getAccount: () => request<AccountResponse>("GET", "/account"),
-		createHousehold: (name: string) => request<void>("POST", "/households", { name }),
-		joinHousehold: (code: string) => request<void>("POST", "/household/join", { code }),
+		createHousehold: (name: string) => request<{ householdId: string }>("POST", "/households", { name }),
+		updateAccount: (input: UpdateAccountInput) => request<AccountResponse>("PATCH", "/account", input),
+		joinHousehold: (code: string) => request<{ householdId: string }>("POST", "/household/join", { code }),
 		// --- Administration (super admins)
 		adminListUsers: () => request<Response<"/api/v1/admin/users", "get", 200>>("GET", "/admin/users"),
 		adminCreateUser: (input: CreateAdminUserInput) => request<AdminUser>("POST", "/admin/users", input),
 		adminUpdateUser: (id: string, input: UpdateAdminUserInput) =>
 			request<AdminUser>("PATCH", `/admin/users/${id}`, input),
 		adminDeleteUser: (id: string) => request<void>("DELETE", `/admin/users/${id}`),
-		adminAssignHousehold: (id: string, input: BodyOf<"/api/v1/admin/users/{id}/household", "post">) =>
-			request<AdminUser>("POST", `/admin/users/${id}/household`, input),
-		adminRemoveFromHousehold: (id: string) => request<void>("DELETE", `/admin/users/${id}/household`),
+		adminAssignHousehold: (id: string, input: BodyOf<"/api/v1/admin/users/{id}/households", "post">) =>
+			request<AdminUser>("POST", `/admin/users/${id}/households`, input),
+		adminRemoveFromHousehold: (id: string, householdId: string) =>
+			request<void>("DELETE", `/admin/users/${id}/households/${householdId}`),
 		adminListHouseholds: () => request<Response<"/api/v1/admin/households", "get", 200>>("GET", "/admin/households"),
 		adminCreateHousehold: (name: string) => request<AdminHousehold>("POST", "/admin/households", { name }),
 		adminRenameHousehold: (id: string, name: string) =>

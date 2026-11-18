@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c7374425-e143-45b5-96cd-253d05246fc1",
+  "id": "01d210d1-a813-46e0-b5e8-7ca310e110e4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "completions": {
@@ -246,22 +246,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "timezone": {
-          "name": "timezone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'Europe/Paris'"
-        },
-        "week_start": {
-          "name": "week_start",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 1
-        },
         "backdate_days": {
           "name": "backdate_days",
           "type": "integer",
@@ -292,10 +276,6 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
-        "households_week_start_check": {
-          "name": "households_week_start_check",
-          "value": "\"households\".\"week_start\" BETWEEN 1 AND 7"
-        },
         "households_backdate_days_check": {
           "name": "households_backdate_days_check",
           "value": "\"households\".\"backdate_days\" >= 0"
@@ -983,12 +963,12 @@
         }
       },
       "indexes": {
-        "memberships_user_uq": {
-          "name": "memberships_user_uq",
+        "memberships_user_idx": {
+          "name": "memberships_user_idx",
           "columns": [
             "user_id"
           ],
-          "isUnique": true
+          "isUnique": false
         }
       },
       "foreignKeys": {

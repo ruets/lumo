@@ -15,7 +15,7 @@ import type { z } from "zod";
 import { completions, itemAssignees, items, ledgerEntries, memberships } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { completionView } from "../schemas.js";
-import type { ActorCtx, HouseholdActorCtx } from "./context.js";
+import { type ActorCtx, actorIn, type HouseholdActorCtx } from "./context.js";
 import { accessibleItems, getActiveItem } from "./items.js";
 import { addEntry, balancesFor, walletFor } from "./ledger.js";
 import type { DbOrTx, Tx } from "./members.js";
@@ -55,6 +55,16 @@ export function countActive(db: DbOrTx, itemId: string, userId: string, date: st
 	);
 }
 
+/** Role of a person in a household; adult when they are not a member (never used to grant more than adult). */
+function roleOf(db: DbOrTx, householdId: string, userId: string) {
+	const row = db
+		.select({ role: memberships.role })
+		.from(memberships)
+		.where(and(eq(memberships.householdId, householdId), eq(memberships.userId, userId)))
+		.get();
+	return row?.role ?? "adult";
+}
+
 function getCompletion(db: DbOrTx, actor: ActorCtx, id: string) {
 	const row = db
 		.select({ c: completions, i: items })
@@ -83,18 +93,20 @@ export function createCompletion(
 	now: Date,
 ) {
 	const item = getActiveItem(tx, actor, itemId);
+	// Rights and backdate window come from the household the item belongs to.
+	const as = actorIn(actor, item.householdId);
 	const assigned = tx
 		.select()
 		.from(itemAssignees)
 		.where(and(eq(itemAssignees.itemId, itemId), eq(itemAssignees.userId, actor.userId)))
 		.get();
-	if (!assigned || !can(actor, "completion:create", { userId: actor.userId })) {
+	if (!assigned || !can(as, "completion:create", { userId: actor.userId })) {
 		throw errors.forbidden("This item is not assigned to you");
 	}
 
 	const today = localDate(now, actor.timezone);
 	const date = input.date ?? today;
-	checkCompletionDate({ date, today, windowDays: actor.backdateDays, role: actor.role });
+	checkCompletionDate({ date, today, windowDays: as.backdateDays, role: as.role });
 
 	if (item.kind === "habit" && !isDue(scheduleSchema.parse(item.schedule), date)) {
 		throw new DomainError("not_due", "This habit is not planned that day");
@@ -102,13 +114,13 @@ export function createCompletion(
 	// A task is completed only once, whatever the date.
 	assertUnderTarget(countActive(tx, itemId, actor.userId, item.kind === "habit" ? date : null), item.targetPerPeriod);
 
-	const plan = planCompletion({ actorRole: actor.role, requiresApproval: item.requiresApproval, reward: item.reward });
+	const plan = planCompletion({ actorRole: as.role, requiresApproval: item.requiresApproval, reward: item.reward });
 	const id = randomUUID();
 	let ledgerEntryId: string | null = null;
 	if (plan.credit > 0) {
 		ledgerEntryId = addEntry(tx, {
 			householdId: item.householdId,
-			walletId: walletFor(tx, item.creditsTo, actor.userId, actor.householdId),
+			walletId: walletFor(tx, item.creditsTo, actor.userId, item.householdId),
 			amount: plan.credit,
 			reason: "completion",
 			refId: id,
@@ -124,9 +136,9 @@ export function createCompletion(
 
 /** Undo: `undone_at` + counter-entry of the exact amount paid. */
 export function undoCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date) {
-	const { c } = getCompletion(tx, actor, id);
-	const owner = tx.select().from(memberships).where(eq(memberships.userId, c.userId)).get();
-	if (!can(actor, "completion:undo", { userId: c.userId, userRole: owner?.role ?? "adult" })) {
+	const { c, i } = getCompletion(tx, actor, id);
+	const owner = i.householdId ? roleOf(tx, i.householdId, c.userId) : "adult";
+	if (!can(actorIn(actor, i.householdId), "completion:undo", { userId: c.userId, userRole: owner })) {
 		throw errors.forbidden("Undo not allowed");
 	}
 	if (c.undoneAt) throw errors.conflict("already_undone", "This completion is already undone");
@@ -155,7 +167,9 @@ function pendingOnly(c: CompletionRow) {
 
 export function approveCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 	const { c, i } = getCompletion(tx, actor, id);
-	if (!can(actor, "completion:approve", { userId: c.userId })) throw errors.forbidden("Approval not allowed");
+	if (!can(actorIn(actor, i.householdId), "completion:approve", { userId: c.userId })) {
+		throw errors.forbidden("Approval not allowed");
+	}
 	pendingOnly(c);
 
 	let ledgerEntryId: string | null = null;
@@ -163,7 +177,7 @@ export function approveCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date
 		ledgerEntryId = addEntry(tx, {
 			householdId: i.householdId,
 			// The reward goes to the wallet of the person who completed it, not the approver.
-			walletId: walletFor(tx, i.creditsTo, c.userId, actor.householdId),
+			walletId: walletFor(tx, i.creditsTo, c.userId, i.householdId),
 			amount: i.reward,
 			reason: "completion",
 			refId: id,
@@ -179,8 +193,10 @@ export function approveCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date
 }
 
 export function rejectCompletion(tx: Tx, actor: ActorCtx, id: string) {
-	const { c } = getCompletion(tx, actor, id);
-	if (!can(actor, "completion:approve", { userId: c.userId })) throw errors.forbidden("Rejection not allowed");
+	const { c, i } = getCompletion(tx, actor, id);
+	if (!can(actorIn(actor, i.householdId), "completion:approve", { userId: c.userId })) {
+		throw errors.forbidden("Rejection not allowed");
+	}
 	pendingOnly(c);
 	tx.update(completions).set({ status: "rejected", approvedBy: actor.userId }).where(eq(completions.id, id)).run();
 	return result(tx, actor, tx.select().from(completions).where(eq(completions.id, id)).get() as CompletionRow);

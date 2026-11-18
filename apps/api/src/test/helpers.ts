@@ -119,10 +119,10 @@ export async function setupOwner(ctx: TestContext): Promise<string> {
 
 /** Cookie-authenticated HTTP client: origin and `Idempotency-Key` (a fresh UUID per call) added. */
 export interface Api {
-	get(url: string): Promise<LightMyRequestResponse>;
+	get(url: string, extra?: Record<string, string>): Promise<LightMyRequestResponse>;
 	post(url: string, payload?: unknown, extra?: Record<string, string>): Promise<LightMyRequestResponse>;
-	patch(url: string, payload?: unknown): Promise<LightMyRequestResponse>;
-	del(url: string): Promise<LightMyRequestResponse>;
+	patch(url: string, payload?: unknown, extra?: Record<string, string>): Promise<LightMyRequestResponse>;
+	del(url: string, extra?: Record<string, string>): Promise<LightMyRequestResponse>;
 }
 
 export function api(ctx: { app: FastifyInstance }, cookie: string): Api {
@@ -139,10 +139,10 @@ export function api(ctx: { app: FastifyInstance }, cookie: string): Api {
 			headers: { ...cookieHeader(cookie), ...ORIGIN, "idempotency-key": randomUUID(), ...extra },
 		});
 	return {
-		get: (url: string) => call("GET", url),
+		get: (url: string, extra?: Record<string, string>) => call("GET", url, undefined, extra),
 		post: (url: string, payload: unknown = {}, extra?: Record<string, string>) => call("POST", url, payload, extra),
-		patch: (url: string, payload: unknown = {}) => call("PATCH", url, payload),
-		del: (url: string) => call("DELETE", url),
+		patch: (url: string, payload: unknown = {}, extra?: Record<string, string>) => call("PATCH", url, payload, extra),
+		del: (url: string, extra?: Record<string, string>) => call("DELETE", url, undefined, extra),
 	};
 }
 
@@ -183,6 +183,8 @@ export async function createHousehold(ctx: TestContext): Promise<{ owner: Member
 	const owner: Member = { cookie: ownerCookie, userId: meRes.json().user.id as string, api: api(ctx, ownerCookie) };
 	const adult = await addMember(ctx, ownerCookie, "adult", "bob");
 	const kid = await addMember(ctx, ownerCookie, "child", "kid");
+	// Days are counted in the person's own time zone: the household tests live in Paris.
+	for (const m of [owner, adult, kid]) await m.api.patch("/account", { timezone: "Europe/Paris" });
 	return { owner, adult, kid };
 }
 

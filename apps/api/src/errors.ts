@@ -25,8 +25,9 @@ export const errors = {
 	setupDone: () => new AppError(409, "setup_done", "This instance is already set up"),
 	noHousehold: () => new AppError(403, "no_household", "This account is not in a household"),
 	accountDisabled: () => new AppError(403, "account_disabled", "This account is disabled"),
-	alreadyInHousehold: () => new AppError(409, "already_in_household", "This account is already in a household"),
+	alreadyMember: () => new AppError(409, "already_member", "This account is already in this household"),
 	conflict: (code: string, title: string) => new AppError(409, code, title),
+	notFound: (what: string) => new AppError(404, "not_found", `${what} not found`),
 	validation: (detail: string) => new AppError(400, "validation_error", "Invalid request", detail),
 };
 

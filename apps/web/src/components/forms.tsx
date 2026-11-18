@@ -21,29 +21,45 @@ function useCreate<I>(call: (input: I) => Promise<unknown>, onDone: () => void) 
 	return { m, error };
 }
 
+/** Who an item or wish is for: the person alone, or one of their households. */
 function ScopeField({
 	value,
 	onChange,
+	households,
 }: {
-	value: "household" | "personal";
-	onChange: (v: "household" | "personal") => void;
+	value: string;
+	onChange: (v: string) => void;
+	households: { id: string; name: string }[];
 }) {
 	return (
 		<Field label={t("form.scope")}>
-			<select value={value} onChange={(e) => onChange(e.target.value as typeof value)} className={fieldClass}>
-				<option value="household">{t("form.scope.household")}</option>
+			<select value={value} onChange={(e) => onChange(e.target.value)} className={fieldClass}>
+				{households.map((h) => (
+					<option key={h.id} value={h.id}>
+						{h.name}
+					</option>
+				))}
 				<option value="personal">{t("form.scope.personal")}</option>
 			</select>
 		</Field>
 	);
 }
 
+/** Where a new item or wish goes: `personal` by default without a household, else the active household. */
+function useTarget() {
+	const me = useMe().data;
+	const households = me?.households ?? [];
+	const [target, setTarget] = useState<string>(me?.household?.id ?? "personal");
+	const scope =
+		target === "personal" ? { scope: "personal" as const } : { scope: "household" as const, householdId: target };
+	return { households, target, setTarget, scope, personal: target === "personal" };
+}
+
 export function ItemDialog({ kind, onClose }: { kind: "habit" | "task"; onClose: () => void }) {
 	const [freq, setFreq] = useState<"daily" | "timesPerWeek" | "weekly" | "monthly">("daily");
 	const [days, setDays] = useState<number[]>([1]);
 	const { m, error } = useCreate((input: CreateItemInput) => api.createItem(input), onClose);
-	const inHousehold = Boolean(useMe().data?.household);
-	const [scope, setScope] = useState<"household" | "personal">(inHousehold ? "household" : "personal");
+	const { households, target, setTarget, scope, personal } = useTarget();
 
 	function submit(e: FormEvent<HTMLFormElement>) {
 		e.preventDefault();
@@ -51,8 +67,8 @@ export function ItemDialog({ kind, onClose }: { kind: "habit" | "task"; onClose:
 		const common = {
 			name: String(f.get("name") ?? ""),
 			reward: Number(f.get("reward") ?? 0),
-			scope,
-			requiresApproval: scope === "household" && f.get("approval") === "on",
+			...scope,
+			requiresApproval: !personal && f.get("approval") === "on",
 		};
 		if (kind === "task") {
 			const due = String(f.get("dueAt") ?? "");
@@ -77,7 +93,7 @@ export function ItemDialog({ kind, onClose }: { kind: "habit" | "task"; onClose:
 				<Field label={t("form.name")}>
 					<input name="name" required maxLength={120} className={fieldClass} />
 				</Field>
-				{inHousehold && <ScopeField value={scope} onChange={setScope} />}
+				{households.length > 0 && <ScopeField value={target} onChange={setTarget} households={households} />}
 				<Field label={t("form.reward")}>
 					<input name="reward" type="number" min={0} defaultValue={1} className={fieldClass} />
 				</Field>
@@ -131,7 +147,7 @@ export function ItemDialog({ kind, onClose }: { kind: "habit" | "task"; onClose:
 						<input name="dueAt" type="date" className={fieldClass} />
 					</Field>
 				)}
-				{scope === "household" && (
+				{!personal && (
 					<label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-soft">
 						<input name="approval" type="checkbox" className="size-5" />
 						{t("form.requiresApproval")}
@@ -162,8 +178,7 @@ export function ItemDialog({ kind, onClose }: { kind: "habit" | "task"; onClose:
 export function RewardDialog({ onClose }: { onClose: () => void }) {
 	const [limited, setLimited] = useState(false);
 	const { m, error } = useCreate((input: CreateRewardInput) => api.createReward(input), onClose);
-	const inHousehold = Boolean(useMe().data?.household);
-	const [scope, setScope] = useState<"household" | "personal">(inHousehold ? "household" : "personal");
+	const { households, target, setTarget, scope } = useTarget();
 
 	function submit(e: FormEvent<HTMLFormElement>) {
 		e.preventDefault();
@@ -172,7 +187,7 @@ export function RewardDialog({ onClose }: { onClose: () => void }) {
 		m.mutate({
 			name: String(f.get("name") ?? ""),
 			cost: Number(f.get("cost") ?? 1),
-			scope,
+			...scope,
 			...(link ? { link } : {}),
 			...(limited
 				? { limitCount: Number(f.get("limitCount") ?? 1), limitPeriod: String(f.get("limitPeriod")) as "week" }
@@ -186,7 +201,7 @@ export function RewardDialog({ onClose }: { onClose: () => void }) {
 				<Field label={t("form.name")}>
 					<input name="name" required maxLength={120} className={fieldClass} />
 				</Field>
-				{inHousehold && <ScopeField value={scope} onChange={setScope} />}
+				{households.length > 0 && <ScopeField value={target} onChange={setTarget} households={households} />}
 				<Field label={t("form.cost")}>
 					<input name="cost" type="number" min={1} defaultValue={50} className={fieldClass} />
 				</Field>
