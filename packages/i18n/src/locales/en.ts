@@ -341,5 +341,12 @@ export const en = {
 	"features.hint":
 		"Turned-off features are hidden and refused for this household. Your personal space is not affected.",
 	"errors.feature_disabled": "This household turned that feature off.",
+	"errors.already_linked": "This account is already linked to an Authentik identity.",
+	"link.title": "Authentik",
+	"link.hint": "Link your Authentik account to sign in with it on this account, instead of creating a second one.",
+	"link.button": "Link my Authentik account",
+	"link.linked": "Your Authentik account is linked.",
+	"link.done": "Authentik account linked",
+	"errors.identity_in_use": "This Authentik account is already linked to another account.",
 	"errors.unknown": "Something went wrong.",
 } as const satisfies Record<string, string>;

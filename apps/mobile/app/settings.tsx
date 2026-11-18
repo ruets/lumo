@@ -5,8 +5,9 @@ import { Stack, useRouter } from "expo-router";
 import { Alert, Pressable, View } from "react-native";
 import { changeServer, logout } from "../src/account";
 import { AccountSettings } from "../src/accountSettings";
-import { useAccount, useLeaveHousehold, useMe, useSwitchHousehold } from "../src/hooks";
+import { useAccount, useAuthConfig, useLeaveHousehold, useMe, useSwitchHousehold } from "../src/hooks";
 import { HouseholdAccess } from "../src/householdAccess";
+import { LinkOidc } from "../src/linkOidc";
 import { LanguagePicker } from "../src/locale";
 import { currentServerUrl } from "../src/server";
 import { Button, Chip, font, Screen, T } from "../src/ui";
@@ -29,6 +30,7 @@ export default function SettingsScreen() {
 	const account = useAccount().data;
 	const isSuperAdmin = account?.isSuperAdmin ?? false;
 	const switchHousehold = useSwitchHousehold();
+	const authConfig = useAuthConfig().data;
 	return (
 		<Screen topInset={false}>
 			<Stack.Screen
@@ -69,6 +71,11 @@ export default function SettingsScreen() {
 			{account && (
 				<Section title={t("account.title")}>
 					<AccountSettings account={account} />
+				</Section>
+			)}
+			{authConfig?.oidc && (
+				<Section title={t("link.title")}>
+					<LinkOidc />
 				</Section>
 			)}
 			{me && me.households.length > 1 && (

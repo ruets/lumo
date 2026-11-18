@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { isSuperAdminAfterOidcLogin, type Role } from "@lumo/domain";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Config } from "../config.js";
 import type { Db } from "../db/client.js";
 import { memberships, users } from "../db/schema.js";
@@ -20,7 +20,7 @@ const adminGroup = (config: Config) => config.OIDC_ADMIN_GROUP ?? null;
 
 /**
  * Links an OIDC identity to a Lumo user.
- *  1. Known `sub` → sign-in (super admin if in the admin group; a disabled account is refused).
+ *  1. Known identity (issuer + `sub`) → sign-in (super admin if in the admin group; a disabled account is refused).
  *  2. Invitation provided → account created and put in the invitation's household with its role.
  *  3. No user in the instance → first account: super admin, with a new household.
  *  4. Otherwise → refused: no account without an invitation.
@@ -34,7 +34,12 @@ export function resolveOidcLogin(
 	return writeTx(db, (tx) => {
 		const displayName = claims.name?.trim() || claims.email || "Member";
 
-		const existing = tx.select().from(users).where(eq(users.oidcSubject, claims.sub)).get();
+		const issuer = config.OIDC_ISSUER ?? "";
+		const existing = tx
+			.select()
+			.from(users)
+			.where(and(eq(users.oidcIssuer, issuer), eq(users.oidcSubject, claims.sub)))
+			.get();
 		if (existing) {
 			if (existing.deletedAt) throw errors.invitationRequired();
 			if (existing.disabledAt) throw errors.accountDisabled();
@@ -57,6 +62,7 @@ export function resolveOidcLogin(
 			displayName,
 			avatarUrl: claims.picture,
 			oidcSubject: claims.sub,
+			oidcIssuer: issuer,
 			email: claims.email,
 		};
 
@@ -73,6 +79,40 @@ export function resolveOidcLogin(
 		}
 
 		throw errors.invitationRequired();
+	});
+}
+
+/**
+ * A signed-in account takes an OIDC identity (a "Link Authentik" button): from then on that identity signs in to
+ * this very account. Refused if the account already has an identity or if the identity belongs to someone else.
+ */
+export function linkOidcIdentity(db: Db, config: Config, userId: string, claims: OidcClaims): void {
+	writeTx(db, (tx) => {
+		const issuer = config.OIDC_ISSUER ?? "";
+		const user = tx.select().from(users).where(eq(users.id, userId)).get();
+		if (!user || user.deletedAt || user.disabledAt) throw errors.unauthenticated();
+		if (user.oidcSubject) throw errors.alreadyLinked();
+		const owner = tx
+			.select({ id: users.id })
+			.from(users)
+			.where(and(eq(users.oidcIssuer, issuer), eq(users.oidcSubject, claims.sub)))
+			.get();
+		if (owner) throw errors.identityInUse();
+		const set: Partial<typeof users.$inferInsert> = {
+			oidcIssuer: issuer,
+			oidcSubject: claims.sub,
+			isSuperAdmin: isSuperAdminAfterOidcLogin(user.isSuperAdmin, claims.groups, adminGroup(config)),
+		};
+		if (claims.picture && !user.avatarUrl) set.avatarUrl = claims.picture;
+		// The e-mail is only informative and unique: never take one another account already holds.
+		if (
+			claims.email &&
+			!user.email &&
+			!tx.select({ id: users.id }).from(users).where(eq(users.email, claims.email)).get()
+		) {
+			set.email = claims.email;
+		}
+		tx.update(users).set(set).where(eq(users.id, userId)).run();
 	});
 }
 

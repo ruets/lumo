@@ -282,6 +282,14 @@ export function createClient(options: ClientOptions) {
 			/** Invitation code, when the person is joining an existing household. */
 			invite?: string;
 		}) => request<TokenPair>("POST", "/auth/mobile/exchange", input),
+		/** A signed-in account links an Authentik identity to itself (same inputs as `exchangeMobile`). */
+		linkOidcMobile: (input: {
+			code: string;
+			codeVerifier: string;
+			redirectUri: string;
+			nonce: string;
+			state?: string;
+		}) => request<void>("POST", "/auth/mobile/link", input),
 		refresh: (refreshToken: string) => request<TokenPair>("POST", "/auth/refresh", { refreshToken }),
 		logout: (refreshToken?: string) => request<void>("POST", "/auth/logout", refreshToken ? { refreshToken } : {}),
 	};

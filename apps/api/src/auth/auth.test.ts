@@ -496,3 +496,95 @@ describe("divers", () => {
 		expect(res.headers["content-type"]).toContain("application/problem+json");
 	});
 });
+
+describe("linking an OIDC identity to a signed-in account", () => {
+	const PASSWORD = "a-long-password-here";
+
+	/** alice (super admin) and a local member bob, signed in. */
+	async function members() {
+		const owner = await setupOwner(ctx);
+		const invite = (await post("/household/invites", { role: "member" }, { ...cookieHeader(owner), ...ORIGIN })).json()
+			.token;
+		const bob = await post("/auth/local/register", {
+			invite,
+			displayName: "Bob",
+			username: "bob",
+			password: PASSWORD,
+		});
+		return { owner, bob: sessionCookie(bob) as string };
+	}
+	const link = async (cookie: string, code: string, sub: string) => {
+		ctx.oidc.grant(code, { sub, name: "Bob From Authentik", email: "bob@example.org" });
+		const start = await get("/auth/link", cookieHeader(cookie));
+		expect(start.statusCode).toBe(302);
+		const state = new URL(start.headers.location as string).searchParams.get("state") as string;
+		return get(`/auth/callback?code=${code}&state=${state}`);
+	};
+	const bobRow = () => ctx.db.select().from(users).where(eq(users.username, "bob")).get();
+
+	it("links the identity to the account, which keeps its name, password and household", async () => {
+		const { bob } = await members();
+		const res = await link(bob, "l1", "sub-bob");
+		expect(res.headers.location).toBe("https://lumo.test/settings?linked=1");
+		expect(bobRow()).toMatchObject({ displayName: "Bob", oidcSubject: "sub-bob", email: "bob@example.org" });
+		expect(bobRow()?.oidcIssuer).toBe(ctx.config.OIDC_ISSUER);
+		expect(bobRow()?.passwordHash).not.toBeNull();
+		expect((await get("/account", cookieHeader(bob))).json().oidc).toBe(true);
+	});
+
+	it("the identity then signs in to that same account", async () => {
+		const { bob } = await members();
+		await link(bob, "l1", "sub-bob");
+		ctx.oidc.grant("l2", { sub: "sub-bob" });
+		const login = await get("/auth/login");
+		const state = new URL(login.headers.location as string).searchParams.get("state") as string;
+		const res = await get(`/auth/callback?code=l2&state=${state}`);
+		expect(res.headers.location).toBe("https://lumo.test/");
+		const me = await get("/me", cookieHeader(sessionCookie(res) as string));
+		expect(me.json().user.displayName).toBe("Bob");
+		expect(ctx.db.select().from(users).all()).toHaveLength(2);
+	});
+
+	it("requires being signed in", async () => {
+		expect((await get("/auth/link")).statusCode).toBe(401);
+	});
+
+	it("refuses an account that already has an identity, and an identity that belongs to someone else", async () => {
+		const { owner, bob } = await members();
+		await link(bob, "l1", "sub-bob");
+		const again = await link(bob, "l2", "sub-other");
+		expect(again.headers.location).toBe("https://lumo.test/settings?auth_error=already_linked");
+		const taken = await link(owner, "l3", "sub-bob");
+		expect(taken.headers.location).toBe("https://lumo.test/settings?auth_error=identity_in_use");
+		expect(ctx.db.select().from(users).where(eq(users.username, "alice")).get()?.oidcSubject).toBeNull();
+	});
+
+	it("the same subject under another issuer is another identity", async () => {
+		const { owner, bob } = await members();
+		await link(bob, "l1", "sub-bob");
+		ctx.db.update(users).set({ oidcIssuer: "https://old-idp" }).where(eq(users.username, "bob")).run();
+		const res = await link(owner, "l2", "sub-bob");
+		expect(res.headers.location).toBe("https://lumo.test/settings?linked=1");
+	});
+
+	it("mobile: links with the bearer token and the code exchange", async () => {
+		const { bob } = await members();
+		const tokens = await post("/auth/local/login", { username: "bob", password: PASSWORD, client: "mobile" });
+		ctx.oidc.grant("m1", { sub: "sub-bob-mobile" });
+		const res = await post(
+			"/auth/mobile/link",
+			{ code: "m1", codeVerifier: "v".repeat(50), redirectUri: "lumo://auth", nonce: "n-123", state: "s-123" },
+			{ authorization: `Bearer ${tokens.json().accessToken}` },
+		);
+		expect(res.statusCode).toBe(204);
+		expect(bobRow()?.oidcSubject).toBe("sub-bob-mobile");
+		expect(bob).toBeTruthy();
+		const unauth = await post("/auth/mobile/link", {
+			code: "m1",
+			codeVerifier: "v".repeat(50),
+			redirectUri: "lumo://auth",
+			nonce: "n",
+		});
+		expect(unauth.statusCode).toBe(401);
+	});
+});

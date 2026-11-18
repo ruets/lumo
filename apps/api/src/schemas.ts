@@ -362,6 +362,8 @@ export const accountView = z.object({
 	isSuperAdmin: z.boolean(),
 	/** Every household of the account (possibly none). */
 	households: z.array(z.object({ id: z.string(), name: z.string(), role: roleEnum })),
+	/** Whether an OIDC (Authentik) identity is linked to this account. */
+	oidc: z.boolean(),
 	timezone: z.string(),
 	/** ISO weekday the week starts on: 1 = Monday … 7 = Sunday. */
 	weekStart: z.number().int(),

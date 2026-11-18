@@ -367,6 +367,9 @@
 												"additionalProperties": false
 											}
 										},
+										"oidc": {
+											"type": "boolean"
+										},
 										"timezone": {
 											"type": "string"
 										},
@@ -379,7 +382,15 @@
 											"type": "boolean"
 										}
 									},
-									"required": ["user", "isSuperAdmin", "households", "timezone", "weekStart", "canCreateHousehold"],
+									"required": [
+										"user",
+										"isSuperAdmin",
+										"households",
+										"oidc",
+										"timezone",
+										"weekStart",
+										"canCreateHousehold"
+									],
 									"additionalProperties": false
 								}
 							}
@@ -517,6 +528,9 @@
 												"additionalProperties": false
 											}
 										},
+										"oidc": {
+											"type": "boolean"
+										},
 										"timezone": {
 											"type": "string"
 										},
@@ -529,7 +543,15 @@
 											"type": "boolean"
 										}
 									},
-									"required": ["user", "isSuperAdmin", "households", "timezone", "weekStart", "canCreateHousehold"],
+									"required": [
+										"user",
+										"isSuperAdmin",
+										"households",
+										"oidc",
+										"timezone",
+										"weekStart",
+										"canCreateHousehold"
+									],
 									"additionalProperties": false
 								}
 							}

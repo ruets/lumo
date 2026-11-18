@@ -343,5 +343,12 @@ export const fr: Record<MessageId, string> = {
 	"features.hint":
 		"Les options désactivées sont masquées et refusées pour ce foyer. Votre espace personnel n'est pas touché.",
 	"errors.feature_disabled": "Ce foyer a désactivé cette option.",
+	"errors.already_linked": "Ce compte est déjà lié à une identité Authentik.",
+	"link.title": "Authentik",
+	"link.hint": "Liez votre compte Authentik pour vous connecter avec sur ce compte, au lieu d'en créer un second.",
+	"link.button": "Lier mon compte Authentik",
+	"link.linked": "Votre compte Authentik est lié.",
+	"link.done": "Compte Authentik lié",
+	"errors.identity_in_use": "Ce compte Authentik est déjà lié à un autre compte.",
 	"errors.unknown": "Une erreur est survenue.",
 };

@@ -1098,6 +1098,7 @@ export interface operations {
                             /** @enum {string} */
                             role: "owner" | "member";
                         }[];
+                        oidc: boolean;
                         timezone: string;
                         weekStart: number;
                         canCreateHousehold: boolean;
@@ -1161,6 +1162,7 @@ export interface operations {
                             /** @enum {string} */
                             role: "owner" | "member";
                         }[];
+                        oidc: boolean;
                         timezone: string;
                         weekStart: number;
                         canCreateHousehold: boolean;

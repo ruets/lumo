@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { MeResponse } from "@lumo/api-client";
-import { t } from "@lumo/i18n";
+import { errorMessage, t } from "@lumo/i18n";
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { fieldClass, PageTitle } from "../components/ui";
-import { useAccount, useLeaveHousehold, useLogout, useSwitchHousehold } from "../lib/hooks";
+import { useAccount, useAuthConfig, useLeaveHousehold, useLogout, useSwitchHousehold } from "../lib/hooks";
 import { LanguageSelect } from "../lib/locale";
+import { showToast } from "../lib/toast";
 import { AccountSettings } from "./AccountSettings";
 import { HouseholdAccess } from "./NoHousehold";
 
@@ -25,6 +26,16 @@ export function SettingsPage({ me }: { me: MeResponse }) {
 	const account = useAccount().data;
 	const isSuperAdmin = account?.isSuperAdmin ?? false;
 	const switchHousehold = useSwitchHousehold();
+	const authConfig = useAuthConfig().data;
+
+	// Back from Authentik after "Link my Authentik account": say how it went, then clean the address.
+	useEffect(() => {
+		const params = new URLSearchParams(window.location.search);
+		if (!params.has("linked") && !params.has("auth_error")) return;
+		const code = params.get("auth_error");
+		showToast(code ? errorMessage(code) : t("link.done"), 4000);
+		window.history.replaceState(null, "", window.location.pathname);
+	}, []);
 	return (
 		<div className="grid max-w-xl gap-5">
 			<PageTitle>{t("settings.title")}</PageTitle>
@@ -56,6 +67,23 @@ export function SettingsPage({ me }: { me: MeResponse }) {
 			{account && (
 				<Section title={t("account.title")}>
 					<AccountSettings account={account} />
+				</Section>
+			)}
+			{authConfig?.oidc && account && (
+				<Section title={t("link.title")}>
+					{account.oidc ? (
+						<p className="m-0 text-sm font-semibold text-ok">{t("link.linked")}</p>
+					) : (
+						<>
+							<p className="m-0 text-sm text-muted">{t("link.hint")}</p>
+							<a
+								href="/api/v1/auth/link"
+								className="grid min-h-11 place-items-center rounded-full bg-primary font-bold text-white no-underline"
+							>
+								{t("link.button")}
+							</a>
+						</>
+					)}
 				</Section>
 			)}
 			{me.households.length > 1 && (

@@ -60,6 +60,8 @@ export const users = sqliteTable(
 		avatarUrl: text("avatar_url"),
 		/** Authentik `sub`; null for a purely local account. */
 		oidcSubject: text("oidc_subject"),
+		/** The OIDC tenant (`OIDC_ISSUER`): an identity is the pair (issuer, subject). */
+		oidcIssuer: text("oidc_issuer"),
 		/** Local account (fallback): sign-in username, lowercase. */
 		username: text("username"),
 		email: text("email"),
@@ -82,7 +84,7 @@ export const users = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(t) => [
-		uniqueIndex("users_oidc_subject_uq").on(t.oidcSubject),
+		uniqueIndex("users_oidc_identity_uq").on(t.oidcIssuer, t.oidcSubject),
 		uniqueIndex("users_username_uq").on(t.username),
 		uniqueIndex("users_email_uq").on(t.email),
 	],
@@ -435,6 +437,8 @@ export const oidcStates = sqliteTable(
 		codeVerifier: text("code_verifier").notNull(),
 		/** Plain invitation token, present when the sign-in creates an account. */
 		inviteToken: text("invite_token"),
+		/** Set when a signed-in account is linking this OIDC identity to itself (no sign-in happens then). */
+		linkUserId: text("link_user_id"),
 		expiresAt: ts("expires_at").notNull(),
 	},
 	(t) => [index("oidc_states_expires_idx").on(t.expiresAt)],
