@@ -4,17 +4,7 @@ import { longDate, t } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useRouter } from "expo-router";
 import { Pressable, View } from "react-native";
-import {
-	statsWindow,
-	useBalance,
-	useItems,
-	useMe,
-	usePending,
-	useReview,
-	useRewards,
-	useStats,
-	useToday,
-} from "../../src/hooks";
+import { statsWindow, useBalance, useMe, usePending, useReview, useRewards, useStats, useToday } from "../../src/hooks";
 import { awaitingReview, itemMeta, withSpace } from "../../src/itemMeta";
 import { enqueueCompletion, useQueue } from "../../src/queue";
 import { useRefresh } from "../../src/refresh";
@@ -70,10 +60,9 @@ function RemainingRow({ e, space, onTap }: { e: TodayItem; space: string | null;
 	);
 }
 
+/** Completions waiting for the approval of this person as a guardian, with whose they are. */
 function Approvals() {
-	const me = useMe().data;
-	const pending = usePending(Boolean(me?.household));
-	const items = useItems();
+	const pending = usePending();
 	const review = useReview();
 	const list = pending.data?.completions ?? [];
 	if (list.length === 0) return null;
@@ -93,18 +82,19 @@ function Approvals() {
 						paddingLeft: 16,
 					}}
 				>
-					<T style={{ flex: 1, fontFamily: font.bold, fontSize: 15 }}>
-						{items.data?.items.find((i) => i.id === c.itemId)?.name ?? "…"}
-					</T>
+					<View style={{ flex: 1 }}>
+						<T style={{ fontFamily: font.bold, fontSize: 15 }}>{c.itemName}</T>
+						<T style={{ fontSize: 13, color: colors.muted }}>{c.wardName}</T>
+					</View>
 					<Button
 						label={t("today.reject")}
 						variant="ghost"
-						onPress={() => review.mutate({ id: c.id, approve: false })}
+						onPress={() => review.mutate({ wardId: c.wardId, id: c.id, approve: false })}
 					/>
 					<Button
 						label={t("today.approve")}
 						variant="coin"
-						onPress={() => review.mutate({ id: c.id, approve: true })}
+						onPress={() => review.mutate({ wardId: c.wardId, id: c.id, approve: true })}
 					/>
 				</View>
 			))}
@@ -184,7 +174,7 @@ export default function TodayScreen() {
 
 			<SpacePills households={me.households} value={filter} />
 
-			{me.role !== "child" && <Approvals />}
+			<Approvals />
 
 			<View style={{ gap: 10 }}>
 				<T style={{ fontFamily: font.bold, fontSize: 15, color: colors.muted }}>{t("today.remaining")}</T>

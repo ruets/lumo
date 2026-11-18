@@ -5,6 +5,7 @@ import { errors } from "../errors.js";
 import {
 	completionResult,
 	createWardBody,
+	guardianPendingView,
 	guardianshipCodeBody,
 	guardianshipCodeView,
 	potAdjustmentBody,
@@ -25,6 +26,7 @@ import {
 	createCode,
 	createWardAccount,
 	endSupervision,
+	listPendingForGuardian,
 	listWardPending,
 	redeemCode,
 	updateWardRights,
@@ -43,6 +45,21 @@ export const supervisionRoutes = [
 		summary: "Who supervises me and who I supervise",
 		response: supervisionView,
 		handler: ({ db, account }) => viewOf(db, account.userId),
+	}),
+	route({
+		...base,
+		method: "get",
+		url: "/supervision/pending",
+		summary: "Everything waiting for my approval, across the people I supervise",
+		response: guardianPendingView,
+		handler: ({ db, account }) => ({
+			completions: listPendingForGuardian(db, account.userId).map((r) => ({
+				...toCompletionView(r.c),
+				itemName: r.name,
+				wardId: r.wardId,
+				wardName: r.wardName,
+			})),
+		}),
 	}),
 	route({
 		...base,

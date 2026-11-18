@@ -12,10 +12,10 @@ import {
 } from "@lumo/domain";
 import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import type { z } from "zod";
-import { completions, itemAssignees, items, ledgerEntries, memberships } from "../db/schema.js";
+import { completions, itemAssignees, items, ledgerEntries } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { completionView } from "../schemas.js";
-import { type ActorCtx, actorIn, type HouseholdActorCtx } from "./context.js";
+import { type ActorCtx, actorIn } from "./context.js";
 import { accessibleItems, getActiveItem } from "./items.js";
 import { addEntry, balancesFor, walletFor } from "./ledger.js";
 import type { DbOrTx, Tx } from "./members.js";
@@ -54,16 +54,6 @@ export function countActive(db: DbOrTx, itemId: string, userId: string, date: st
 			)
 			.get()?.n ?? 0
 	);
-}
-
-/** Role of a person in a household; adult when they are not a member (never used to grant more than adult). */
-function roleOf(db: DbOrTx, householdId: string, userId: string) {
-	const row = db
-		.select({ role: memberships.role })
-		.from(memberships)
-		.where(and(eq(memberships.householdId, householdId), eq(memberships.userId, userId)))
-		.get();
-	return row?.role ?? "adult";
 }
 
 function getCompletion(db: DbOrTx, actor: ActorCtx, id: string) {
@@ -115,9 +105,9 @@ export function createCompletion(
 	// A task is completed only once, whatever the date.
 	assertUnderTarget(countActive(tx, itemId, actor.userId, item.kind === "habit" ? date : null), item.targetPerPeriod);
 
-	// A supervised account needs approval like a child does.
+	// A supervised account needs its guardians' approval on items that ask for it.
 	const plan = planCompletion({
-		actorRole: actor.supervised ? "child" : as.role,
+		supervised: actor.supervised !== null,
 		requiresApproval: item.requiresApproval,
 		reward: item.reward,
 	});
@@ -143,8 +133,7 @@ export function createCompletion(
 /** Undo: `undone_at` + counter-entry of the exact amount paid. */
 export function undoCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 	const { c, i } = getCompletion(tx, actor, id);
-	const owner = i.householdId ? roleOf(tx, i.householdId, c.userId) : "adult";
-	if (!can(actorIn(actor, i.householdId), "completion:undo", { userId: c.userId, userRole: owner })) {
+	if (!can(actorIn(actor, i.householdId), "completion:undo", { userId: c.userId })) {
 		throw errors.forbidden("Undo not allowed");
 	}
 	if (c.undoneAt) throw errors.conflict("already_undone", "This completion is already undone");
@@ -192,16 +181,6 @@ function applyApproval(tx: Tx, approverId: string, c: CompletionRow, i: typeof i
 		.run();
 }
 
-export function approveCompletion(tx: Tx, actor: ActorCtx, id: string, now: Date) {
-	const { c, i } = getCompletion(tx, actor, id);
-	if (!can(actorIn(actor, i.householdId), "completion:approve", { userId: c.userId })) {
-		throw errors.forbidden("Approval not allowed");
-	}
-	pendingOnly(c);
-	applyApproval(tx, actor.userId, c, i, now);
-	return result(tx, actor, tx.select().from(completions).where(eq(completions.id, id)).get() as CompletionRow);
-}
-
 /** A guardian approves or rejects a completion of their ward, whichever household the item belongs to. */
 export function reviewAsGuardian(tx: Tx, guardianId: string, ward: ActorCtx, id: string, approve: boolean, now: Date) {
 	assertGuardian(tx, guardianId, ward.userId);
@@ -216,28 +195,4 @@ export function reviewAsGuardian(tx: Tx, guardianId: string, ward: ActorCtx, id:
 	if (approve) applyApproval(tx, guardianId, row.c, row.i, now);
 	else tx.update(completions).set({ status: "rejected", approvedBy: guardianId }).where(eq(completions.id, id)).run();
 	return result(tx, ward, tx.select().from(completions).where(eq(completions.id, id)).get() as CompletionRow);
-}
-
-export function rejectCompletion(tx: Tx, actor: ActorCtx, id: string) {
-	const { c, i } = getCompletion(tx, actor, id);
-	if (!can(actorIn(actor, i.householdId), "completion:approve", { userId: c.userId })) {
-		throw errors.forbidden("Rejection not allowed");
-	}
-	pendingOnly(c);
-	tx.update(completions).set({ status: "rejected", approvedBy: actor.userId }).where(eq(completions.id, id)).run();
-	return result(tx, actor, tx.select().from(completions).where(eq(completions.id, id)).get() as CompletionRow);
-}
-
-/** Completions waiting for approval, for the actor's household. */
-export function listPending(db: DbOrTx, actor: HouseholdActorCtx): CompletionView[] {
-	if (!can(actor, "completion:review")) throw errors.forbidden("Adults only");
-	return db
-		.select({ c: completions })
-		.from(completions)
-		.innerJoin(items, eq(items.id, completions.itemId))
-		.where(
-			and(eq(items.householdId, actor.householdId), eq(completions.status, "pending"), isNull(completions.undoneAt)),
-		)
-		.all()
-		.map((r) => toCompletionView(r.c));
 }

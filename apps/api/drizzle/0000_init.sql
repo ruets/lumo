@@ -93,7 +93,7 @@ CREATE TABLE `invites` (
 	FOREIGN KEY (`household_id`) REFERENCES `households`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`used_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "invites_role_check" CHECK(role IN ('owner', 'adult', 'child'))
+	CONSTRAINT "invites_role_check" CHECK(role IN ('owner', 'member'))
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `invites_token_hash_uq` ON `invites` (`token_hash`);--> statement-breakpoint
@@ -159,12 +159,11 @@ CREATE TABLE `memberships` (
 	`household_id` text NOT NULL,
 	`user_id` text NOT NULL,
 	`role` text NOT NULL,
-	`can_create_items` integer DEFAULT false NOT NULL,
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
 	PRIMARY KEY(`household_id`, `user_id`),
 	FOREIGN KEY (`household_id`) REFERENCES `households`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "memberships_role_check" CHECK(role IN ('owner', 'adult', 'child'))
+	CONSTRAINT "memberships_role_check" CHECK(role IN ('owner', 'member'))
 );
 --> statement-breakpoint
 CREATE INDEX `memberships_user_idx` ON `memberships` (`user_id`);--> statement-breakpoint

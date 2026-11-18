@@ -97,7 +97,7 @@ describe("accounts without a household", () => {
 		await h.kid.api.post(`/items/${item.id}/completions`);
 		await h.owner.api.del(`/members/${h.kid.userId}`);
 
-		const invite = (await h.owner.api.post("/household/invites", { role: "child" })).json();
+		const invite = (await h.owner.api.post("/household/invites", { role: "member" })).json();
 		const join = await h.kid.api.post("/household/join", { code: invite.token });
 		expect(join.statusCode).toBe(201);
 		expect((await balances(h.kid)).personal).toBe(5);
@@ -105,16 +105,16 @@ describe("accounts without a household", () => {
 
 	it("joins a household with a code, also a second one, but never the same twice", async () => {
 		const zoe = await newAccount("zoe");
-		const invite = (await h.owner.api.post("/household/invites", { role: "adult" })).json();
+		const invite = (await h.owner.api.post("/household/invites", { role: "member" })).json();
 		expect((await zoe.api.post("/household/join", { code: "not-a-real-invitation-code" })).json().code).toBe(
 			"invalid_invite",
 		);
 		const ok = await zoe.api.post("/household/join", { code: invite.token });
 		expect(ok.statusCode).toBe(201);
-		expect((await zoe.api.get("/me")).json()).toMatchObject({ role: "adult", household: { name: "The Smiths" } });
+		expect((await zoe.api.get("/me")).json()).toMatchObject({ role: "member", household: { name: "The Smiths" } });
 
 		// Already a member of that household: refused.
-		const second = (await h.owner.api.post("/household/invites", { role: "adult" })).json();
+		const second = (await h.owner.api.post("/household/invites", { role: "member" })).json();
 		const again = await zoe.api.post("/household/join", { code: second.token });
 		expect(again.statusCode).toBe(409);
 		expect(again.json().code).toBe("already_member");
@@ -164,7 +164,7 @@ describe("admin: accounts", () => {
 			displayName: "bob",
 			isSuperAdmin: false,
 			disabled: false,
-			households: [expect.objectContaining({ name: "The Smiths", role: "adult" })],
+			households: [expect.objectContaining({ name: "The Smiths", role: "member" })],
 		});
 		expect(res.body).not.toContain("Secret habit");
 	});
@@ -240,13 +240,13 @@ describe("admin: accounts", () => {
 		const zoe = await newAccount("zoe");
 		const households = (await h.owner.api.get("/admin/households")).json().households;
 		const smiths = households[0].id;
-		const put = await h.owner.api.post(`/admin/users/${zoe.id}/households`, { householdId: smiths, role: "adult" });
+		const put = await h.owner.api.post(`/admin/users/${zoe.id}/households`, { householdId: smiths, role: "member" });
 		expect(put.statusCode).toBe(200);
-		expect(put.json().households).toEqual([expect.objectContaining({ id: smiths, role: "adult" })]);
+		expect(put.json().households).toEqual([expect.objectContaining({ id: smiths, role: "member" })]);
 		expect((await zoe.api.get("/me")).statusCode).toBe(200);
 		// Already a member of that household: refused.
 		expect(
-			(await h.owner.api.post(`/admin/users/${zoe.id}/households`, { householdId: smiths, role: "adult" })).statusCode,
+			(await h.owner.api.post(`/admin/users/${zoe.id}/households`, { householdId: smiths, role: "member" })).statusCode,
 		).toBe(409);
 
 		expect((await h.owner.api.del(`/admin/users/${zoe.id}/households/${smiths}`)).statusCode).toBe(204);

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-export const ROLES = ["owner", "adult", "child"] as const;
+/** A household has owners, who manage it, and members. Supervision (guardians) is a property of the account. */
+export const ROLES = ["owner", "member"] as const;
 export type Role = (typeof ROLES)[number];
 
-const RANK: Record<Role, number> = { child: 0, adult: 1, owner: 2 };
+const RANK: Record<Role, number> = { member: 0, owner: 1 };
 
 export function isRole(value: unknown): value is Role {
 	return typeof value === "string" && (ROLES as readonly string[]).includes(value);

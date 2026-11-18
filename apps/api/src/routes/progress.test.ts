@@ -112,7 +112,7 @@ describe("GET /stats", () => {
 		const item = await makeHabit(h.adult, { requiresApproval: true, assigneeIds: [h.kid.userId] });
 		const pending = (await h.kid.api.post(`/items/${item.id}/completions`)).json().completion;
 		expect((await h.kid.api.get("/stats")).json().habits[0].streak.current).toBe(0);
-		await h.adult.api.post(`/completions/${pending.id}/approve`);
+		await h.owner.api.post(`/supervision/wards/${h.kid.userId}/completions/${pending.id}/approve`);
 		expect((await h.kid.api.get("/stats")).json().habits[0].streak.current).toBe(1);
 	});
 

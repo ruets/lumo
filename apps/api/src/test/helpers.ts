@@ -156,7 +156,7 @@ export interface Member {
 export async function addMember(
 	ctx: TestContext,
 	ownerCookie: string,
-	role: "adult" | "child",
+	role: "owner" | "member",
 	username: string,
 ): Promise<Member> {
 	const invite = await ctx.app.inject({
@@ -176,13 +176,15 @@ export async function addMember(
 	return { cookie, userId: me.json().user.id as string, api: api(ctx, cookie) };
 }
 
-/** Test household: alice (owner), bob (adult), kid (child). */
+/** Test household: alice (owner), bob (member), kid (member supervised by alice with the strict default rights). */
 export async function createHousehold(ctx: TestContext): Promise<{ owner: Member; adult: Member; kid: Member }> {
 	const ownerCookie = await setupOwner(ctx);
 	const meRes = await ctx.app.inject({ url: "/api/v1/me", headers: cookieHeader(ownerCookie) });
 	const owner: Member = { cookie: ownerCookie, userId: meRes.json().user.id as string, api: api(ctx, ownerCookie) };
-	const adult = await addMember(ctx, ownerCookie, "adult", "bob");
-	const kid = await addMember(ctx, ownerCookie, "child", "kid");
+	const adult = await addMember(ctx, ownerCookie, "member", "bob");
+	const kid = await addMember(ctx, ownerCookie, "member", "kid");
+	const code = (await owner.api.post("/supervision/codes", { kind: "supervise" })).json();
+	await kid.api.post("/supervision/redeem", { code: code.token });
 	// Days are counted in the person's own time zone: the household tests live in Paris.
 	for (const m of [owner, adult, kid]) await m.api.patch("/account", { timezone: "Europe/Paris" });
 	return { owner, adult, kid };

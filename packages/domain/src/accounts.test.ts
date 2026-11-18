@@ -96,7 +96,7 @@ describe("assertInstanceAccessChange", () => {
 describe("assertCanLeaveHousehold", () => {
 	it("anyone can leave, except the last owner (last_owner)", () => {
 		expect(code(() => assertCanLeaveHousehold({ role: "member", ownerCount: 1 }))).toBeNull();
-		expect(code(() => assertCanLeaveHousehold({ role: "adult", ownerCount: 1 }))).toBeNull();
+		expect(code(() => assertCanLeaveHousehold({ role: "member", ownerCount: 1 }))).toBeNull();
 		expect(code(() => assertCanLeaveHousehold({ role: "owner", ownerCount: 2 }))).toBeNull();
 		expect(code(() => assertCanLeaveHousehold({ role: "owner", ownerCount: 1 }))).toBe("last_owner");
 	});

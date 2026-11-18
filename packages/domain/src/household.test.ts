@@ -14,18 +14,16 @@ const code = (fn: () => void) => {
 
 describe("assertRoleChange", () => {
 	it("allows promoting and demoting a non-owner whatever the number of owners", () => {
-		expect(code(() => assertRoleChange({ currentRole: "child", newRole: "adult", ownerCount: 1 }))).toBeNull();
-		expect(code(() => assertRoleChange({ currentRole: "adult", newRole: "child", ownerCount: 1 }))).toBeNull();
-		expect(code(() => assertRoleChange({ currentRole: "adult", newRole: "owner", ownerCount: 1 }))).toBeNull();
+		expect(code(() => assertRoleChange({ currentRole: "member", newRole: "member", ownerCount: 1 }))).toBeNull();
+		expect(code(() => assertRoleChange({ currentRole: "member", newRole: "owner", ownerCount: 1 }))).toBeNull();
 	});
 
 	it("allows demoting an owner while another owner remains", () => {
-		expect(code(() => assertRoleChange({ currentRole: "owner", newRole: "adult", ownerCount: 2 }))).toBeNull();
+		expect(code(() => assertRoleChange({ currentRole: "owner", newRole: "member", ownerCount: 2 }))).toBeNull();
 	});
 
 	it("refuses to demote the last owner (last_owner)", () => {
-		expect(code(() => assertRoleChange({ currentRole: "owner", newRole: "adult", ownerCount: 1 }))).toBe("last_owner");
-		expect(code(() => assertRoleChange({ currentRole: "owner", newRole: "child", ownerCount: 1 }))).toBe("last_owner");
+		expect(code(() => assertRoleChange({ currentRole: "owner", newRole: "member", ownerCount: 1 }))).toBe("last_owner");
 	});
 
 	it("keeping the same role is always fine, even for the last owner", () => {
@@ -34,11 +32,10 @@ describe("assertRoleChange", () => {
 });
 
 describe("assertCanRemoveMember", () => {
-	const base = { actorId: "alice", targetId: "bob", targetRole: "adult" as const, ownerCount: 1 };
+	const base = { actorId: "alice", targetId: "bob", targetRole: "member" as const, ownerCount: 1 };
 
 	it("allows removing another member", () => {
 		expect(code(() => assertCanRemoveMember(base))).toBeNull();
-		expect(code(() => assertCanRemoveMember({ ...base, targetRole: "child" }))).toBeNull();
 	});
 
 	it("allows removing another owner while at least one owner remains", () => {

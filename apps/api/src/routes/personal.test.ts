@@ -59,7 +59,7 @@ describe("an account without a household", () => {
 			() => zoe.api.get("/ledger?wallet=shared"),
 			() => zoe.api.post("/transfers", { amount: 1 }),
 			() => zoe.api.get("/household"),
-			() => zoe.api.post("/household/invites", { role: "adult" }),
+			() => zoe.api.post("/household/invites", { role: "member" }),
 		]) {
 			const res = await call();
 			expect(res.statusCode).toBe(403);
@@ -146,9 +146,7 @@ describe("personal items inside a household", () => {
 	});
 
 	it("leaving the household keeps personal items and coins", async () => {
-		const mine = await makeHabit(h.kid, { name: "Read", scope: "personal", reward: 3 }).catch(() => null);
-		expect(mine).toBeNull(); // the kid cannot create items: promote first
-		await h.owner.api.patch(`/members/${h.kid.userId}`, { canCreateItems: true });
+		await h.owner.api.patch(`/supervision/wards/${h.kid.userId}/rights`, { canCreate: true });
 		const own = await makeHabit(h.kid, { name: "Read", scope: "personal", reward: 3 });
 		await h.kid.api.post(`/items/${own.id}/completions`);
 		await h.owner.api.del(`/members/${h.kid.userId}`);

@@ -38,7 +38,7 @@ export function assertInstanceAccessChange(input: {
 }
 
 /** Leaving a household is always allowed, except for its last owner. `ownerCount` is the count before leaving. */
-export function assertCanLeaveHousehold(input: { role: Role | "member"; ownerCount: number }): void {
+export function assertCanLeaveHousehold(input: { role: Role; ownerCount: number }): void {
 	if (input.role === "owner" && input.ownerCount <= 1) {
 		throw new DomainError("last_owner", "A household needs at least one owner");
 	}

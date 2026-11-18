@@ -181,8 +181,9 @@ describe("other coin writes under concurrency", () => {
 		const item = await makeHabit(h.adult, { reward: 5, requiresApproval: true, assigneeIds: [h.kid.userId] });
 		const pending = (await h.kid.api.post(`/items/${item.id}/completions`)).json().completion;
 		const responses = await Promise.all([
-			...Array.from({ length: 3 }, () => h.adult.api.post(`/completions/${pending.id}/approve`)),
-			...Array.from({ length: 3 }, () => h.owner.api.post(`/completions/${pending.id}/approve`)),
+			...Array.from({ length: 6 }, () =>
+				h.owner.api.post(`/supervision/wards/${h.kid.userId}/completions/${pending.id}/approve`),
+			),
 		]);
 		expect(tally(statuses(responses))).toEqual({ 200: 1, 409: 5 });
 		expect((await balances(h.kid)).personal).toBe(15); // 10 to start + 5

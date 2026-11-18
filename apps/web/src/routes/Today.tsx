@@ -6,17 +6,7 @@ import { HeaderActions } from "../components/AppShell";
 import { awaitingReview, itemMeta, withSpace } from "../components/itemMeta";
 import { SpacePills } from "../components/SpacePills";
 import { Bar, CoinIcon, PageTitle, Reward, Ring } from "../components/ui";
-import {
-	statsWindow,
-	useComplete,
-	useItems,
-	useMe,
-	usePending,
-	useReview,
-	useRewards,
-	useStats,
-	useToday,
-} from "../lib/hooks";
+import { statsWindow, useComplete, usePending, useReview, useRewards, useStats, useToday } from "../lib/hooks";
 import { useSpaceFilter } from "../lib/space";
 
 function RemainingRow({ e, space, onTap }: { e: TodayItem; space: string | null; onTap: () => void }) {
@@ -49,30 +39,31 @@ function RemainingRow({ e, space, onTap }: { e: TodayItem; space: string | null;
 	);
 }
 
+/** Completions waiting for the approval of this person as a guardian, with whose they are. */
 function Approvals() {
-	const me = useMe().data;
-	const pending = usePending(Boolean(me?.household));
-	const items = useItems();
+	const pending = usePending();
 	const review = useReview();
 	const list = pending.data?.completions ?? [];
 	if (list.length === 0) return null;
-	const name = (id: string) => items.data?.items.find((i) => i.id === id)?.name ?? "…";
 	return (
 		<section className="grid gap-2.5">
 			<h2 className="m-0 text-[15px] font-bold text-muted">{t("today.approvals")}</h2>
 			{list.map((c) => (
 				<div key={c.id} className="flex items-center gap-3 rounded-[18px] bg-surface p-3 pl-4">
-					<span className="grow text-[15px] font-bold">{name(c.itemId)}</span>
+					<span className="grid grow">
+						<span className="text-[15px] font-bold">{c.itemName}</span>
+						<span className="text-[13px] text-muted">{c.wardName}</span>
+					</span>
 					<button
 						type="button"
-						onClick={() => review.mutate({ id: c.id, approve: false })}
+						onClick={() => review.mutate({ wardId: c.wardId, id: c.id, approve: false })}
 						className="min-h-11 cursor-pointer rounded-full border border-edge bg-transparent px-4 text-sm font-bold text-soft"
 					>
 						{t("today.reject")}
 					</button>
 					<button
 						type="button"
-						onClick={() => review.mutate({ id: c.id, approve: true })}
+						onClick={() => review.mutate({ wardId: c.wardId, id: c.id, approve: true })}
 						className="min-h-11 cursor-pointer rounded-full border-0 bg-ok px-4 text-sm font-bold text-bg"
 					>
 						{t("today.approve")}
@@ -132,7 +123,7 @@ export function TodayPage({ me }: { me: MeResponse }) {
 
 					<SpacePills households={me.households} value={filter} />
 
-					{me.role !== "child" && <Approvals />}
+					<Approvals />
 
 					<section className="grid gap-2.5">
 						<h2 className="m-0 text-[15px] font-bold text-muted">{t("today.remaining")}</h2>

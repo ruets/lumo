@@ -1,7 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { memberships } from "../db/schema.js";
 import { createHousehold, createTestContext, makeHabit, type TestContext } from "../test/helpers.js";
 
 let ctx: TestContext;
@@ -89,27 +86,26 @@ describe("creation", () => {
 });
 
 describe("creation rights", () => {
-	it("a child creates nothing by default", async () => {
+	it("a supervised account creates nothing until its guardian allows it", async () => {
 		const res = await h.kid.api.post("/items", { kind: "task", name: "Ranger" });
 		expect(res.statusCode).toBe(403);
-		expect(res.json().code).toBe("forbidden");
+		expect(res.json().code).toBe("supervised");
+		await h.owner.api.patch(`/supervision/wards/${h.kid.userId}/rights`, { canCreate: true });
+		expect((await h.kid.api.post("/items", { kind: "task", name: "Ranger" })).statusCode).toBe(201);
 	});
 
-	it("an allowed child creates for themselves only", async () => {
-		ctx.db.update(memberships).set({ canCreateItems: true }).where(eq(memberships.userId, h.kid.userId)).run();
-		expect((await h.kid.api.post("/items", { kind: "task", name: "Ranger" })).statusCode).toBe(201);
-		const forOther = await h.kid.api.post("/items", { kind: "task", name: "Ranger", assigneeIds: [h.adult.userId] });
-		expect(forOther.statusCode).toBe(403);
+	it("any other member creates for themselves and for others", async () => {
+		expect(
+			(await h.adult.api.post("/items", { kind: "task", name: "x", assigneeIds: [h.kid.userId] })).statusCode,
+		).toBe(201);
 	});
 });
 
 describe("lecture, modification, archivage", () => {
-	it("a child only sees what is assigned to them or what they created; an adult sees everything", async () => {
-		const mine = await makeHabit(h.adult, { name: "For the child", assigneeIds: [h.kid.userId] });
+	it("every member sees the household's items, assigned or not", async () => {
+		await makeHabit(h.adult, { name: "For the kid", assigneeIds: [h.kid.userId] });
 		await makeHabit(h.adult, { name: "For the adult" });
-		const kidItems = (await h.kid.api.get("/items")).json().items;
-		expect(kidItems.map((i: { id: string }) => i.id)).toEqual([mine.id]);
-		expect((await h.adult.api.get("/items")).json().items).toHaveLength(2);
+		for (const who of [h.kid, h.adult, h.owner]) expect((await who.api.get("/items")).json().items).toHaveLength(2);
 	});
 
 	it("updates fields and assignees, and pins", async () => {
@@ -124,9 +120,11 @@ describe("lecture, modification, archivage", () => {
 		expect(res.json()).toMatchObject({ name: "Water", reward: 7, pinned: true, assigneeIds: [h.kid.userId] });
 	});
 
-	it("a child cannot update an item they did not create", async () => {
+	it("a supervised account cannot update an item, whoever created it", async () => {
 		const item = await makeHabit(h.adult, { assigneeIds: [h.kid.userId] });
-		expect((await h.kid.api.patch(`/items/${item.id}`, { name: "Hacked" })).statusCode).toBe(403);
+		const res = await h.kid.api.patch(`/items/${item.id}`, { name: "Hacked" });
+		expect(res.statusCode).toBe(403);
+		expect(res.json().code).toBe("supervised");
 	});
 
 	it("archive (DELETE): disappears from the list, comes back with includeArchived, and stays idempotent", async () => {

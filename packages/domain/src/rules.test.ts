@@ -23,36 +23,32 @@ const codeOf = (fn: () => unknown) => {
 
 describe("planCompletion", () => {
 	it("credits the reward when no approval is required", () => {
-		expect(planCompletion({ actorRole: "adult", requiresApproval: false, reward: 5 })).toEqual({
+		expect(planCompletion({ supervised: false, requiresApproval: false, reward: 5 })).toEqual({
 			status: "approved",
 			credit: 5,
 		});
-		expect(planCompletion({ actorRole: "child", requiresApproval: false, reward: 5 })).toEqual({
+		expect(planCompletion({ supervised: true, requiresApproval: false, reward: 5 })).toEqual({
 			status: "approved",
 			credit: 5,
 		});
 	});
 
-	it("a child on an item needing approval: pending, no entry", () => {
-		expect(planCompletion({ actorRole: "child", requiresApproval: true, reward: 5 })).toEqual({
+	it("a supervised account on an item needing approval: pending, no entry", () => {
+		expect(planCompletion({ supervised: true, requiresApproval: true, reward: 5 })).toEqual({
 			status: "pending",
 			credit: 0,
 		});
 	});
 
-	it("approval only concerns children", () => {
-		expect(planCompletion({ actorRole: "adult", requiresApproval: true, reward: 5 })).toEqual({
-			status: "approved",
-			credit: 5,
-		});
-		expect(planCompletion({ actorRole: "owner", requiresApproval: true, reward: 5 })).toEqual({
+	it("approval only concerns supervised accounts", () => {
+		expect(planCompletion({ supervised: false, requiresApproval: true, reward: 5 })).toEqual({
 			status: "approved",
 			credit: 5,
 		});
 	});
 
 	it("a zero reward credits nothing", () => {
-		expect(planCompletion({ actorRole: "adult", requiresApproval: false, reward: 0 }).credit).toBe(0);
+		expect(planCompletion({ supervised: false, requiresApproval: false, reward: 0 }).credit).toBe(0);
 	});
 });
 
@@ -68,26 +64,26 @@ describe("assertUnderTarget", () => {
 describe("checkCompletionDate", () => {
 	const base = { today: "2026-11-17", windowDays: 2 };
 	it("accepts today and the past-days window", () => {
-		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-17", role: "child" }))).toBeNull();
-		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-15", role: "child" }))).toBeNull();
+		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-17", role: "member" }))).toBeNull();
+		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-15", role: "member" }))).toBeNull();
 	});
 	it("rejects the future for everyone, owner included", () => {
 		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-18", role: "owner" }))).toBe("future_date");
 	});
 	it("beyond the window: only an owner", () => {
-		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-14", role: "adult" }))).toBe(
+		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-14", role: "member" }))).toBe(
 			"backdate_not_allowed",
 		);
 		expect(codeOf(() => checkCompletionDate({ ...base, date: "2026-11-14", role: "owner" }))).toBeNull();
 	});
 	it("no limit (Infinity): any past day, but still never the future", () => {
 		const open = { today: "2026-11-17", windowDays: Number.POSITIVE_INFINITY };
-		expect(codeOf(() => checkCompletionDate({ ...open, date: "2020-01-01", role: "child" }))).toBeNull();
-		expect(codeOf(() => checkCompletionDate({ ...open, date: "2026-11-18", role: "child" }))).toBe("future_date");
+		expect(codeOf(() => checkCompletionDate({ ...open, date: "2020-01-01", role: "member" }))).toBeNull();
+		expect(codeOf(() => checkCompletionDate({ ...open, date: "2026-11-18", role: "member" }))).toBe("future_date");
 	});
 	it("window of 0: today only", () => {
 		expect(
-			codeOf(() => checkCompletionDate({ today: "2026-11-17", date: "2026-11-16", windowDays: 0, role: "adult" })),
+			codeOf(() => checkCompletionDate({ today: "2026-11-17", date: "2026-11-16", windowDays: 0, role: "member" })),
 		).toBe("backdate_not_allowed");
 	});
 });

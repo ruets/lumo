@@ -16,7 +16,7 @@ import { showToast } from "../lib/toast";
 
 type Household = HouseholdResponse["household"];
 
-const ROLES = ["owner", "adult", "child"] as const;
+const ROLES = ["owner", "member"] as const;
 
 function MemberRow({ member, isYou, canManage }: { member: Member; isYou: boolean; canManage: boolean }) {
 	const update = useUpdateMember();
@@ -57,22 +57,6 @@ function MemberRow({ member, isYou, canManage }: { member: Member; isYou: boolea
 							</option>
 						))}
 					</select>
-					{member.role === "child" && (
-						<label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-soft">
-							<input
-								type="checkbox"
-								checked={member.canCreateItems}
-								onChange={(e) =>
-									update.mutate(
-										{ id: member.userId, input: { canCreateItems: e.target.checked } },
-										{ onSuccess: saved },
-									)
-								}
-								className="size-5"
-							/>
-							{t("household.canCreate")}
-						</label>
-					)}
 					{!isYou && (
 						<button
 							type="button"
@@ -156,7 +140,7 @@ function InviteSection() {
 	const household = useHousehold();
 	const create = useCreateInvite();
 	const revoke = useRevokeInvite();
-	const [role, setRole] = useState<"adult" | "child">("child");
+	const [role, setRole] = useState<"owner" | "member">("member");
 	const [created, setCreated] = useState<{ token: string; expiresAt: string } | null>(null);
 	const link = created ? `${window.location.origin}/?invite=${created.token}` : "";
 	const pending = household.data?.invites ?? [];
@@ -178,11 +162,11 @@ function InviteSection() {
 					<select
 						aria-label={t("household.role")}
 						value={role}
-						onChange={(e) => setRole(e.target.value as "adult" | "child")}
+						onChange={(e) => setRole(e.target.value as "owner" | "member")}
 						className={`${fieldClass} w-auto`}
 					>
-						<option value="adult">{t("role.adult")}</option>
-						<option value="child">{t("role.child")}</option>
+						<option value="member">{t("role.member")}</option>
+						<option value="owner">{t("role.owner")}</option>
 					</select>
 					<PrimaryButton disabled={create.isPending} onClick={() => create.mutate(role, { onSuccess: setCreated })}>
 						{t("household.invite.create")}
