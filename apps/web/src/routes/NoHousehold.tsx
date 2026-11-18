@@ -9,12 +9,12 @@ const value = (e: FormEvent<HTMLFormElement>, name: string) =>
 	String(new FormData(e.currentTarget).get(name) ?? "").trim();
 
 /** For an account in no household: join one with a code, or create one when the instance allows it. */
-export function HouseholdAccess({ account }: { account: AccountResponse }) {
+export function HouseholdAccess({ account, hint = true }: { account: AccountResponse; hint?: boolean }) {
 	const join = useJoinHousehold();
 	const create = useCreateOwnHousehold();
 	return (
 		<>
-			<p className="m-0 text-sm text-muted">{t("noHousehold.settingsHint")}</p>
+			{hint && <p className="m-0 text-sm text-muted">{t("noHousehold.settingsHint")}</p>}
 			<form
 				onSubmit={(e) => {
 					e.preventDefault();

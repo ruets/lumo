@@ -4,11 +4,12 @@ import { colors, radii, spacing } from "@lumo/tokens";
 import { Stack, useRouter } from "expo-router";
 import { Alert, Pressable, View } from "react-native";
 import { changeServer, logout } from "../src/account";
-import { useAccount, useLeaveHousehold, useMe } from "../src/hooks";
+import { AccountSettings } from "../src/accountSettings";
+import { useAccount, useLeaveHousehold, useMe, useSwitchHousehold } from "../src/hooks";
 import { HouseholdAccess } from "../src/householdAccess";
 import { LanguagePicker } from "../src/locale";
 import { currentServerUrl } from "../src/server";
-import { Button, font, Screen, T } from "../src/ui";
+import { Button, Chip, font, Screen, T } from "../src/ui";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
@@ -27,6 +28,7 @@ export default function SettingsScreen() {
 	const leave = useLeaveHousehold();
 	const account = useAccount().data;
 	const isSuperAdmin = account?.isSuperAdmin ?? false;
+	const switchHousehold = useSwitchHousehold();
 	return (
 		<Screen topInset={false}>
 			<Stack.Screen
@@ -64,9 +66,23 @@ export default function SettingsScreen() {
 					)}
 				</Section>
 			)}
-			{me && !me.household && account && (
-				<Section title={t("settings.accessTitle")}>
-					<HouseholdAccess account={account} />
+			{account && (
+				<Section title={t("account.title")}>
+					<AccountSettings account={account} />
+				</Section>
+			)}
+			{me && me.households.length > 1 && (
+				<Section title={t("household.switch")}>
+					<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+						{me.households.map((h) => (
+							<Chip key={h.id} label={h.name} on={h.id === me.household?.id} onPress={() => switchHousehold(h.id)} />
+						))}
+					</View>
+				</Section>
+			)}
+			{me && account && (
+				<Section title={me.household ? t("household.add") : t("settings.accessTitle")}>
+					<HouseholdAccess account={account} hint={!me.household} />
 				</Section>
 			)}
 			{me?.household && (

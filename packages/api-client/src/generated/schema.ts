@@ -52,7 +52,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Change your name, time zone or first day of the week */
+        patch: operations["patchApiV1Account"];
         trace?: never;
     };
     "/api/v1/households": {
@@ -142,7 +143,7 @@ export interface paths {
         patch: operations["patchApiV1AdminUsersId"];
         trace?: never;
     };
-    "/api/v1/admin/users/{id}/household": {
+    "/api/v1/admin/users/{id}/households": {
         parameters: {
             query?: never;
             header?: never;
@@ -151,10 +152,26 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Put an account without a household into one */
-        post: operations["postApiV1AdminUsersIdHousehold"];
-        /** Take an account out of its household, keeping the account */
-        delete: operations["deleteApiV1AdminUsersIdHousehold"];
+        /** Put an account into a household */
+        post: operations["postApiV1AdminUsersIdHouseholds"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/households/{householdId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Take an account out of a household, keeping the account */
+        delete: operations["deleteApiV1AdminUsersIdHouseholdsHouseholdId"];
         options?: never;
         head?: never;
         patch?: never;
@@ -595,9 +612,18 @@ export interface operations {
                         household: {
                             id: string;
                             name: string;
-                            timezone: string;
                         } | null;
                         role: ("owner" | "adult" | "child") | null;
+                        households: {
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            role: "owner" | "adult" | "child";
+                            pot: {
+                                id: string;
+                                balance: number;
+                            };
+                        }[];
                         wallets: {
                             personal: {
                                 id: string;
@@ -697,12 +723,77 @@ export interface operations {
                             avatarUrl: string | null;
                         };
                         isSuperAdmin: boolean;
-                        household: {
+                        households: {
                             id: string;
                             name: string;
                             /** @enum {string} */
                             role: "owner" | "adult" | "child";
-                        } | null;
+                        }[];
+                        timezone: string;
+                        weekStart: number;
+                        canCreateHousehold: boolean;
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    patchApiV1Account: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    displayName?: string;
+                    timezone?: string;
+                    weekStart?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            id: string;
+                            displayName: string;
+                            avatarUrl: string | null;
+                        };
+                        isSuperAdmin: boolean;
+                        households: {
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            role: "owner" | "adult" | "child";
+                        }[];
+                        timezone: string;
+                        weekStart: number;
                         canCreateHousehold: boolean;
                     };
                 };
@@ -748,7 +839,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        householdId: string;
+                    };
+                };
             };
             /** @description Error (RFC 9457) with a stable `code` */
             default: {
@@ -791,7 +886,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        householdId: string;
+                    };
+                };
             };
             /** @description Error (RFC 9457) with a stable `code` */
             default: {
@@ -871,12 +970,12 @@ export interface operations {
                             oidc: boolean;
                             isSuperAdmin: boolean;
                             disabled: boolean;
-                            household: {
+                            households: {
                                 id: string;
                                 name: string;
                                 /** @enum {string} */
                                 role: "owner" | "adult" | "child";
-                            } | null;
+                            }[];
                             createdAt: string;
                         }[];
                     };
@@ -933,12 +1032,12 @@ export interface operations {
                         oidc: boolean;
                         isSuperAdmin: boolean;
                         disabled: boolean;
-                        household: {
+                        households: {
                             id: string;
                             name: string;
                             /** @enum {string} */
                             role: "owner" | "adult" | "child";
-                        } | null;
+                        }[];
                         createdAt: string;
                     };
                 };
@@ -1034,12 +1133,12 @@ export interface operations {
                         oidc: boolean;
                         isSuperAdmin: boolean;
                         disabled: boolean;
-                        household: {
+                        households: {
                             id: string;
                             name: string;
                             /** @enum {string} */
                             role: "owner" | "adult" | "child";
-                        } | null;
+                        }[];
                         createdAt: string;
                     };
                 };
@@ -1062,7 +1161,7 @@ export interface operations {
             };
         };
     };
-    postApiV1AdminUsersIdHousehold: {
+    postApiV1AdminUsersIdHouseholds: {
         parameters: {
             query?: never;
             header: {
@@ -1097,12 +1196,12 @@ export interface operations {
                         oidc: boolean;
                         isSuperAdmin: boolean;
                         disabled: boolean;
-                        household: {
+                        households: {
                             id: string;
                             name: string;
                             /** @enum {string} */
                             role: "owner" | "adult" | "child";
-                        } | null;
+                        }[];
                         createdAt: string;
                     };
                 };
@@ -1125,7 +1224,7 @@ export interface operations {
             };
         };
     };
-    deleteApiV1AdminUsersIdHousehold: {
+    deleteApiV1AdminUsersIdHouseholdsHouseholdId: {
         parameters: {
             query?: never;
             header: {
@@ -1134,6 +1233,7 @@ export interface operations {
             };
             path: {
                 id: string;
+                householdId: string;
             };
             cookie?: never;
         };
@@ -1505,8 +1605,6 @@ export interface operations {
                         household: {
                             id: string;
                             name: string;
-                            timezone: string;
-                            weekStart: number;
                             backdateDays: number | null;
                         };
                         members: {
@@ -1558,8 +1656,6 @@ export interface operations {
             content: {
                 "application/json": {
                     name?: string;
-                    timezone?: string;
-                    weekStart?: number;
                     backdateDays?: number | null;
                 };
             };
@@ -1575,8 +1671,6 @@ export interface operations {
                         household: {
                             id: string;
                             name: string;
-                            timezone: string;
-                            weekStart: number;
                             backdateDays: number | null;
                         };
                         members: {
@@ -1799,6 +1893,7 @@ export interface operations {
                             assigneeIds: string[];
                             /** @enum {string} */
                             scope: "personal" | "household";
+                            householdId: string | null;
                         }[];
                     };
                 };
@@ -1870,6 +1965,7 @@ export interface operations {
                     assigneeIds?: string[];
                     /** @enum {string} */
                     scope?: "personal" | "household";
+                    householdId?: string;
                 } | {
                     /** @constant */
                     kind: "task";
@@ -1891,6 +1987,7 @@ export interface operations {
                     assigneeIds?: string[];
                     /** @enum {string} */
                     scope?: "personal" | "household";
+                    householdId?: string;
                 };
             };
         };
@@ -1935,6 +2032,7 @@ export interface operations {
                         assigneeIds: string[];
                         /** @enum {string} */
                         scope: "personal" | "household";
+                        householdId: string | null;
                     };
                 };
             };
@@ -2080,6 +2178,7 @@ export interface operations {
                         assigneeIds: string[];
                         /** @enum {string} */
                         scope: "personal" | "household";
+                        householdId: string | null;
                     };
                 };
             };
@@ -2155,6 +2254,7 @@ export interface operations {
                                 assigneeIds: string[];
                                 /** @enum {string} */
                                 scope: "personal" | "household";
+                                householdId: string | null;
                             };
                             approved: number;
                             pending: number;
@@ -2497,6 +2597,7 @@ export interface operations {
                             assigneeIds: string[];
                             /** @enum {string} */
                             scope: "personal" | "household";
+                            householdId: string | null;
                             remaining: number | null;
                         }[];
                     };
@@ -2543,6 +2644,7 @@ export interface operations {
                     fundedFrom?: "personal" | "shared";
                     /** @enum {string} */
                     scope?: "personal" | "household";
+                    householdId?: string;
                     link?: string | null;
                     /** @default [] */
                     assigneeIds?: string[];
@@ -2572,6 +2674,7 @@ export interface operations {
                         assigneeIds: string[];
                         /** @enum {string} */
                         scope: "personal" | "household";
+                        householdId: string | null;
                         remaining: number | null;
                     };
                 };
@@ -2643,6 +2746,7 @@ export interface operations {
                         assigneeIds: string[];
                         /** @enum {string} */
                         scope: "personal" | "household";
+                        householdId: string | null;
                         remaining: number | null;
                     };
                 };

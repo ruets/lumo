@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { HouseholdResponse, Member } from "@lumo/api-client";
-import { shortDate, t, weekdayLong, weekdayNarrow } from "@lumo/i18n";
+import { shortDate, t } from "@lumo/i18n";
 import { colors, radii, spacing } from "@lumo/tokens";
 import { Stack } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, Share, Switch, View } from "react-native";
+import { Alert, Share, Switch, View } from "react-native";
 import {
 	useCreateInvite,
 	useHousehold,
@@ -124,47 +124,11 @@ function SettingsSection() {
 function SettingsForm({ h }: { h: HouseholdResponse["household"] }) {
 	const update = useUpdateHousehold();
 	const [name, setName] = useState(h.name);
-	const [timezone, setTimezone] = useState(h.timezone);
-	const [weekStart, setWeekStart] = useState(h.weekStart);
 	const [backdate, setBackdate] = useState(String(h.backdateDays ?? 2));
 	const [unlimited, setUnlimited] = useState(h.backdateDays === null);
 	return (
 		<Section title={t("household.settings.title")}>
 			<Field label={t("household.settings.name")} value={name} onChangeText={setName} maxLength={80} />
-			<Field
-				label={t("household.settings.timezone")}
-				value={timezone}
-				onChangeText={setTimezone}
-				autoCapitalize="none"
-				autoCorrect={false}
-			/>
-			<T style={{ fontSize: 12, color: colors.muted }}>{t("household.settings.timezoneHint")}</T>
-
-			<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.muted }}>{t("household.settings.weekStart")}</T>
-			<View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-				{[1, 2, 3, 4, 5, 6, 7].map((d) => (
-					<Pressable
-						key={d}
-						accessibilityRole="button"
-						accessibilityLabel={weekdayLong(d)}
-						accessibilityState={{ selected: weekStart === d }}
-						onPress={() => setWeekStart(d)}
-						style={{
-							width: 40,
-							height: 44,
-							borderRadius: 22,
-							alignItems: "center",
-							justifyContent: "center",
-							backgroundColor: weekStart === d ? colors.primary : colors.surfaceRaised,
-						}}
-					>
-						<T style={{ fontFamily: font.bold, fontSize: 14, color: weekStart === d ? "#fff" : colors.textSoft }}>
-							{weekdayNarrow(d)}
-						</T>
-					</Pressable>
-				))}
-			</View>
-
 			<Field
 				label={t("household.settings.backdate")}
 				value={backdate}
@@ -187,8 +151,6 @@ function SettingsForm({ h }: { h: HouseholdResponse["household"] }) {
 					update.mutate(
 						{
 							name: name.trim(),
-							timezone: timezone.trim(),
-							weekStart,
 							backdateDays: unlimited ? null : Number(backdate),
 						},
 						{ onSuccess: () => showToast(t("household.saved"), 1500) },

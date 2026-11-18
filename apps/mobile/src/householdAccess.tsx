@@ -8,14 +8,14 @@ import { useCreateOwnHousehold, useJoinHousehold } from "./hooks";
 import { Button, Field, T } from "./ui";
 
 /** For an account in no household: join one with a code, or create one when the instance allows it. */
-export function HouseholdAccess({ account }: { account: AccountResponse }) {
+export function HouseholdAccess({ account, hint = true }: { account: AccountResponse; hint?: boolean }) {
 	const join = useJoinHousehold();
 	const create = useCreateOwnHousehold();
 	const [code, setCode] = useState("");
 	const [name, setName] = useState("");
 	return (
 		<View style={{ gap: 12 }}>
-			<T style={{ color: colors.muted, fontSize: 14 }}>{t("noHousehold.settingsHint")}</T>
+			{hint && <T style={{ color: colors.muted, fontSize: 14 }}>{t("noHousehold.settingsHint")}</T>}
 			<Field
 				label={t("noHousehold.code")}
 				value={code}

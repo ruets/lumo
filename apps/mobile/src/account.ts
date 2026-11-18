@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { setActiveHouseholdId } from "./household";
 import { persister, queryClient } from "./query";
 import { clearQueue } from "./queue";
 import { forgetServer } from "./server";
@@ -23,6 +24,7 @@ export async function changeServer(): Promise<void> {
 
 async function wipeLocalData(): Promise<void> {
 	await clearTokens();
+	await setActiveHouseholdId(null);
 	await clearQueue();
 	queryClient.clear();
 	await persister.removeClient();

@@ -5,7 +5,7 @@ import { createInvite } from "../auth/invites.js";
 import { households, users } from "../db/schema.js";
 import { errors } from "../errors.js";
 import { inviteBody, inviteView, meView } from "../schemas.js";
-import { balancesFor, personalWalletId, sharedWalletId } from "../services/ledger.js";
+import { personalWalletId, sharedWalletId, walletBalance } from "../services/ledger.js";
 import { route } from "./define.js";
 
 export const meRoutes = [
@@ -20,20 +20,34 @@ export const meRoutes = [
 		handler: ({ db, actor }) => {
 			const user = db.select().from(users).where(eq(users.id, actor.userId)).get();
 			if (!user) throw errors.unauthenticated();
-			const household = actor.householdId
-				? (db.select().from(households).where(eq(households.id, actor.householdId)).get() ?? null)
-				: null;
-			const balances = balancesFor(db, actor);
+			const names = new Map(
+				db
+					.select({ id: households.id, name: households.name })
+					.from(households)
+					.all()
+					.map((h) => [h.id, h.name]),
+			);
+			const list = actor.memberships.map((m) => {
+				const potId = sharedWalletId(db, m.householdId);
+				return {
+					id: m.householdId,
+					name: names.get(m.householdId) ?? "",
+					role: m.role,
+					pot: { id: potId, balance: walletBalance(db, potId) },
+				};
+			});
+			const active = list.find((h) => h.id === actor.householdId) ?? null;
 			return {
 				user: { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl },
-				household: household ? { id: household.id, name: household.name, timezone: household.timezone } : null,
-				role: household ? actor.role : null,
+				household: active ? { id: active.id, name: active.name } : null,
+				role: active ? active.role : null,
+				households: list,
 				wallets: {
-					personal: { id: personalWalletId(db, actor.userId), balance: balances.personal },
-					shared:
-						household && balances.shared !== null
-							? { id: sharedWalletId(db, household.id), balance: balances.shared }
-							: null,
+					personal: {
+						id: personalWalletId(db, actor.userId),
+						balance: walletBalance(db, personalWalletId(db, actor.userId)),
+					},
+					shared: active ? active.pot : null,
 				},
 			};
 		},

@@ -26,16 +26,37 @@ function useSubmit<I>(call: (i: I) => Promise<unknown>, onClose: () => void) {
 	return { m, error };
 }
 
-function ScopeChips({ personal, onChange }: { personal: boolean; onChange: (personal: boolean) => void }) {
+/** Who an item or wish is for: one of the person's households, or the person alone. */
+function ScopeChips({
+	dest,
+	onChange,
+	households,
+}: {
+	dest: string;
+	onChange: (target: string) => void;
+	households: { id: string; name: string }[];
+}) {
 	return (
 		<>
 			<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.muted }}>{t("form.scope")}</T>
-			<View style={{ flexDirection: "row", gap: 8 }}>
-				<Chip label={t("form.scope.household")} on={!personal} onPress={() => onChange(false)} />
-				<Chip label={t("form.scope.personal")} on={personal} onPress={() => onChange(true)} />
+			<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+				{households.map((h) => (
+					<Chip key={h.id} label={h.name} on={dest === h.id} onPress={() => onChange(h.id)} />
+				))}
+				<Chip label={t("form.scope.personal")} on={dest === "personal"} onPress={() => onChange("personal")} />
 			</View>
 		</>
 	);
+}
+
+/** Where a new item or wish goes: personal without a household, else the active household. */
+function useTarget() {
+	const me = useMe().data;
+	const households = me?.households ?? [];
+	const [dest, setDest] = useState<string>(me?.household?.id ?? "personal");
+	const personal = dest === "personal";
+	const scope = personal ? { scope: "personal" as const } : { scope: "household" as const, householdId: dest };
+	return { households, dest, setDest, scope, personal };
 }
 
 export function ItemSheet({
@@ -55,8 +76,7 @@ export function ItemSheet({
 	const [days, setDays] = useState<number[]>([1]);
 	const [target, setTarget] = useState("1");
 	const [approval, setApproval] = useState(false);
-	const inHousehold = Boolean(useMe().data?.household);
-	const [personal, setPersonal] = useState(false);
+	const { households, dest, setDest, scope, personal } = useTarget();
 	const { m, error } = useSubmit(
 		(i: CreateItemInput) => api.createItem(i),
 		() => {
@@ -69,8 +89,8 @@ export function ItemSheet({
 		const common = {
 			name: name.trim(),
 			reward: Number(reward) || 0,
-			scope: inHousehold && !personal ? ("household" as const) : ("personal" as const),
-			requiresApproval: inHousehold && !personal && approval,
+			...scope,
+			requiresApproval: !personal && approval,
 		};
 		if (kind === "task") return m.mutate({ kind: "task", ...common });
 		const schedule =
@@ -87,7 +107,7 @@ export function ItemSheet({
 	return (
 		<Sheet title={kind === "habit" ? t("items.newHabit") : t("items.newTask")} visible={visible} onClose={onClose}>
 			<Field label={t("form.name")} value={name} onChangeText={setName} maxLength={120} />
-			{inHousehold && <ScopeChips personal={personal} onChange={setPersonal} />}
+			{households.length > 0 && <ScopeChips dest={dest} onChange={setDest} households={households} />}
 			<Field label={t("form.reward")} value={reward} onChangeText={setReward} keyboardType="number-pad" />
 			{kind === "habit" && (
 				<>
@@ -118,7 +138,7 @@ export function ItemSheet({
 					<Field label={t("form.target")} value={target} onChangeText={setTarget} keyboardType="number-pad" />
 				</>
 			)}
-			{inHousehold && !personal && (
+			{!personal && (
 				<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
 					<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.textSoft, flex: 1 }}>
 						{t("form.requiresApproval")}
@@ -146,8 +166,7 @@ export function RewardSheet({ visible, onClose }: { visible: boolean; onClose: (
 	const [limited, setLimited] = useState(false);
 	const [limitCount, setLimitCount] = useState("1");
 	const [period, setPeriod] = useState<"day" | "week" | "month" | "year">("week");
-	const inHousehold = Boolean(useMe().data?.household);
-	const [personal, setPersonal] = useState(false);
+	const { households, dest, setDest, scope } = useTarget();
 	const { m, error } = useSubmit(
 		(i: Parameters<typeof api.createReward>[0]) => api.createReward(i),
 		() => {
@@ -159,7 +178,7 @@ export function RewardSheet({ visible, onClose }: { visible: boolean; onClose: (
 	return (
 		<Sheet title={t("wishes.new")} visible={visible} onClose={onClose}>
 			<Field label={t("form.name")} value={name} onChangeText={setName} maxLength={120} />
-			{inHousehold && <ScopeChips personal={personal} onChange={setPersonal} />}
+			{households.length > 0 && <ScopeChips dest={dest} onChange={setDest} households={households} />}
 			<Field label={t("form.cost")} value={cost} onChangeText={setCost} keyboardType="number-pad" />
 			<Field label={t("form.link")} value={link} onChangeText={setLink} autoCapitalize="none" keyboardType="url" />
 			<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
@@ -191,7 +210,7 @@ export function RewardSheet({ visible, onClose }: { visible: boolean; onClose: (
 						m.mutate({
 							name: name.trim(),
 							cost: Number(cost) || 1,
-							scope: inHousehold && !personal ? ("household" as const) : ("personal" as const),
+							...scope,
 							...(link.trim() ? { link: link.trim() } : {}),
 							...(limited ? { limitCount: Number(limitCount) || 1, limitPeriod: period } : {}),
 						})

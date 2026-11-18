@@ -37,6 +37,8 @@ const itemCommon = {
 	assigneeIds: assigneeIds.optional(),
 	/** Defaults to the household when the account has one, personal otherwise. */
 	scope: z.enum(["personal", "household"]).optional(),
+	/** Which household, for a household item; defaults to the active one. */
+	householdId: z.string().min(1).max(100).optional(),
 };
 
 export const createItemBody = z.discriminatedUnion("kind", [
@@ -99,6 +101,7 @@ export const itemView = z.object({
 	assigneeIds: z.array(z.string()),
 	/** `personal`: belongs to the account alone; `household`: shared with the household. */
 	scope: z.enum(["personal", "household"]),
+	householdId: z.string().nullable(),
 });
 
 // ---- Completions ------------------------------------------------------------------------
@@ -142,6 +145,8 @@ export const createRewardBody = z
 		fundedFrom: walletKind.default("personal"),
 		/** Defaults to the household when the account has one, personal otherwise. */
 		scope: z.enum(["personal", "household"]).optional(),
+		/** Which household, for a household wish; defaults to the active one. */
+		householdId: z.string().min(1).max(100).optional(),
 		link: z.url().max(500).nullish(),
 		assigneeIds: z.array(z.string().min(1).max(100)).max(30).default([]),
 		...limitFields,
@@ -176,6 +181,7 @@ export const rewardView = z.object({
 	archivedAt: z.string().nullable(),
 	assigneeIds: z.array(z.string()),
 	scope: z.enum(["personal", "household"]),
+	householdId: z.string().nullable(),
 	/** Redemptions still possible in the period (list only); `null`: no limit or not computed. */
 	remaining: z.number().int().nullable(),
 });
@@ -270,9 +276,18 @@ export const statsView = z.object({
 
 export const meView = z.object({
 	user: z.object({ id: z.string(), displayName: z.string(), avatarUrl: z.string().nullable() }),
-	/** `null` when the account is in no household: personal items and coins still work. */
-	household: z.object({ id: z.string(), name: z.string(), timezone: z.string() }).nullable(),
+	/** The active household (the `X-Household-Id` one, else the oldest membership); `null` in none. */
+	household: z.object({ id: z.string(), name: z.string() }).nullable(),
 	role: z.enum(["owner", "adult", "child"]).nullable(),
+	/** Every household of the account, with its role there and its pot. */
+	households: z.array(
+		z.object({
+			id: z.string(),
+			name: z.string(),
+			role: z.enum(["owner", "adult", "child"]),
+			pot: z.object({ id: z.string(), balance: z.number().int() }),
+		}),
+	),
 	wallets: z.object({
 		personal: z.object({ id: z.string(), balance: z.number().int() }),
 		shared: z.object({ id: z.string(), balance: z.number().int() }).nullable(),
@@ -297,8 +312,6 @@ export const householdView = z.object({
 	household: z.object({
 		id: z.string(),
 		name: z.string(),
-		timezone: z.string(),
-		weekStart: z.number().int(),
 		/** `null` = no limit. */
 		backdateDays: z.number().int().nullable(),
 	}),
@@ -319,9 +332,6 @@ const isTimeZone = (tz: string) => {
 export const updateHouseholdBody = z
 	.object({
 		name: z.string().trim().min(1).max(80),
-		timezone: z.string().min(1).max(64).refine(isTimeZone, "unknown time zone"),
-		/** ISO weekday the week starts on: 1 = Monday … 7 = Sunday. */
-		weekStart: z.number().int().min(1).max(7),
 		/** How many days back anyone may complete something (an owner can always go further); `null` = no limit. */
 		backdateDays: z.number().int().min(0).max(30).nullable(),
 	})
@@ -340,11 +350,31 @@ export const updateMemberBody = z
 export const accountView = z.object({
 	user: z.object({ id: z.string(), displayName: z.string(), avatarUrl: z.string().nullable() }),
 	isSuperAdmin: z.boolean(),
-	/** `null` when the account is not in a household. */
-	household: z.object({ id: z.string(), name: z.string(), role: roleEnum }).nullable(),
+	/** Every household of the account (possibly none). */
+	households: z.array(z.object({ id: z.string(), name: z.string(), role: roleEnum })),
+	timezone: z.string(),
+	/** ISO weekday the week starts on: 1 = Monday … 7 = Sunday. */
+	weekStart: z.number().int(),
 	/** Whether this account may create a household (instance setting). */
 	canCreateHousehold: z.boolean(),
 });
+
+export const removeMembershipParams = z.object({
+	id: z.string().min(1).max(100),
+	householdId: z.string().min(1).max(100),
+});
+
+export const householdIdView = z.object({ householdId: z.string() });
+
+export const updateAccountBody = z
+	.object({
+		displayName: z.string().trim().min(1).max(80),
+		timezone: z.string().min(1).max(64).refine(isTimeZone, "unknown time zone"),
+		weekStart: z.number().int().min(1).max(7),
+	})
+	.partial()
+	.strict()
+	.refine((b) => Object.values(b).some((v) => v !== undefined), "provide at least one field");
 
 export const createHouseholdBody = z.object({ name: z.string().trim().min(1).max(80) }).strict();
 export const joinHouseholdBody = z.object({ code: z.string().min(10).max(200) }).strict();
@@ -357,7 +387,7 @@ export const adminUserView = z.object({
 	oidc: z.boolean(),
 	isSuperAdmin: z.boolean(),
 	disabled: z.boolean(),
-	household: z.object({ id: z.string(), name: z.string(), role: roleEnum }).nullable(),
+	households: z.array(z.object({ id: z.string(), name: z.string(), role: roleEnum })),
 	createdAt: z.string(),
 });
 export const adminUsersView = z.object({ users: z.array(adminUserView) });

@@ -2,6 +2,7 @@
 import { createClient, type TokenPair } from "@lumo/api-client";
 import { randomUUID } from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
+import { getActiveHouseholdId } from "./household";
 import { currentServerUrl } from "./server";
 
 const KEY = "lumo.tokens";
@@ -60,4 +61,9 @@ async function getAccessToken(): Promise<string | null> {
 	return (await refreshing)?.accessToken ?? null;
 }
 
-export const api = createClient({ baseUrl: currentServerUrl, getAccessToken, generateKey: randomUUID });
+export const api = createClient({
+	baseUrl: currentServerUrl,
+	getAccessToken,
+	getHouseholdId: getActiveHouseholdId,
+	generateKey: randomUUID,
+});

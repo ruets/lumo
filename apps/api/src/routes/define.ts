@@ -148,7 +148,8 @@ export function registerRoutes(
 					const account = loadAccount(dbx, userId);
 					if (!account) throw errors.unauthenticated();
 					if (def.superAdmin && !account.isSuperAdmin) throw errors.forbidden("Super admins only");
-					const actor = loadActor(dbx, userId);
+					const header = req.headers["x-household-id"];
+					const actor = loadActor(dbx, userId, typeof header === "string" ? header : null);
 					if (!actor) throw errors.unauthenticated();
 					if (def.scope === "household" && !actor.householdId) throw errors.noHousehold();
 					return def.handler({ db: dbx, config, actor, account, body, query, params, prepared, now });

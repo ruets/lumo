@@ -56,8 +56,6 @@ export function getHousehold(db: DbOrTx, actor: HouseholdActorCtx, now: Date): H
 		household: {
 			id: h.id,
 			name: h.name,
-			timezone: h.timezone,
-			weekStart: h.weekStart,
 			backdateDays: h.backdateUnlimited ? null : h.backdateDays,
 		},
 		members: membersOf(db, actor.householdId),
@@ -118,7 +116,7 @@ export function revokeInvite(tx: Tx, actor: HouseholdActorCtx, inviteId: string)
 	if (removed.length === 0) throw notFound("Invitation");
 }
 
-/** Owner only: household name, time zone, first day of the week and backdate window. */
+/** Owner only: household name and backdate window. */
 export function updateHousehold(
 	tx: Tx,
 	actor: HouseholdActorCtx,
@@ -129,8 +127,6 @@ export function updateHousehold(
 	tx.update(households)
 		.set({
 			...(input.name !== undefined ? { name: input.name } : {}),
-			...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
-			...(input.weekStart !== undefined ? { weekStart: input.weekStart } : {}),
 			// null turns the limit off but keeps the last number, so turning it back on starts from there.
 			...(input.backdateDays === null ? { backdateUnlimited: true } : {}),
 			...(typeof input.backdateDays === "number" ? { backdateDays: input.backdateDays, backdateUnlimited: false } : {}),
@@ -200,18 +196,24 @@ export function leaveHousehold(tx: Tx, actor: HouseholdActorCtx): void {
 	detachFromHousehold(tx, actor.householdId, actor.userId);
 }
 
-/** An account without a household joins one with an invitation code. */
-export function joinWithCode(tx: Tx, account: AccountCtx, code: string, now: Date): void {
-	if (account.household) throw errors.alreadyInHousehold();
+/** An account joins a household with an invitation code (it may already belong to others). */
+export function joinWithCode(tx: Tx, account: AccountCtx, code: string, now: Date): { householdId: string } {
 	const invite = findValidInvite(tx, code, now);
+	if (account.households.some((h) => h.id === invite.householdId)) throw errors.alreadyMember();
 	joinHousehold(tx, { householdId: invite.householdId, userId: account.userId, role: invite.role });
 	markInviteUsed(tx, invite.id, account.userId, now);
+	return { householdId: invite.householdId };
 }
 
 /** Creating a household yourself: allowed to everybody unless the instance restricts it to super admins. */
-export function createOwnHousehold(tx: Tx, account: AccountCtx, name: string, creationOpen: boolean): void {
-	if (account.household) throw errors.alreadyInHousehold();
+export function createOwnHousehold(
+	tx: Tx,
+	account: AccountCtx,
+	name: string,
+	creationOpen: boolean,
+): { householdId: string } {
 	if (!creationOpen && !account.isSuperAdmin) throw errors.forbidden("Only super admins can create households");
 	const householdId = createHousehold(tx, { name });
 	joinHousehold(tx, { householdId, userId: account.userId, role: "owner" });
+	return { householdId };
 }

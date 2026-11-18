@@ -117,7 +117,7 @@ describe("complete: coins are computed by the server, in the same transaction", 
 		expect((await complete(h.owner, task.json().id, { date: "2026-11-16" })).json().code).toBe("target_reached");
 	});
 
-	it("the day is the household's (Europe/Paris time zone), not UTC", async () => {
+	it("the day is the person's (Europe/Paris time zone here), not UTC", async () => {
 		ctx.clock.now = new Date("2026-11-17T23:30:00Z"); // 00:30 on the 18th in Paris
 		const item = await makeHabit(h.owner);
 		expect((await complete(h.owner, item.id)).json().completion.localDate).toBe("2026-11-18");

@@ -32,18 +32,12 @@ export const households = sqliteTable(
 	{
 		id: id(),
 		name: text("name").notNull(),
-		timezone: text("timezone").notNull().default("Europe/Paris"),
-		/** ISO weekday the week starts on: 1 = Monday … 7 = Sunday. */
-		weekStart: integer("week_start").notNull().default(1),
 		backdateDays: integer("backdate_days").notNull().default(2),
 		/** When true there is no backdate limit (`backdate_days` keeps its last value, for when it is turned back on). */
 		backdateUnlimited: integer("backdate_unlimited", { mode: "boolean" }).notNull().default(false),
 		createdAt: createdAt(),
 	},
-	(t) => [
-		check("households_week_start_check", sql`${t.weekStart} BETWEEN 1 AND 7`),
-		check("households_backdate_days_check", sql`${t.backdateDays} >= 0`),
-	],
+	(t) => [check("households_backdate_days_check", sql`${t.backdateDays} >= 0`)],
 );
 
 export const users = sqliteTable(
@@ -59,7 +53,7 @@ export const users = sqliteTable(
 		email: text("email"),
 		/** Argon2id hash; null for an OIDC-only account. */
 		passwordHash: text("password_hash"),
-		/** Time zone and first weekday used while the account is in no household (a household has its own). */
+		/** Time zone and first weekday of the person: nobody has two "todays", whatever households they belong to. */
 		timezone: text("timezone").notNull().default("UTC"),
 		weekStart: integer("week_start").notNull().default(1),
 		/** Instance-level role: manages accounts and households, sees no content. */
@@ -93,7 +87,7 @@ export const memberships = sqliteTable(
 	},
 	(t) => [
 		primaryKey({ columns: [t.householdId, t.userId] }),
-		uniqueIndex("memberships_user_uq").on(t.userId),
+		index("memberships_user_idx").on(t.userId),
 		check("memberships_role_check", inList(t.role.name, ROLES)),
 	],
 );
