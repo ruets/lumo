@@ -27,15 +27,16 @@ export function SettingsPage({ me }: { me: MeResponse }) {
 	const isSuperAdmin = account?.isSuperAdmin ?? false;
 	const switchHousehold = useSwitchHousehold();
 	const authConfig = useAuthConfig().data;
+	const provider = authConfig?.oidcName ?? "SSO";
 
 	// Back from Authentik after "Link my Authentik account": say how it went, then clean the address.
 	useEffect(() => {
 		const params = new URLSearchParams(window.location.search);
 		if (!params.has("linked") && !params.has("auth_error")) return;
 		const code = params.get("auth_error");
-		showToast(code ? errorMessage(code) : t("link.done"), 4000);
+		showToast(code ? errorMessage(code) : t("link.done", { provider }), 4000);
 		window.history.replaceState(null, "", window.location.pathname);
-	}, []);
+	}, [provider]);
 	return (
 		<div className="grid max-w-xl gap-5">
 			<PageTitle>{t("settings.title")}</PageTitle>
@@ -70,17 +71,17 @@ export function SettingsPage({ me }: { me: MeResponse }) {
 				</Section>
 			)}
 			{authConfig?.oidc && account && (
-				<Section title={t("link.title")}>
+				<Section title={t("link.title", { provider })}>
 					{account.oidc ? (
-						<p className="m-0 text-sm font-semibold text-ok">{t("link.linked")}</p>
+						<p className="m-0 text-sm font-semibold text-ok">{t("link.linked", { provider })}</p>
 					) : (
 						<>
-							<p className="m-0 text-sm text-muted">{t("link.hint")}</p>
+							<p className="m-0 text-sm text-muted">{t("link.hint", { provider })}</p>
 							<a
 								href="/api/v1/auth/link"
 								className="grid min-h-11 place-items-center rounded-full bg-primary font-bold text-white no-underline"
 							>
-								{t("link.button")}
+								{t("link.button", { provider })}
 							</a>
 						</>
 					)}

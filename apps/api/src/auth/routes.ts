@@ -101,6 +101,7 @@ export function registerAuthRoutes(app: FastifyInstance, { db, config, oidc, req
 	app.get("/auth/config", async () => ({
 		app: "lumo" as const,
 		oidc: config.oidcEnabled,
+		oidcName: config.OIDC_PROVIDER_NAME,
 		oidcIssuer: config.OIDC_ISSUER ?? null,
 		oidcClientId: config.OIDC_CLIENT_ID ?? null,
 		local: config.LOCAL_AUTH_ENABLED,

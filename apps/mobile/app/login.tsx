@@ -23,12 +23,15 @@ function OidcButton({
 	issuer,
 	clientId,
 	invite,
+	provider,
 	onError,
 }: {
 	issuer: string;
 	clientId: string;
 	/** Invitation code typed in the join form, sent with the code exchange so the account joins that household. */
 	invite?: string;
+	/** How the identity provider is called on screen. */
+	provider: string;
 	onError: (message: string) => void;
 }) {
 	const qc = useQueryClient();
@@ -66,7 +69,7 @@ function OidcButton({
 	}, [response, request, redirectUri, nonce, qc, onError, invite]);
 
 	// While joining, Authentik sign-in needs the invitation code (otherwise it is a plain sign-in).
-	return <Button label={t("auth.oidc")} disabled={!request} onPress={() => void promptAsync()} />;
+	return <Button label={t("auth.oidc", { provider })} disabled={!request} onPress={() => void promptAsync()} />;
 }
 
 export default function Login() {
@@ -165,6 +168,7 @@ export default function Login() {
 							issuer={config.data.oidcIssuer}
 							clientId={config.data.oidcClientId}
 							invite={joinMode ? inviteCode.trim() : undefined}
+							provider={config.data.oidcName}
 							onError={setError}
 						/>
 					)}

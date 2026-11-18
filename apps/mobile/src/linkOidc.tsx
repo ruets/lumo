@@ -14,7 +14,7 @@ import { Button, font, T } from "./ui";
 WebBrowser.maybeCompleteAuthSession();
 
 /** The Authentik part, mounted only when OIDC is configured: the hooks need a valid issuer. */
-function LinkButton({ issuer, clientId }: { issuer: string; clientId: string }) {
+function LinkButton({ issuer, clientId, provider }: { issuer: string; clientId: string; provider: string }) {
 	const qc = useQueryClient();
 	const discovery = useAutoDiscovery(issuer);
 	const nonce = useMemo(() => randomUUID(), []);
@@ -36,12 +36,12 @@ function LinkButton({ issuer, clientId }: { issuer: string; clientId: string }) 
 			})
 			.then(async () => {
 				await qc.invalidateQueries({ queryKey: keys.account });
-				showToast(t("link.done"), 4000);
+				showToast(t("link.done", { provider }), 4000);
 			})
 			.catch((err: unknown) => showToast(describeError(err)));
-	}, [response, request, redirectUri, nonce, qc]);
+	}, [response, request, redirectUri, nonce, qc, provider]);
 
-	return <Button label={t("link.button")} disabled={!request} onPress={() => void promptAsync()} />;
+	return <Button label={t("link.button", { provider })} disabled={!request} onPress={() => void promptAsync()} />;
 }
 
 /** "Link my Authentik account" for a signed-in local account: from then on Authentik signs in to this account. */
@@ -50,11 +50,15 @@ export function LinkOidc() {
 	const account = useAccount().data;
 	if (!config?.oidc || !config.oidcIssuer || !config.oidcClientId || !account) return null;
 	if (account.oidc)
-		return <T style={{ color: colors.success, fontFamily: font.semi, fontSize: 14 }}>{t("link.linked")}</T>;
+		return (
+			<T style={{ color: colors.success, fontFamily: font.semi, fontSize: 14 }}>
+				{t("link.linked", { provider: config.oidcName })}
+			</T>
+		);
 	return (
 		<>
-			<T style={{ color: colors.muted, fontSize: 14 }}>{t("link.hint")}</T>
-			<LinkButton issuer={config.oidcIssuer} clientId={config.oidcClientId} />
+			<T style={{ color: colors.muted, fontSize: 14 }}>{t("link.hint", { provider: config.oidcName })}</T>
+			<LinkButton issuer={config.oidcIssuer} clientId={config.oidcClientId} provider={config.oidcName} />
 		</>
 	);
 }

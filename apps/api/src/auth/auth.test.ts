@@ -32,7 +32,12 @@ async function ownerId() {
 
 describe("fresh instance", () => {
 	it("announces that setup is required, then no longer", async () => {
-		expect((await get("/auth/config")).json()).toMatchObject({ oidc: true, local: true, setupRequired: true });
+		expect((await get("/auth/config")).json()).toMatchObject({
+			oidc: true,
+			oidcName: "SSO",
+			local: true,
+			setupRequired: true,
+		});
 		await setupOwner(ctx);
 		expect((await get("/auth/config")).json().setupRequired).toBe(false);
 	});
@@ -834,5 +839,13 @@ describe("first account through Authentik while local sign-in is on", () => {
 		// The instance is set up now: the local setup is closed.
 		expect((await get("/auth/config")).json().setupRequired).toBe(false);
 		expect((await post("/auth/setup", { ...OWNER, username: "late" })).statusCode).toBe(409);
+	});
+});
+
+describe("OIDC_PROVIDER_NAME", () => {
+	it("names the identity provider on screen, and is announced by the config", async () => {
+		await ctx.close();
+		ctx = await createTestContext({ OIDC_PROVIDER_NAME: "  Keycloak " });
+		expect((await get("/auth/config")).json().oidcName).toBe("Keycloak");
 	});
 });
