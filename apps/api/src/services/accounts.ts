@@ -7,15 +7,7 @@ import { AppError, errors } from "../errors.js";
 import type { AccountCtx } from "./context.js";
 import { detachFromHousehold } from "./household.js";
 import { addEntry, sharedWalletId, walletBalance } from "./ledger.js";
-import {
-	createAccount,
-	createHousehold,
-	type DbOrTx,
-	joinHousehold,
-	superAdminCount,
-	type Tx,
-	usernameTaken,
-} from "./members.js";
+import { createHousehold, type DbOrTx, joinHousehold, superAdminCount, type Tx } from "./members.js";
 
 const notFound = (what: string) => new AppError(404, "not_found", `${what} not found`);
 const iso = (d: Date) => d.toISOString();
@@ -62,12 +54,6 @@ export function listUsers(db: DbOrTx) {
 		.orderBy(asc(users.createdAt), asc(users.id))
 		.all();
 	return { users: rows.map((u) => userView(db, u)) };
-}
-
-export function createLocalUser(tx: Tx, input: { displayName: string; username: string; passwordHash: string }) {
-	if (usernameTaken(tx, input.username)) throw errors.conflict("username_taken", "This username is already taken");
-	const id = createAccount(tx, input);
-	return userView(tx, liveUser(tx, id));
 }
 
 export function updateUser(

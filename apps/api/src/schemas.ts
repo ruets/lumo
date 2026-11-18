@@ -404,18 +404,6 @@ export const adminUserView = z.object({
 });
 export const adminUsersView = z.object({ users: z.array(adminUserView) });
 
-export const adminCreateUserBody = z
-	.object({
-		displayName: z.string().trim().min(1).max(80),
-		username: z
-			.string()
-			.trim()
-			.toLowerCase()
-			.regex(/^[a-z0-9._-]{3,32}$/, "3 to 32 characters: letters, digits, dot, hyphen, underscore"),
-		password: z.string().min(10).max(200),
-	})
-	.strict();
-
 export const adminUpdateUserBody = z
 	.object({ isSuperAdmin: z.boolean(), disabled: z.boolean() })
 	.partial()
@@ -473,7 +461,6 @@ export const wardView = z.object({ id: z.string(), displayName: z.string(), righ
 export const guardianshipCodeBody = z.object({ kind: z.enum(["supervise", "be_supervised"]) }).strict();
 export const guardianshipCodeView = z.object({ token: z.string(), expiresAt: z.string() });
 export const redeemCodeBody = z.object({ code: z.string().min(10).max(200) }).strict();
-export const createWardBody = adminCreateUserBody;
 export const wardParams = z.object({ wardId: z.string().min(1).max(100) });
 export const wardCompletionParams = z.object({ wardId: z.string().min(1).max(100), id: z.string().min(1).max(100) });
 export const updateWardRightsBody = wardRightsView

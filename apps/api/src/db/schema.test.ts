@@ -24,7 +24,7 @@ function seed() {
 }
 
 describe("migrations", () => {
-	it("creates the schema's 19 tables", () => {
+	it("creates the schema's 20 tables", () => {
 		const names = ctx.sqlite
 			.prepare(
 				"SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '\\_\\_%' ESCAPE '\\' AND name NOT LIKE 'sqlite_%'",
@@ -33,6 +33,7 @@ describe("migrations", () => {
 			.map((r) => (r as { name: string }).name);
 		expect(names.sort()).toEqual(
 			[
+				"account_invites",
 				"completions",
 				"devices",
 				"guardianship_codes",

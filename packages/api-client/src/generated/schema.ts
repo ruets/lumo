@@ -117,8 +117,24 @@ export interface paths {
         /** All accounts with their household and status */
         get: operations["getApiV1AdminUsers"];
         put?: never;
-        /** Create a local account without a household */
-        post: operations["postApiV1AdminUsers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/account-invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Invite someone to create an account (OIDC or local), with a one-time code */
+        post: operations["postApiV1AdminAccountInvites"];
         delete?: never;
         options?: never;
         head?: never;
@@ -621,23 +637,6 @@ export interface paths {
         put?: never;
         /** Use a code made by someone else: this completes the consent */
         post: operations["postApiV1SupervisionRedeem"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/supervision/wards": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Create a local account that I supervise (for a child) */
-        post: operations["postApiV1SupervisionWards"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1370,25 +1369,14 @@ export interface operations {
             };
         };
     };
-    postApiV1AdminUsers: {
+    postApiV1AdminAccountInvites: {
         parameters: {
             query?: never;
-            header: {
-                /** @description Unique UUID per request; a duplicate returns the response already stored. */
-                "Idempotency-Key": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    displayName: string;
-                    username: string;
-                    password: string;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Success */
             201: {
@@ -1397,19 +1385,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        id: string;
-                        displayName: string;
-                        username: string | null;
-                        oidc: boolean;
-                        isSuperAdmin: boolean;
-                        disabled: boolean;
-                        households: {
-                            id: string;
-                            name: string;
-                            /** @enum {string} */
-                            role: "owner" | "member";
-                        }[];
-                        createdAt: string;
+                        token: string;
+                        expiresAt: string;
                     };
                 };
             };
@@ -3642,62 +3619,6 @@ export interface operations {
                                 canTransfer: boolean;
                             };
                         }[];
-                    };
-                };
-            };
-            /** @description Error (RFC 9457) with a stable `code` */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": {
-                        type: string;
-                        title: string;
-                        status: number;
-                        code: string;
-                        detail?: string;
-                        instance?: string;
-                    };
-                };
-            };
-        };
-    };
-    postApiV1SupervisionWards: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Unique UUID per request; a duplicate returns the response already stored. */
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    displayName: string;
-                    username: string;
-                    password: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        id: string;
-                        displayName: string;
-                        rights: {
-                            canCreate: boolean;
-                            canModify: boolean;
-                            canDelete: boolean;
-                            canTransfer: boolean;
-                        };
                     };
                 };
             };

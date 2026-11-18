@@ -67,11 +67,12 @@ export const fr: Record<MessageId, string> = {
 	"household.settings.backdateHint":
 		"Jusqu’où tout le monde peut valider un jour passé. Un propriétaire peut toujours aller plus loin.",
 	"household.settings.save": "Enregistrer les réglages",
-	"join.title": "Rejoindre un foyer",
-	"join.hint": "Saisis le code d’invitation qu’on t’a donné, puis choisis tes identifiants.",
+	"join.title": "Créez votre compte",
+	"join.hint":
+		"Saisissez le code qu'on vous a donné (d'un foyer, d'un référent ou d'un administrateur), puis choisissez comment vous connecter.",
 	"join.code": "Code d’invitation",
-	"join.submit": "Rejoindre",
-	"join.have": "J’ai une invitation",
+	"join.submit": "Créer mon compte",
+	"join.have": "J'ai un code d'invitation",
 	"join.back": "Retour à la connexion",
 
 	"server.title": "Ton serveur Lumo",
@@ -239,8 +240,6 @@ export const fr: Record<MessageId, string> = {
 	"admin.superAdmin": "Super admin",
 	"admin.disabled": "Désactivé",
 	"admin.noHousehold": "Sans foyer",
-	"admin.user.create": "Créer un compte",
-	"admin.user.displayName": "Nom",
 	"admin.user.disable": "Désactiver",
 	"admin.user.enable": "Réactiver",
 	"admin.user.delete": "Supprimer",
@@ -306,7 +305,6 @@ export const fr: Record<MessageId, string> = {
 	"supervision.redeemTitle": "Utiliser un code",
 	"supervision.redeemHint": "Utiliser un code démarre une supervision : vérifiez qui vous l'a donné.",
 	"supervision.redeem": "Utiliser le code",
-	"supervision.createAccount": "Créer un compte pour un enfant",
 	"supervision.end": "Arrêter la supervision",
 	"supervision.endConfirm": "Arrêter de superviser {name} ?",
 	"supervision.ward.balance": "Solde : {amount}",
@@ -350,5 +348,12 @@ export const fr: Record<MessageId, string> = {
 	"link.linked": "Votre compte Authentik est lié.",
 	"link.done": "Compte Authentik lié",
 	"errors.identity_in_use": "Ce compte Authentik est déjà lié à un autre compte.",
+	"auth.local.create": "Créer un compte local",
+	"admin.invite.button": "Inviter quelqu'un à créer un compte",
+	"admin.invite.shown": "Donnez ce code ou ce lien à la personne. Il ne marche qu'une fois, pendant 7 jours :",
+	"admin.invite.link": "Lien d'invitation",
+	"admin.invite.code": "Code",
+	"supervision.codeHint":
+		"Marche pour quelqu'un qui a déjà un compte comme pour quelqu'un qui n'en a pas : il le crée avec ce code.",
 	"errors.unknown": "Une erreur est survenue.",
 };

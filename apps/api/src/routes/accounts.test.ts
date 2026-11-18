@@ -8,7 +8,9 @@ import {
 	createHousehold,
 	createTestContext,
 	makeHabit,
+	newLoneAccount,
 	sessionCookie,
+	signUp,
 	type TestContext,
 } from "../test/helpers.js";
 
@@ -34,12 +36,10 @@ async function login(username: string, password = PASSWORD) {
 	return { status: res.statusCode, body: res.json(), cookie, api: api(ctx, cookie ?? "") };
 }
 
-/** A local account with no household, created by the super admin. */
+/** A local account with no household: someone invited by the super admin creates it themselves. */
 async function newAccount(username: string) {
-	const res = await h.owner.api.post("/admin/users", { displayName: username, username, password: PASSWORD });
-	expect(res.statusCode).toBe(201);
-	const session = await login(username);
-	return { id: res.json().id as string, api: session.api };
+	const account = await newLoneAccount(ctx, h.owner, username);
+	return { id: account.id, api: account.api };
 }
 
 describe("super admin", () => {
@@ -61,7 +61,7 @@ describe("super admin", () => {
 		for (const call of [
 			() => h.adult.api.get("/admin/users"),
 			() => h.adult.api.get("/admin/households"),
-			() => h.adult.api.post("/admin/users", { displayName: "x", username: "xxx", password: PASSWORD }),
+			() => h.adult.api.post("/admin/account-invites"),
 			() => h.adult.api.post("/admin/households", { name: "Nope" }),
 			() => h.adult.api.get("/admin/settings"),
 		]) {
@@ -169,16 +169,17 @@ describe("admin: accounts", () => {
 		expect(res.body).not.toContain("Secret habit");
 	});
 
-	it("creates a local account without a household; the username must be free and the password strong", async () => {
-		const ok = await h.owner.api.post("/admin/users", { displayName: "Zoe", username: "zoe", password: PASSWORD });
-		expect(ok.statusCode).toBe(201);
-		expect(ok.json()).toMatchObject({ displayName: "Zoe", households: [], isSuperAdmin: false });
-		expect(
-			(await h.owner.api.post("/admin/users", { displayName: "Z", username: "zoe", password: PASSWORD })).statusCode,
-		).toBe(409);
-		expect(
-			(await h.owner.api.post("/admin/users", { displayName: "Z", username: "zed", password: "short" })).statusCode,
-		).toBe(400);
+	it("a super admin invites someone, who creates their own account: free username, strong password, once", async () => {
+		const invite = (await h.owner.api.post("/admin/account-invites")).json();
+		expect((await signUp(ctx, invite.token, "zoe", "short")).status).toBe(400);
+		const ok = await signUp(ctx, invite.token, "zoe");
+		expect(ok.status).toBe(201);
+		expect((await ok.api.get("/account")).json()).toMatchObject({ isSuperAdmin: false, households: [] });
+		// The code worked once.
+		expect((await signUp(ctx, invite.token, "zed")).status).toBe(400);
+		// The username must be free.
+		const second = (await h.owner.api.post("/admin/account-invites")).json();
+		expect((await signUp(ctx, second.token, "zoe")).status).toBe(409);
 	});
 
 	it("grants and removes the super admin role, never leaving the instance without one", async () => {
@@ -215,10 +216,8 @@ describe("admin: accounts", () => {
 		const ids = (await h.owner.api.get("/admin/users")).json().users.map((u: { id: string }) => u.id);
 		expect(ids).not.toContain(h.kid.userId);
 		// The username is free again.
-		expect(
-			(await h.owner.api.post("/admin/users", { displayName: "Kid 2", username: "kid", password: PASSWORD }))
-				.statusCode,
-		).toBe(201);
+		const invite = (await h.owner.api.post("/admin/account-invites")).json();
+		expect((await signUp(ctx, invite.token, "kid")).status).toBe(201);
 	});
 
 	it("nobody disables or deletes themselves, nor the last super admin", async () => {

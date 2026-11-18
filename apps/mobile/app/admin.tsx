@@ -108,46 +108,25 @@ function UserRow({ user, households }: { user: AdminUser; households: AdminHouse
 	);
 }
 
-function CreateUser() {
-	const create = useAdminWrite((input: Parameters<typeof api.adminCreateUser>[0]) => api.adminCreateUser(input));
-	const [displayName, setDisplayName] = useState("");
-	const [username, setUsername] = useState("");
-	const [password, setPassword] = useState("");
+/** A super admin invites someone: they create their own account (Authentik or local) with the code. */
+function InviteUser() {
+	const [token, setToken] = useState<string | null>(null);
+	const make = useAdminWrite(() => api.adminCreateAccountInvite());
 	return (
 		<View style={{ gap: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
-			<T style={{ fontFamily: font.bold, fontSize: 14 }}>{t("admin.user.create")}</T>
-			<Field label={t("admin.user.displayName")} value={displayName} onChangeText={setDisplayName} maxLength={80} />
-			<Field
-				label={t("auth.username")}
-				value={username}
-				onChangeText={setUsername}
-				autoCapitalize="none"
-				autoCorrect={false}
-			/>
-			<Field
-				label={t("auth.password")}
-				value={password}
-				onChangeText={setPassword}
-				secureTextEntry
-				autoCapitalize="none"
-			/>
 			<Button
-				label={t("admin.user.create")}
-				disabled={create.isPending || !displayName.trim() || username.trim().length < 3 || password.length < 10}
-				onPress={() =>
-					create.mutate(
-						{ displayName: displayName.trim(), username: username.trim(), password },
-						{
-							onSuccess: () => {
-								setDisplayName("");
-								setUsername("");
-								setPassword("");
-								saved();
-							},
-						},
-					)
-				}
+				variant="ghost"
+				label={t("admin.invite.button")}
+				onPress={() => make.mutate(undefined, { onSuccess: (r) => setToken(r.token) })}
 			/>
+			{token && (
+				<View style={{ gap: 6 }}>
+					<T style={{ color: colors.muted, fontSize: 14 }}>{t("admin.invite.shown")}</T>
+					<T selectable style={{ backgroundColor: colors.background, borderRadius: 12, padding: 12, fontSize: 14 }}>
+						{token}
+					</T>
+				</View>
+			)}
 		</View>
 	);
 }
@@ -296,7 +275,7 @@ export default function AdminScreen() {
 				{users.data?.users.map((u) => (
 					<UserRow key={u.id} user={u} households={list} />
 				))}
-				<CreateUser />
+				<InviteUser />
 			</Section>
 			<Section title={t("admin.households")}>
 				{list.map((h) => (

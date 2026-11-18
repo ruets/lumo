@@ -384,6 +384,23 @@ export const invites = sqliteTable(
 	],
 );
 
+/** One-time invitation made by a super admin: whoever uses it creates an account (no household, no supervision). */
+export const accountInvites = sqliteTable(
+	"account_invites",
+	{
+		id: id(),
+		tokenHash: text("token_hash").notNull(),
+		createdBy: text("created_by")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		expiresAt: ts("expires_at").notNull(),
+		usedAt: ts("used_at"),
+		usedBy: text("used_by").references(() => users.id),
+		createdAt: createdAt(),
+	},
+	(t) => [uniqueIndex("account_invites_token_hash_uq").on(t.tokenHash)],
+);
+
 /** `guardian_id` supervises `ward_id`: an account is supervised if and only if it has at least one row. */
 export const guardianships = sqliteTable(
 	"guardianships",
