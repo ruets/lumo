@@ -17,11 +17,13 @@ const envSchema = z
 		OIDC_CLIENT_ID: z.string().min(1).optional(),
 		OIDC_CLIENT_SECRET: z.string().min(1).optional(),
 		/**
-		 * An unknown Authentik identity creates its own account (no household, not supervised) instead of being
+		 * An unknown OIDC identity creates its own account (no household, not supervised) instead of being
 		 * refused. Off by default: without it an account needs a code.
 		 */
 		OIDC_AUTO_CREATE_USERS: bool.default(false),
-		/** Authentik group whose members become `owner`. Unset or empty = disabled (opt-in). */
+		/** How the identity provider is called on screen ("Sign in with …"): Authentik, Keycloak, Google… */
+		OIDC_PROVIDER_NAME: z.string().trim().min(1).max(40).default("SSO"),
+		/** OIDC group whose members become `owner`. Unset or empty = disabled (opt-in). */
 		OIDC_ADMIN_GROUP: z
 			.string()
 			.trim()

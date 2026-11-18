@@ -66,6 +66,8 @@ export interface AuthConfig {
 	/** Identification marker: proves an address is a Lumo server. */
 	app: "lumo";
 	oidc: boolean;
+	/** How the identity provider is called on screen (`OIDC_PROVIDER_NAME`). */
+	oidcName: string;
 	oidcIssuer: string | null;
 	oidcClientId: string | null;
 	local: boolean;

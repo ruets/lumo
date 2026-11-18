@@ -74,7 +74,7 @@ export default function SettingsScreen() {
 				</Section>
 			)}
 			{authConfig?.oidc && (
-				<Section title={t("link.title")}>
+				<Section title={t("link.title", { provider: authConfig.oidcName })}>
 					<LinkOidc />
 				</Section>
 			)}

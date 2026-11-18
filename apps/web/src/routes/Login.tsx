@@ -125,7 +125,7 @@ export function Login({ config }: { config: AuthConfig }) {
 						href={oidcHref}
 						className="grid min-h-12 place-items-center rounded-full bg-primary font-bold text-white no-underline"
 					>
-						{t("auth.oidc")}
+						{t("auth.oidc", { provider: config.oidcName })}
 					</a>
 				)}
 				{!config.setupRequired && (
