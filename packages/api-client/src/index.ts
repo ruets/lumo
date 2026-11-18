@@ -188,6 +188,10 @@ export function createClient(options: ClientOptions) {
 		updateHousehold: (input: UpdateHouseholdInput) => request<HouseholdResponse>("PATCH", "/household", input),
 		removeMember: (id: string) => request<void>("DELETE", `/members/${id}`),
 		updateMember: (id: string, input: UpdateMemberInput) => request<Member>("PATCH", `/members/${id}`, input),
+		withdrawFromPot: (amount: number) =>
+			request<Response<"/api/v1/transfers", "post", 201>>("POST", "/household/pot/withdrawals", { amount }),
+		payoutFromPot: (userId: string, amount: number) =>
+			request<Response<"/api/v1/transfers", "post", 201>>("POST", "/household/pot/payouts", { userId, amount }),
 		createInvite: (role: "owner" | "member") =>
 			request<{ token: string; expiresAt: string }>("POST", "/household/invites", { role }),
 		revokeInvite: (id: string) => request<void>("DELETE", `/household/invites/${id}`),

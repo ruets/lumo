@@ -28,6 +28,7 @@ export const errors = {
 	alreadyMember: () => new AppError(409, "already_member", "This account is already in this household"),
 	conflict: (code: string, title: string) => new AppError(409, code, title),
 	invalidCode: () => new AppError(400, "invalid_code", "Code invalid, expired or already used"),
+	potLocked: () => new AppError(403, "pot_locked", "This household does not let you take coins out of its pot"),
 	supervised: () => new AppError(403, "supervised", "Your guardians do not allow this"),
 	notFound: (what: string) => new AppError(404, "not_found", `${what} not found`),
 	validation: (detail: string) => new AppError(400, "validation_error", "Invalid request", detail),

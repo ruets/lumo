@@ -194,11 +194,12 @@ export function updateReward(
 export function redeemReward(tx: Tx, actor: ActorCtx, rewardId: string, now: Date) {
 	const reward = getRewardRow(tx, actor, rewardId);
 	const assigneeIds = assigneesOf(tx, [rewardId]).get(rewardId) ?? [];
-	if (
-		reward.householdId &&
-		!can(actorIn(actor, reward.householdId), "reward:redeem", { fundedFrom: reward.fundedFrom, assigneeIds })
-	) {
-		throw errors.forbidden("You cannot redeem this wish");
+	if (reward.householdId) {
+		const as = actorIn(actor, reward.householdId);
+		if (reward.fundedFrom === "shared" && !can(as, "pot:withdraw")) throw errors.potLocked();
+		if (!can(as, "reward:redeem", { fundedFrom: reward.fundedFrom, assigneeIds })) {
+			throw errors.forbidden("You cannot redeem this wish");
+		}
 	}
 
 	const usedInPeriod = usedInPeriodOf(tx, actor, reward, now);

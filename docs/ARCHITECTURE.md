@@ -126,7 +126,8 @@ Guards: never delete or demote the last super admin, never delete yourself, neve
 - Personal ownership (slice B1): items and wishes belong to a household or to an account (`owner_id`), the personal wallet belongs to the account and follows it between households (`wallets.household_id` is null), `ledger_entries.household_id` is nullable, and the app works fully for an account in no household. Personal items are visible to their owner only, credit the personal wallet only and never need approval.
 - Several households per account (slice B2): `memberships` has no per-user uniqueness. Time zone and first weekday belong to the account (`users.timezone`, `users.week_start`, edited in Settings); a household keeps only its name and backdate window. Lists (items, wishes, today, stats) merge every household of the person and their personal space. Rights on an item or wish come from the household it belongs to, and coins credited to a pot go to that household's pot, whichever household is active. The client sends the household it is looking at in the `X-Household-Id` header; household management routes (members, invites, pot transfers, ledger of the pot, approvals, leaving) apply to that active household, which falls back to the person's oldest membership. Until guardians exist, a child without the right to create items in any household cannot create personal items either.
 - Guardianships (slice C1): `guardianships` rows, one-time `guardianship_codes` (7 days, single use) in both directions (a guardian's code makes the person who uses it their ward; a ward's code makes the person who uses it their guardian), and a guardian can also create a supervised local account. A supervised account is limited by `users.can_create/can_modify/can_delete/can_transfer` (strict defaults: only giving to a pot is allowed) and its completions of items that need approval go pending like a child's. Guardians act on a ward's own space through `/supervision/wards/:wardId/...` (same routes and rules as the ward, minus completing and redeeming), set the ward's rights, adjust the ward's coins with a note, approve or reject completions, and end the supervision; a ward cannot end it. Nothing is revealed about accounts you do not supervise (404), super admins included. No loops: a supervised account cannot supervise. Household roles are `owner` and `member`: the former `child` is a supervised account, the former `can_create_items` is the ward's `can_create`.
-- Still to do: pot withdrawal policy (until then a supervised account cannot pay a wish from the pot, anyone else can), feature toggles, claim codes, `OIDC_AUTO_CREATE_USERS`.
+- Pot policy (slice D1): `households.pot_withdrawals` is `owners` (default), `members` or `nobody` and governs who takes coins out of the pot, either to their own wallet (`POST /household/pot/withdrawals`) or by paying a shared wish; a supervised account never withdraws, and nobody withdraws on a ward's behalf. An owner can pay another member out of the pot (`POST /household/pot/payouts`, never to themselves, whatever the policy); everybody can give to it. Errors use `pot_locked`.
+- Still to do: anyone else can), feature toggles, claim codes, `OIDC_AUTO_CREATE_USERS`.
 
 ### Still open
 
@@ -247,15 +248,15 @@ Rules clarified during implementation:
 | `POST /auth/logout`                                   | Revokes the current session                                                                                                                |
 | `POST /household/invites`                             | Creates an invitation (owner)                                                                                                              |
 
-| Action                                          | owner | member | supervised member               |
-| ----------------------------------------------- | ----- | ------ | ------------------------------- |
-| Complete own items, redeem a personal wish      | yes   | yes    | yes (approval if the item asks) |
-| Create, edit or delete habits, tasks and wishes | yes   | yes    | only what their guardians allow |
-| Redeem a shared wish (paid from the pot)        | yes   | yes    | no                              |
-| Give to a pot                                   | yes   | yes    | if their guardians allow it     |
-| Undo someone else's completion, adjust the pot  | yes   | no     | no                              |
-| Complete outside the backdate window            | yes   | no     | no                              |
-| Manage members and settings                     | yes   | no     | no                              |
+| Action                                                        | owner                | member               | supervised member               |
+| ------------------------------------------------------------- | -------------------- | -------------------- | ------------------------------- |
+| Complete own items, redeem a personal wish                    | yes                  | yes                  | yes (approval if the item asks) |
+| Create, edit or delete habits, tasks and wishes               | yes                  | yes                  | only what their guardians allow |
+| Take coins out of the pot (to yourself, or pay a shared wish) | per household policy | per household policy | never                           |
+| Give to a pot                                                 | yes                  | yes                  | if their guardians allow it     |
+| Undo someone else's completion, adjust the pot                | yes                  | no                   | no                              |
+| Complete outside the backdate window                          | yes                  | no                   | no                              |
+| Manage members and settings                                   | yes                  | no                   | no                              |
 
 Rights are checked on the API side by `can(actor, action, resource)` from the `domain` package.
 

@@ -3,9 +3,10 @@ import { describe, expect, it } from "vitest";
 import { type Actor, can } from "./permissions.js";
 import { DEFAULT_WARD_RIGHTS } from "./supervision.js";
 
-const owner: Actor = { userId: "o", role: "owner", supervised: null };
-const member: Actor = { userId: "m", role: "member", supervised: null };
-const ward: Actor = { userId: "w", role: "member", supervised: DEFAULT_WARD_RIGHTS };
+const owner: Actor = { userId: "o", role: "owner", supervised: null, potWithdrawals: "owners" };
+const member: Actor = { userId: "m", role: "member", supervised: null, potWithdrawals: "owners" };
+const ward: Actor = { userId: "w", role: "member", supervised: DEFAULT_WARD_RIGHTS, potWithdrawals: "owners" };
+const under = (a: Actor, potWithdrawals: Actor["potWithdrawals"]): Actor => ({ ...a, potWithdrawals });
 
 describe("can — items", () => {
 	it("every member creates and updates items, for themselves and for others", () => {
@@ -44,10 +45,31 @@ describe("can — complete and undo", () => {
 });
 
 describe("can — wishes, pot and household", () => {
-	it("a supervised account cannot pay from the pot, anyone else can", () => {
-		expect(can(ward, "reward:redeem", { fundedFrom: "shared", assigneeIds: [] })).toBe(false);
+	it("the pot policy decides who withdraws: owners by default, then members, or nobody", () => {
+		expect(can(owner, "pot:withdraw")).toBe(true);
+		expect(can(member, "pot:withdraw")).toBe(false);
+		expect(can(under(member, "members"), "pot:withdraw")).toBe(true);
+		expect(can(under(owner, "nobody"), "pot:withdraw")).toBe(false);
+		expect(can(under(member, "nobody"), "pot:withdraw")).toBe(false);
+	});
+
+	it("a supervised account never withdraws, whatever the policy", () => {
+		for (const policy of ["owners", "members", "nobody"] as const) {
+			expect(can(under(ward, policy), "pot:withdraw")).toBe(false);
+			expect(can(under(ward, policy), "reward:redeem", { fundedFrom: "shared", assigneeIds: [] })).toBe(false);
+		}
 		expect(can(ward, "reward:redeem", { fundedFrom: "personal", assigneeIds: [] })).toBe(true);
-		expect(can(member, "reward:redeem", { fundedFrom: "shared", assigneeIds: [] })).toBe(true);
+	});
+
+	it("paying a shared wish is a withdrawal, a personal wish is not", () => {
+		expect(can(member, "reward:redeem", { fundedFrom: "shared", assigneeIds: [] })).toBe(false);
+		expect(can(under(member, "members"), "reward:redeem", { fundedFrom: "shared", assigneeIds: [] })).toBe(true);
+		expect(can(member, "reward:redeem", { fundedFrom: "personal", assigneeIds: [] })).toBe(true);
+	});
+
+	it("only owners pay a member out of the pot", () => {
+		expect(can(owner, "pot:payout")).toBe(true);
+		expect(can(member, "pot:payout")).toBe(false);
 	});
 
 	it("a wish assigned to others is not redeemable by the rest", () => {

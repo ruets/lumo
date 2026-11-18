@@ -1,5 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { type Actor, type Role, supervisionAllows, type WardAction, type WardRights, type Weekday } from "@lumo/domain";
+import {
+	type Actor,
+	type PotPolicy,
+	type Role,
+	supervisionAllows,
+	type WardAction,
+	type WardRights,
+	type Weekday,
+} from "@lumo/domain";
 import { eq } from "drizzle-orm";
 import { guardianships, households, memberships, users } from "../db/schema.js";
 import { errors } from "../errors.js";
@@ -9,6 +17,7 @@ import type { DbOrTx } from "./members.js";
 export interface MembershipCtx {
 	householdId: string;
 	role: Role;
+	potWithdrawals: PotPolicy;
 	/** Days back allowed in this household; `Number.POSITIVE_INFINITY` when it has no limit. */
 	backdateDays: number;
 }
@@ -50,11 +59,17 @@ export const inHousehold = (actor: ActorCtx): actor is HouseholdActorCtx => acto
 /** The same person acting inside one household (their rights there), or on their own space for `null`. */
 export function actorIn(actor: ActorCtx, householdId: string | null): ActorCtx {
 	if (householdId === null) {
-		return { ...actor, householdId: null, role: "member", backdateDays: Number.POSITIVE_INFINITY };
+		return {
+			...actor,
+			householdId: null,
+			role: "member",
+			potWithdrawals: "owners",
+			backdateDays: Number.POSITIVE_INFINITY,
+		};
 	}
 	const m = actor.memberships.find((x) => x.householdId === householdId);
 	if (!m) throw errors.notFound("Household");
-	return { ...actor, householdId, role: m.role, backdateDays: m.backdateDays };
+	return { ...actor, householdId, role: m.role, potWithdrawals: m.potWithdrawals, backdateDays: m.backdateDays };
 }
 
 export function membershipsOf(db: DbOrTx, userId: string): MembershipCtx[] {
@@ -68,6 +83,7 @@ export function membershipsOf(db: DbOrTx, userId: string): MembershipCtx[] {
 		.map(({ m, h }) => ({
 			householdId: h.id,
 			role: m.role,
+			potWithdrawals: h.potWithdrawals,
 			backdateDays: h.backdateUnlimited ? Number.POSITIVE_INFINITY : h.backdateDays,
 		}));
 }
@@ -80,6 +96,7 @@ export function loadActor(db: DbOrTx, userId: string, preferredHouseholdId?: str
 	const base: ActorCtx = {
 		userId,
 		role: "member",
+		potWithdrawals: "owners",
 		householdId: null,
 		memberships: list,
 		timezone: user.timezone,

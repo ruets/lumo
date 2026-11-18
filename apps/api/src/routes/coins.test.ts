@@ -404,11 +404,14 @@ describe("wishes and redemptions", () => {
 		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).statusCode).toBe(201);
 	});
 
-	it("wish funded by the pot: adults only, debits the pot", async () => {
+	it("wish funded by the pot: owners by default, debits the pot", async () => {
 		await h.kid.api.post("/transfers", { amount: 5 });
 		const reward = (await makeReward(h.adult, { cost: 3, fundedFrom: "shared" })).json();
-		expect((await h.kid.api.post(`/rewards/${reward.id}/redemptions`)).statusCode).toBe(403);
-		const res = await h.adult.api.post(`/rewards/${reward.id}/redemptions`);
+		const kid = await h.kid.api.post(`/rewards/${reward.id}/redemptions`);
+		expect(kid.statusCode).toBe(403);
+		expect(kid.json().code).toBe("pot_locked");
+		expect((await h.adult.api.post(`/rewards/${reward.id}/redemptions`)).json().code).toBe("pot_locked");
+		const res = await h.owner.api.post(`/rewards/${reward.id}/redemptions`);
 		expect(res.statusCode).toBe(201);
 		expect(res.json().balances.shared).toBe(2);
 	});
@@ -497,9 +500,9 @@ describe("undoing a wish redemption", () => {
 	it("wish funded by the pot: refunds the pot", async () => {
 		await h.kid.api.post("/transfers", { amount: 6 });
 		const reward = (await makeReward({ cost: 5, fundedFrom: "shared" })).json();
-		const id = await redeem(h.adult, reward.id);
-		expect((await balances(h.adult)).shared).toBe(1);
-		expect((await h.adult.api.del(`/redemptions/${id}`)).json().balances.shared).toBe(6);
+		const id = await redeem(h.owner, reward.id);
+		expect((await balances(h.owner)).shared).toBe(1);
+		expect((await h.owner.api.del(`/redemptions/${id}`)).json().balances.shared).toBe(6);
 	});
 
 	it("rights: you undo your own; an owner undoes anybody's; another member cannot", async () => {

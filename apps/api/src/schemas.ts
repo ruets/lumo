@@ -199,6 +199,7 @@ export const redemptionResult = z.object({
 // ---- Coins ------------------------------------------------------------------------------
 
 export const transferBody = z.object({ amount: z.number() }).strict();
+export const potPayoutBody = z.object({ userId: z.string().min(1).max(100), amount: z.number() }).strict();
 
 export const adjustmentBody = z
 	.object({
@@ -311,6 +312,8 @@ export const householdView = z.object({
 		name: z.string(),
 		/** `null` = no limit. */
 		backdateDays: z.number().int().nullable(),
+		/** Who may take coins out of the pot. */
+		potWithdrawals: z.enum(["owners", "members", "nobody"]),
 	}),
 	members: z.array(memberView),
 	/** Pending invitations (owner only; empty for everyone else). The token is shown only once, at creation. */
@@ -331,6 +334,8 @@ export const updateHouseholdBody = z
 		name: z.string().trim().min(1).max(80),
 		/** How many days back anyone may complete something (an owner can always go further); `null` = no limit. */
 		backdateDays: z.number().int().min(0).max(30).nullable(),
+		/** Who may take coins out of the pot: owners (default), every member, or nobody. */
+		potWithdrawals: z.enum(["owners", "members", "nobody"]),
 	})
 	.partial()
 	.strict()

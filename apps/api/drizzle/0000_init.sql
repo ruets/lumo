@@ -59,10 +59,12 @@ CREATE INDEX `guardianships_ward_idx` ON `guardianships` (`ward_id`);--> stateme
 CREATE TABLE `households` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
+	`pot_withdrawals` text DEFAULT 'owners' NOT NULL,
 	`backdate_days` integer DEFAULT 2 NOT NULL,
 	`backdate_unlimited` integer DEFAULT false NOT NULL,
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
-	CONSTRAINT "households_backdate_days_check" CHECK("households"."backdate_days" >= 0)
+	CONSTRAINT "households_backdate_days_check" CHECK("households"."backdate_days" >= 0),
+	CONSTRAINT "households_pot_withdrawals_check" CHECK(pot_withdrawals IN ('owners', 'members', 'nobody'))
 );
 --> statement-breakpoint
 CREATE TABLE `idempotency_keys` (

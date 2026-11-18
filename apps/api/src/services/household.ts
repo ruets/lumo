@@ -56,6 +56,7 @@ export function getHousehold(db: DbOrTx, actor: HouseholdActorCtx, now: Date): H
 			id: h.id,
 			name: h.name,
 			backdateDays: h.backdateUnlimited ? null : h.backdateDays,
+			potWithdrawals: h.potWithdrawals,
 		},
 		members: membersOf(db, actor.householdId),
 		invites: pending.map((i) => ({
@@ -126,6 +127,7 @@ export function updateHousehold(
 		.set({
 			...(input.name !== undefined ? { name: input.name } : {}),
 			// null turns the limit off but keeps the last number, so turning it back on starts from there.
+			...(input.potWithdrawals !== undefined ? { potWithdrawals: input.potWithdrawals } : {}),
 			...(input.backdateDays === null ? { backdateUnlimited: true } : {}),
 			...(typeof input.backdateDays === "number" ? { backdateDays: input.backdateDays, backdateUnlimited: false } : {}),
 		})

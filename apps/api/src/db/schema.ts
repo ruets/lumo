@@ -22,6 +22,7 @@ export const COMPLETION_STATUSES = ["pending", "approved", "rejected"] as const;
 export const LEDGER_REASONS = ["completion", "undo", "redemption", "transfer", "adjustment"] as const;
 export const LIMIT_PERIODS = ["day", "week", "month", "year"] as const;
 export const SESSION_KINDS = ["web", "mobile"] as const;
+export const POT_POLICIES = ["owners", "members", "nobody"] as const;
 export const GUARDIANSHIP_CODE_KINDS = ["supervise", "be_supervised"] as const;
 export const PLATFORMS = ["android", "ios"] as const;
 
@@ -33,12 +34,17 @@ export const households = sqliteTable(
 	{
 		id: id(),
 		name: text("name").notNull(),
+		/** Who may take coins out of the pot: its owners, all members, or nobody. */
+		potWithdrawals: text("pot_withdrawals", { enum: POT_POLICIES }).notNull().default("owners"),
 		backdateDays: integer("backdate_days").notNull().default(2),
 		/** When true there is no backdate limit (`backdate_days` keeps its last value, for when it is turned back on). */
 		backdateUnlimited: integer("backdate_unlimited", { mode: "boolean" }).notNull().default(false),
 		createdAt: createdAt(),
 	},
-	(t) => [check("households_backdate_days_check", sql`${t.backdateDays} >= 0`)],
+	(t) => [
+		check("households_backdate_days_check", sql`${t.backdateDays} >= 0`),
+		check("households_pot_withdrawals_check", inList(t.potWithdrawals.name, POT_POLICIES)),
+	],
 );
 
 export const users = sqliteTable(

@@ -474,6 +474,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/household/pot/withdrawals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Take coins out of the household pot into your wallet (when the household policy allows it) */
+        post: operations["postApiV1HouseholdPotWithdrawals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/household/pot/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pay a member out of the household pot (owner) */
+        post: operations["postApiV1HouseholdPotPayouts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ledger": {
         parameters: {
             query?: never;
@@ -1935,6 +1969,8 @@ export interface operations {
                             id: string;
                             name: string;
                             backdateDays: number | null;
+                            /** @enum {string} */
+                            potWithdrawals: "owners" | "members" | "nobody";
                         };
                         members: {
                             userId: string;
@@ -1985,6 +2021,8 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     backdateDays?: number | null;
+                    /** @enum {string} */
+                    potWithdrawals?: "owners" | "members" | "nobody";
                 };
             };
         };
@@ -2000,6 +2038,8 @@ export interface operations {
                             id: string;
                             name: string;
                             backdateDays: number | null;
+                            /** @enum {string} */
+                            potWithdrawals: "owners" | "members" | "nobody";
                         };
                         members: {
                             userId: string;
@@ -3051,6 +3091,109 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    amount: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        transferId: string;
+                        balances: {
+                            personal: number;
+                            shared: number | null;
+                        };
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1HouseholdPotWithdrawals: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    amount: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        transferId: string;
+                        balances: {
+                            personal: number;
+                            shared: number | null;
+                        };
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1HouseholdPotPayouts: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique UUID per request; a duplicate returns the response already stored. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    userId: string;
                     amount: number;
                 };
             };

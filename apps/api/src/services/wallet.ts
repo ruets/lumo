@@ -87,6 +87,52 @@ export function transferToShared(tx: Tx, actor: HouseholdActorCtx, amount: numbe
 	return { transferId, balances: balancesFor(tx, actor) };
 }
 
+/**
+ * Pot → your own wallet, when the household policy lets you (owners by default, never a supervised account).
+ * Two entries linked by `transfer_id`, balance checked in the same transaction.
+ */
+export function withdrawFromPot(tx: Tx, actor: HouseholdActorCtx, amount: number, now: Date) {
+	if (!can(actor, "pot:withdraw")) throw errors.potLocked();
+	const from = sharedWalletId(tx, actor.householdId);
+	const to = personalWalletId(tx, actor.userId);
+	return movePotCoins(tx, actor, { from, to, amount, now });
+}
+
+/** An owner pays a member out of the pot: never yourself (that is a withdrawal, governed by the policy). */
+export function payoutFromPot(tx: Tx, actor: HouseholdActorCtx, userId: string, amount: number, now: Date) {
+	if (!can(actor, "pot:payout")) throw errors.forbidden("Only an owner can pay out of the pot");
+	if (userId === actor.userId) throw errors.validation("userId: paying yourself is a withdrawal");
+	const member = tx
+		.select()
+		.from(memberships)
+		.where(and(eq(memberships.userId, userId), eq(memberships.householdId, actor.householdId)))
+		.get();
+	if (!member) throw errors.validation("body.userId: unknown member");
+	const from = sharedWalletId(tx, actor.householdId);
+	const to = personalWalletId(tx, userId);
+	return movePotCoins(tx, actor, { from, to, amount, now });
+}
+
+function movePotCoins(tx: Tx, actor: HouseholdActorCtx, m: { from: string; to: string; amount: number; now: Date }) {
+	const [debit, credit] = planTransfer({ balance: walletBalance(tx, m.from), amount: m.amount });
+	const transferId = randomUUID();
+	for (const [walletId, leg] of [
+		[m.from, debit],
+		[m.to, credit],
+	] as const) {
+		addEntry(tx, {
+			householdId: actor.householdId,
+			walletId,
+			amount: leg.amount,
+			reason: "transfer",
+			transferId,
+			createdBy: actor.userId,
+			now: m.now,
+		});
+	}
+	return { transferId, balances: balancesFor(tx, actor) };
+}
+
 /** Manual adjustment (owner): `userId` null = pot. A note always explains the adjustment. */
 export function adjust(
 	tx: Tx,
