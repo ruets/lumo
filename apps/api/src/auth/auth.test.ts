@@ -676,3 +676,85 @@ describe("creating an account with a code", () => {
 		});
 	});
 });
+
+describe("OIDC_AUTO_CREATE_USERS", () => {
+	const login = async (code: string, sub: string, query = "", over: Record<string, unknown> = {}) => {
+		ctx.oidc.grant(code, { sub, name: "Newcomer", ...over });
+		const start = await get(`/auth/login${query}`);
+		const state = new URL(start.headers.location as string).searchParams.get("state") as string;
+		return get(`/auth/callback?code=${code}&state=${state}`);
+	};
+
+	it("is off by default: an unknown identity without a code is refused", async () => {
+		await setupOwner(ctx);
+		expect((await login("a1", "sub-new")).headers.location).toBe("https://lumo.test/?auth_error=invitation_required");
+		expect(ctx.db.select().from(users).all()).toHaveLength(1);
+	});
+
+	describe("when on", () => {
+		beforeEach(async () => {
+			await ctx.close();
+			ctx = await createTestContext({ OIDC_AUTO_CREATE_USERS: "true" });
+		});
+
+		it("an unknown identity creates its own account: no household, not supervised, not super admin", async () => {
+			const owner = await setupOwner(ctx);
+			const res = await login("a1", "sub-new");
+			expect(res.headers.location).toBe("https://lumo.test/");
+			const cookie = cookieHeader(sessionCookie(res) as string);
+			expect((await get("/account", cookie)).json()).toMatchObject({
+				user: { displayName: "Newcomer" },
+				isSuperAdmin: false,
+				households: [],
+				oidc: true,
+			});
+			expect((await get("/supervision", cookie)).json()).toMatchObject({ guardians: [], rights: null });
+			expect(owner).toBeTruthy();
+			// Signing in again finds the same account.
+			await login("a2", "sub-new");
+			expect(ctx.db.select().from(users).all()).toHaveLength(2);
+		});
+
+		it("members of the admin group still become super admins", async () => {
+			await setupOwner(ctx);
+			const res = await login("a1", "sub-boss", "", { groups: ["lumo-admins"] });
+			const cookie = cookieHeader(sessionCookie(res) as string);
+			expect((await get("/account", cookie)).json().isSuperAdmin).toBe(true);
+		});
+
+		it("a code is still honoured: a guardian's code makes the account supervised", async () => {
+			const owner = await setupOwner(ctx);
+			const code = (
+				await post(
+					"/supervision/codes",
+					{ kind: "supervise" },
+					{ ...cookieHeader(owner), ...ORIGIN, "idempotency-key": crypto.randomUUID() },
+				)
+			).json();
+			const res = await login("a1", "sub-child", `?invite=${code.token}`);
+			const cookie = cookieHeader(sessionCookie(res) as string);
+			expect((await get("/supervision", cookie)).json().guardians).toHaveLength(1);
+		});
+
+		it("a bad code is still refused, not silently ignored", async () => {
+			await setupOwner(ctx);
+			const res = await login("a1", "sub-x", `?invite=${"x".repeat(20)}`);
+			expect(res.headers.location).toBe("https://lumo.test/?auth_error=invalid_invite");
+		});
+
+		it("mobile: the exchange creates the account too", async () => {
+			await setupOwner(ctx);
+			ctx.oidc.grant("m1", { sub: "sub-mobile", name: "Mobile" });
+			const res = await post("/auth/mobile/exchange", {
+				code: "m1",
+				codeVerifier: "v".repeat(50),
+				redirectUri: "lumo://auth",
+				nonce: "n-123",
+				state: "s-123",
+			});
+			expect(res.statusCode).toBe(200);
+			const me = await get("/account", { authorization: `Bearer ${res.json().accessToken}` });
+			expect(me.json().households).toEqual([]);
+		});
+	});
+});
