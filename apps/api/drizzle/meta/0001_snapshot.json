@@ -1,6 +1,6 @@
 {
-  "id": "574cf604-b852-463c-9150-2584d3c09103",
-  "prevId": "01d210d1-a813-46e0-b5e8-7ca310e110e4",
+  "id": "563c11b4-731d-463b-8fb3-e599eedcbc49",
+  "prevId": "d6fafdbc-dac4-4e05-8378-e77fc860457b",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -226,6 +226,200 @@
         "devices_platform_check": {
           "name": "devices_platform_check",
           "value": "platform IN ('android', 'ios')"
+        }
+      }
+    },
+    "guardianship_codes": {
+      "name": "guardianship_codes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "used_by": {
+          "name": "used_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch('subsec') * 1000)"
+        }
+      },
+      "indexes": {
+        "guardianship_codes_token_hash_uq": {
+          "name": "guardianship_codes_token_hash_uq",
+          "columns": [
+            "token_hash"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "guardianship_codes_created_by_users_id_fk": {
+          "name": "guardianship_codes_created_by_users_id_fk",
+          "tableFrom": "guardianship_codes",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "guardianship_codes_used_by_users_id_fk": {
+          "name": "guardianship_codes_used_by_users_id_fk",
+          "tableFrom": "guardianship_codes",
+          "columnsFrom": [
+            "used_by"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "guardianship_codes_kind_check": {
+          "name": "guardianship_codes_kind_check",
+          "value": "kind IN ('supervise', 'be_supervised')"
+        }
+      }
+    },
+    "guardianships": {
+      "name": "guardianships",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "guardian_id": {
+          "name": "guardian_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ward_id": {
+          "name": "ward_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch('subsec') * 1000)"
+        }
+      },
+      "indexes": {
+        "guardianships_pair_uq": {
+          "name": "guardianships_pair_uq",
+          "columns": [
+            "guardian_id",
+            "ward_id"
+          ],
+          "isUnique": true
+        },
+        "guardianships_ward_idx": {
+          "name": "guardianships_ward_idx",
+          "columns": [
+            "ward_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "guardianships_guardian_id_users_id_fk": {
+          "name": "guardianships_guardian_id_users_id_fk",
+          "tableFrom": "guardianships",
+          "columnsFrom": [
+            "guardian_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "guardianships_ward_id_users_id_fk": {
+          "name": "guardianships_ward_id_users_id_fk",
+          "tableFrom": "guardianships",
+          "columnsFrom": [
+            "ward_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "guardianships_distinct_check": {
+          "name": "guardianships_distinct_check",
+          "value": "\"guardianships\".\"guardian_id\" <> \"guardianships\".\"ward_id\""
         }
       }
     },
@@ -1610,6 +1804,38 @@
           "notNull": true,
           "autoincrement": false,
           "default": false
+        },
+        "can_create": {
+          "name": "can_create",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "can_modify": {
+          "name": "can_modify",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "can_delete": {
+          "name": "can_delete",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "can_transfer": {
+          "name": "can_transfer",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
         },
         "disabled_at": {
           "name": "disabled_at",

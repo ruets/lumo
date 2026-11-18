@@ -22,6 +22,7 @@ export const COMPLETION_STATUSES = ["pending", "approved", "rejected"] as const;
 export const LEDGER_REASONS = ["completion", "undo", "redemption", "transfer", "adjustment"] as const;
 export const LIMIT_PERIODS = ["day", "week", "month", "year"] as const;
 export const SESSION_KINDS = ["web", "mobile"] as const;
+export const GUARDIANSHIP_CODE_KINDS = ["supervise", "be_supervised"] as const;
 export const PLATFORMS = ["android", "ios"] as const;
 
 const inList = (column: string, values: readonly string[]) =>
@@ -58,6 +59,11 @@ export const users = sqliteTable(
 		weekStart: integer("week_start").notNull().default(1),
 		/** Instance-level role: manages accounts and households, sees no content. */
 		isSuperAdmin: integer("is_super_admin", { mode: "boolean" }).notNull().default(false),
+		/** What guardians allow this account to do by itself; ignored while it has no guardian. */
+		canCreate: integer("can_create", { mode: "boolean" }).notNull().default(false),
+		canModify: integer("can_modify", { mode: "boolean" }).notNull().default(false),
+		canDelete: integer("can_delete", { mode: "boolean" }).notNull().default(false),
+		canTransfer: integer("can_transfer", { mode: "boolean" }).notNull().default(true),
 		/** A disabled account cannot sign in; its data is kept. */
 		disabledAt: ts("disabled_at"),
 		/** A deleted account has no credentials left; the row stays so history keeps a name. */
@@ -364,6 +370,50 @@ export const invites = sqliteTable(
 	(t) => [
 		uniqueIndex("invites_token_hash_uq").on(t.tokenHash),
 		check("invites_role_check", inList(t.role.name, ROLES)),
+	],
+);
+
+/** `guardian_id` supervises `ward_id`: an account is supervised if and only if it has at least one row. */
+export const guardianships = sqliteTable(
+	"guardianships",
+	{
+		id: id(),
+		guardianId: text("guardian_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		wardId: text("ward_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		createdAt: createdAt(),
+	},
+	(t) => [
+		uniqueIndex("guardianships_pair_uq").on(t.guardianId, t.wardId),
+		index("guardianships_ward_idx").on(t.wardId),
+		check("guardianships_distinct_check", sql`${t.guardianId} <> ${t.wardId}`),
+	],
+);
+
+/**
+ * One-time code that starts a supervision by mutual consent. `supervise`: made by the guardian, whoever redeems it
+ * becomes their ward. `be_supervised`: made by the ward, whoever redeems it becomes their guardian.
+ */
+export const guardianshipCodes = sqliteTable(
+	"guardianship_codes",
+	{
+		id: id(),
+		tokenHash: text("token_hash").notNull(),
+		kind: text("kind", { enum: GUARDIANSHIP_CODE_KINDS }).notNull(),
+		createdBy: text("created_by")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		expiresAt: ts("expires_at").notNull(),
+		usedAt: ts("used_at"),
+		usedBy: text("used_by").references(() => users.id),
+		createdAt: createdAt(),
+	},
+	(t) => [
+		uniqueIndex("guardianship_codes_token_hash_uq").on(t.tokenHash),
+		check("guardianship_codes_kind_check", inList(t.kind.name, GUARDIANSHIP_CODE_KINDS)),
 	],
 );
 

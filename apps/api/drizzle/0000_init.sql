@@ -29,6 +29,33 @@ CREATE TABLE `devices` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `devices_push_token_uq` ON `devices` (`push_token`);--> statement-breakpoint
 CREATE INDEX `devices_user_idx` ON `devices` (`user_id`);--> statement-breakpoint
+CREATE TABLE `guardianship_codes` (
+	`id` text PRIMARY KEY NOT NULL,
+	`token_hash` text NOT NULL,
+	`kind` text NOT NULL,
+	`created_by` text NOT NULL,
+	`expires_at` integer NOT NULL,
+	`used_at` integer,
+	`used_by` text,
+	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
+	FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`used_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "guardianship_codes_kind_check" CHECK(kind IN ('supervise', 'be_supervised'))
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `guardianship_codes_token_hash_uq` ON `guardianship_codes` (`token_hash`);--> statement-breakpoint
+CREATE TABLE `guardianships` (
+	`id` text PRIMARY KEY NOT NULL,
+	`guardian_id` text NOT NULL,
+	`ward_id` text NOT NULL,
+	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
+	FOREIGN KEY (`guardian_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`ward_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "guardianships_distinct_check" CHECK("guardianships"."guardian_id" <> "guardianships"."ward_id")
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `guardianships_pair_uq` ON `guardianships` (`guardian_id`,`ward_id`);--> statement-breakpoint
+CREATE INDEX `guardianships_ward_idx` ON `guardianships` (`ward_id`);--> statement-breakpoint
 CREATE TABLE `households` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -225,6 +252,10 @@ CREATE TABLE `users` (
 	`timezone` text DEFAULT 'UTC' NOT NULL,
 	`week_start` integer DEFAULT 1 NOT NULL,
 	`is_super_admin` integer DEFAULT false NOT NULL,
+	`can_create` integer DEFAULT false NOT NULL,
+	`can_modify` integer DEFAULT false NOT NULL,
+	`can_delete` integer DEFAULT false NOT NULL,
+	`can_transfer` integer DEFAULT true NOT NULL,
 	`disabled_at` integer,
 	`deleted_at` integer,
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL

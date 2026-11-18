@@ -6,7 +6,7 @@ import type { z } from "zod";
 import { completions, items, ledgerEntries, memberships, redemptions, rewards } from "../db/schema.js";
 import { errors } from "../errors.js";
 import type { ledgerEntryView } from "../schemas.js";
-import type { ActorCtx, HouseholdActorCtx } from "./context.js";
+import { type ActorCtx, type HouseholdActorCtx, requireRight } from "./context.js";
 import { addEntry, balancesFor, personalWalletId, sharedWalletId, walletBalance } from "./ledger.js";
 import type { DbOrTx, Tx } from "./members.js";
 
@@ -65,6 +65,7 @@ function labelsFor(db: DbOrTx, rows: EntryRow[]): Map<string, string> {
 /** Personal → pot transfer: two entries linked by `transfer_id`, balance checked in the same transaction. */
 export function transferToShared(tx: Tx, actor: HouseholdActorCtx, amount: number, now: Date) {
 	if (!can(actor, "transfer:create")) throw errors.forbidden();
+	requireRight(actor, "transfer");
 	const from = personalWalletId(tx, actor.userId);
 	const to = sharedWalletId(tx, actor.householdId);
 	const [debit, credit] = planTransfer({ balance: walletBalance(tx, from), amount });

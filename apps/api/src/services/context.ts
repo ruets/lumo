@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { Actor, Role, Weekday } from "@lumo/domain";
+import { type Actor, type Role, supervisionAllows, type WardAction, type WardRights, type Weekday } from "@lumo/domain";
 import { eq } from "drizzle-orm";
-import { households, memberships, users } from "../db/schema.js";
+import { guardianships, households, memberships, users } from "../db/schema.js";
 import { errors } from "../errors.js";
 import type { DbOrTx } from "./members.js";
 
@@ -27,6 +27,22 @@ export interface ActorCtx extends Actor {
 	timezone: string;
 	weekStart: Weekday;
 	backdateDays: number;
+	/** What the person's guardians allow them to do by themselves; `null` when they have no guardian. */
+	supervised: WardRights | null;
+}
+
+/** Throws unless the person's guardians (if any) allow this kind of action. */
+export function requireRight(actor: ActorCtx, action: WardAction): void {
+	if (!supervisionAllows(actor.supervised, action)) throw errors.supervised();
+}
+
+/** Rights of a person's guardians over them, or `null` when they have no guardian. */
+export function wardRightsOf(db: DbOrTx, userId: string): WardRights | null {
+	const guarded = db.select({ id: guardianships.id }).from(guardianships).where(eq(guardianships.wardId, userId)).get();
+	if (!guarded) return null;
+	const u = db.select().from(users).where(eq(users.id, userId)).get();
+	if (!u) return null;
+	return { canCreate: u.canCreate, canModify: u.canModify, canDelete: u.canDelete, canTransfer: u.canTransfer };
 }
 
 /** An actor known to be in a household: what household routes receive. */
@@ -74,6 +90,7 @@ export function loadActor(db: DbOrTx, userId: string, preferredHouseholdId?: str
 		timezone: user.timezone,
 		weekStart: user.weekStart as Weekday,
 		backdateDays: Number.POSITIVE_INFINITY,
+		supervised: wardRightsOf(db, userId),
 	};
 	const active = list.find((m) => m.householdId === preferredHouseholdId) ?? list[0];
 	return active ? actorIn(base, active.householdId) : base;

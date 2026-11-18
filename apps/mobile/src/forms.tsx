@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { CreateItemInput } from "@lumo/api-client";
+import type { CreateItemInput, MeResponse } from "@lumo/api-client";
 import { t, weekdayShort } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -50,8 +50,9 @@ function ScopeChips({
 }
 
 /** Where a new item or wish goes: personal without a household, else the active household. */
-function useTarget() {
-	const me = useMe().data;
+function useTarget(ward?: { id: string; me: MeResponse }) {
+	const mine = useMe().data;
+	const me = ward ? ward.me : mine;
 	const households = me?.households ?? [];
 	const [dest, setDest] = useState<string>(me?.household?.id ?? "personal");
 	const personal = dest === "personal";
@@ -63,10 +64,13 @@ export function ItemSheet({
 	kind,
 	visible,
 	onClose,
+	ward,
 }: {
 	kind: "habit" | "task";
 	visible: boolean;
 	onClose: () => void;
+	/** A guardian creating for someone they supervise. */
+	ward?: { id: string; me: MeResponse };
 }) {
 	const [name, setName] = useState("");
 	const [reward, setReward] = useState("1");
@@ -76,9 +80,9 @@ export function ItemSheet({
 	const [days, setDays] = useState<number[]>([1]);
 	const [target, setTarget] = useState("1");
 	const [approval, setApproval] = useState(false);
-	const { households, dest, setDest, scope, personal } = useTarget();
+	const { households, dest, setDest, scope, personal } = useTarget(ward);
 	const { m, error } = useSubmit(
-		(i: CreateItemInput) => api.createItem(i),
+		(i: CreateItemInput) => (ward ? api.createWardItem(ward.id, i) : api.createItem(i)),
 		() => {
 			setName("");
 			onClose();
@@ -159,16 +163,24 @@ export function ItemSheet({
 	);
 }
 
-export function RewardSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function RewardSheet({
+	visible,
+	onClose,
+	ward,
+}: {
+	visible: boolean;
+	onClose: () => void;
+	ward?: { id: string; me: MeResponse };
+}) {
 	const [name, setName] = useState("");
 	const [cost, setCost] = useState("50");
 	const [link, setLink] = useState("");
 	const [limited, setLimited] = useState(false);
 	const [limitCount, setLimitCount] = useState("1");
 	const [period, setPeriod] = useState<"day" | "week" | "month" | "year">("week");
-	const { households, dest, setDest, scope } = useTarget();
+	const { households, dest, setDest, scope } = useTarget(ward);
 	const { m, error } = useSubmit(
-		(i: Parameters<typeof api.createReward>[0]) => api.createReward(i),
+		(i: Parameters<typeof api.createReward>[0]) => (ward ? api.createWardReward(ward.id, i) : api.createReward(i)),
 		() => {
 			setName("");
 			onClose();

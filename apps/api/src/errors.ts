@@ -27,6 +27,8 @@ export const errors = {
 	accountDisabled: () => new AppError(403, "account_disabled", "This account is disabled"),
 	alreadyMember: () => new AppError(409, "already_member", "This account is already in this household"),
 	conflict: (code: string, title: string) => new AppError(409, code, title),
+	invalidCode: () => new AppError(400, "invalid_code", "Code invalid, expired or already used"),
+	supervised: () => new AppError(403, "supervised", "Your guardians do not allow this"),
 	notFound: (what: string) => new AppError(404, "not_found", `${what} not found`),
 	validation: (detail: string) => new AppError(400, "validation_error", "Invalid request", detail),
 };

@@ -6,7 +6,7 @@ import type { z } from "zod";
 import { ledgerEntries, memberships, redemptions, rewardAssignees, rewards } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { createRewardBody, rewardView, updateRewardBody } from "../schemas.js";
-import { type ActorCtx, actorIn } from "./context.js";
+import { type ActorCtx, actorIn, requireRight } from "./context.js";
 import { addEntry, balancesFor, walletBalance, walletFor } from "./ledger.js";
 import type { DbOrTx, Tx } from "./members.js";
 
@@ -86,6 +86,7 @@ function getRewardRow(db: DbOrTx, actor: ActorCtx, id: string, opts: { allowArch
 }
 
 export function createReward(tx: Tx, actor: ActorCtx, input: z.output<typeof createRewardBody>, now: Date): RewardView {
+	requireRight(actor, "create");
 	const scope = input.scope ?? (actor.householdId ? "household" : "personal");
 	const householdId = scope === "household" ? (input.householdId ?? actor.householdId) : null;
 	if (scope === "household" && !householdId) throw errors.noHousehold();
@@ -156,6 +157,7 @@ export function updateReward(
 	input: z.output<typeof updateRewardBody>,
 	now: Date,
 ): RewardView {
+	requireRight(actor, input.archived === true ? "delete" : "modify");
 	const row = getRewardRow(tx, actor, id, { allowArchived: true });
 	if (row.householdId && !can(actorIn(actor, row.householdId), "reward:manage")) throw errors.forbidden("Adults only");
 	if (!row.householdId) {

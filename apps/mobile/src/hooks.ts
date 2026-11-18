@@ -194,3 +194,14 @@ export const useAdminHouseholds = () =>
 export const useAdminSettings = () =>
 	useQuery({ queryKey: ["admin", "settings"], queryFn: () => api.adminGetSettings() });
 export { useWrite as useAdminWrite };
+
+export const useSupervision = () => useQuery({ queryKey: ["supervision"], queryFn: () => api.getSupervision() });
+export const useWardMe = (id: string) =>
+	useQuery({ queryKey: ["supervision", id, "me"], queryFn: () => api.getWardMe(id) });
+export const useWardItems = (id: string) =>
+	useQuery({ queryKey: ["supervision", id, "items"], queryFn: () => api.listWardItems(id) });
+export const useWardRewards = (id: string) =>
+	useQuery({ queryKey: ["supervision", id, "rewards"], queryFn: () => api.listWardRewards(id) });
+export const useWardPending = (id: string) =>
+	useQuery({ queryKey: ["supervision", id, "pending"], queryFn: () => api.getWardPending(id) });
+export { useWrite as useSupervisionWrite };

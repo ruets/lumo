@@ -40,6 +40,8 @@ const DOMAIN_STATUS: Record<DomainError["code"], number> = {
 	cannot_remove_self: 409,
 	cannot_target_self: 409,
 	last_super_admin: 409,
+	already_supervising: 409,
+	guardian_cycle: 409,
 };
 
 export async function buildApp({

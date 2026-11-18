@@ -46,6 +46,8 @@ function Routes() {
 				<Stack.Screen name="(tabs)" />
 				<Stack.Screen name="settings" />
 				<Stack.Screen name="household" />
+				<Stack.Screen name="supervision" />
+				<Stack.Screen name="ward/[id]" />
 			</Stack.Protected>
 			<Stack.Protected guard={authed && Boolean(account.data?.isSuperAdmin)}>
 				<Stack.Screen name="admin" />

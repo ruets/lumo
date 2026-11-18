@@ -53,6 +53,10 @@ export type StatsResponse = Response<"/api/v1/stats", "get", 200>;
 export type AccountResponse = Response<"/api/v1/account", "get", 200>;
 export type AdminUser = Response<"/api/v1/admin/users", "get", 200>["users"][number];
 export type AdminHousehold = Response<"/api/v1/admin/households", "get", 200>["households"][number];
+export type SupervisionResponse = Response<"/api/v1/supervision", "get", 200>;
+export type Ward = SupervisionResponse["wards"][number];
+export type WardRights = Ward["rights"];
+export type WardPending = Response<"/api/v1/supervision/wards/{wardId}/pending", "get", 200>["completions"];
 export type UpdateAccountInput = BodyOf<"/api/v1/account", "patch">;
 export type InstanceSettings = Response<"/api/v1/admin/settings", "get", 200>;
 export type UpdateInstanceSettingsInput = BodyOf<"/api/v1/admin/settings", "patch">;
@@ -217,6 +221,37 @@ export function createClient(options: ClientOptions) {
 		adminGetSettings: () => request<InstanceSettings>("GET", "/admin/settings"),
 		adminUpdateSettings: (input: UpdateInstanceSettingsInput) =>
 			request<InstanceSettings>("PATCH", "/admin/settings", input),
+		// --- Supervision: guardians, wards and the one-time codes between them
+		getSupervision: () => request<SupervisionResponse>("GET", "/supervision"),
+		createSupervisionCode: (kind: "supervise" | "be_supervised") =>
+			request<{ token: string; expiresAt: string }>("POST", "/supervision/codes", { kind }),
+		redeemSupervisionCode: (code: string) => request<SupervisionResponse>("POST", "/supervision/redeem", { code }),
+		createWardAccount: (input: { displayName: string; username: string; password: string }) =>
+			request<Ward>("POST", "/supervision/wards", input),
+		endSupervision: (wardId: string) => request<void>("DELETE", `/supervision/wards/${wardId}`),
+		updateWardRights: (wardId: string, input: Partial<WardRights>) =>
+			request<Ward>("PATCH", `/supervision/wards/${wardId}/rights`, input),
+		adjustWardCoins: (wardId: string, input: { amount: number; note: string }) =>
+			request<{ balance: number }>("POST", `/supervision/wards/${wardId}/adjustments`, input),
+		getWardPending: (wardId: string) =>
+			request<{ completions: WardPending }>("GET", `/supervision/wards/${wardId}/pending`),
+		reviewWardCompletion: (wardId: string, completionId: string, approve: boolean) =>
+			request<CompletionResult>(
+				"POST",
+				`/supervision/wards/${wardId}/completions/${completionId}/${approve ? "approve" : "reject"}`,
+			),
+		// The ward's own space, through the same rules as the ward's.
+		getWardMe: (wardId: string) => request<MeResponse>("GET", `/supervision/wards/${wardId}/me`),
+		listWardItems: (wardId: string) =>
+			request<Response<"/api/v1/items", "get", 200>>("GET", `/supervision/wards/${wardId}/items`),
+		createWardItem: (wardId: string, input: CreateItemInput) =>
+			request<Item>("POST", `/supervision/wards/${wardId}/items`, input),
+		archiveWardItem: (wardId: string, id: string) =>
+			request<void>("DELETE", `/supervision/wards/${wardId}/items/${id}`),
+		listWardRewards: (wardId: string) =>
+			request<Response<"/api/v1/rewards", "get", 200>>("GET", `/supervision/wards/${wardId}/rewards`),
+		createWardReward: (wardId: string, input: CreateRewardInput) =>
+			request<Reward>("POST", `/supervision/wards/${wardId}/rewards`, input),
 		// --- Authentication
 		getAuthConfig: () => request<AuthConfig>("GET", "/auth/config"),
 		getMe: () => request<MeResponse>("GET", "/me"),

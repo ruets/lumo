@@ -10,6 +10,7 @@ import { idempotencyKeys } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import { type AccountCtx, type ActorCtx, type HouseholdActorCtx, loadAccount, loadActor } from "../services/context.js";
 import { type Tx, writeTx } from "../services/members.js";
+import { loadWardActor } from "../services/supervision.js";
 
 /**
  * `household` routes need a household (403 `no_household` otherwise) and receive an actor that has one;
@@ -43,6 +44,8 @@ export interface RouteDef {
 	params?: z.ZodType;
 	response?: z.ZodType;
 	scope: RouteScope;
+	/** Runs for a ward (`/supervision/wards/:wardId/...`): the guardian acts on the ward's own space. */
+	ward: boolean;
 	/** Only super admins may call it (403 otherwise). */
 	superAdmin: boolean;
 	// biome-ignore lint/suspicious/noExplicitAny: typed by `route()`
@@ -98,6 +101,7 @@ export function route<
 		...(def.response ? { response: def.response } : {}),
 		scope: def.scope ?? "household",
 		superAdmin: def.superAdmin ?? false,
+		ward: false,
 		...(def.prepare ? { prepare: def.prepare as RouteDef["prepare"] } : {}),
 		status: def.status ?? 200,
 		idempotent: def.idempotent ?? write,
@@ -138,6 +142,7 @@ export function registerRoutes(
 			preHandler: requireAuth,
 			handler: async (req, reply) => {
 				const { userId } = req.auth as AuthContext;
+				const wardId = (req.params as Record<string, string> | undefined)?.wardId;
 				const params = parse(def.params, req.params, "params");
 				const query = parse(def.query, req.query, "query");
 				const body = parse(def.body, req.body, "body");
@@ -149,7 +154,11 @@ export function registerRoutes(
 					if (!account) throw errors.unauthenticated();
 					if (def.superAdmin && !account.isSuperAdmin) throw errors.forbidden("Super admins only");
 					const header = req.headers["x-household-id"];
-					const actor = loadActor(dbx, userId, typeof header === "string" ? header : null);
+					const preferred = typeof header === "string" ? header : null;
+					// A guardian acting for a ward gets the ward's own space, free of the ward's supervision limits.
+					const actor = def.ward
+						? loadWardActor(dbx, userId, wardId as string, preferred)
+						: loadActor(dbx, userId, preferred);
 					if (!actor) throw errors.unauthenticated();
 					if (def.scope === "household" && !actor.householdId) throw errors.noHousehold();
 					return def.handler({ db: dbx, config, actor, account, body, query, params, prepared, now });

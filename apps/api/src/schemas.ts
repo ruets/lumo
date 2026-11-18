@@ -437,3 +437,37 @@ export const updateInstanceSettingsBody = z
 	.partial()
 	.strict()
 	.refine((b) => b.householdCreation !== undefined, "provide at least one field");
+
+// ---- Supervision ------------------------------------------------------------------------
+
+export const wardRightsView = z.object({
+	canCreate: z.boolean(),
+	canModify: z.boolean(),
+	canDelete: z.boolean(),
+	canTransfer: z.boolean(),
+});
+
+export const supervisionView = z.object({
+	/** Who supervises me. */
+	guardians: z.array(z.object({ id: z.string(), displayName: z.string() })),
+	/** What my guardians allow me to do by myself; `null` when I have no guardian. */
+	rights: wardRightsView.nullable(),
+	/** Who I supervise. */
+	wards: z.array(z.object({ id: z.string(), displayName: z.string(), rights: wardRightsView })),
+});
+
+export const wardView = z.object({ id: z.string(), displayName: z.string(), rights: wardRightsView });
+
+export const guardianshipCodeBody = z.object({ kind: z.enum(["supervise", "be_supervised"]) }).strict();
+export const guardianshipCodeView = z.object({ token: z.string(), expiresAt: z.string() });
+export const redeemCodeBody = z.object({ code: z.string().min(10).max(200) }).strict();
+export const createWardBody = adminCreateUserBody;
+export const wardParams = z.object({ wardId: z.string().min(1).max(100) });
+export const wardCompletionParams = z.object({ wardId: z.string().min(1).max(100), id: z.string().min(1).max(100) });
+export const updateWardRightsBody = wardRightsView
+	.partial()
+	.strict()
+	.refine((b) => Object.values(b).some((v) => v !== undefined), "provide at least one right");
+export const wardPendingView = z.object({
+	completions: z.array(completionView.extend({ itemName: z.string() })),
+});

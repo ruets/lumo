@@ -103,6 +103,22 @@ export default function SettingsScreen() {
 					<T style={{ fontSize: 20, color: colors.muted }}>›</T>
 				</Pressable>
 			)}
+			<Pressable
+				accessibilityRole="button"
+				onPress={() => router.push("/supervision")}
+				style={{
+					minHeight: 52,
+					flexDirection: "row",
+					alignItems: "center",
+					justifyContent: "space-between",
+					backgroundColor: colors.surface,
+					borderRadius: radii.md,
+					paddingHorizontal: spacing.md,
+				}}
+			>
+				<T style={{ fontFamily: font.bold, fontSize: 15 }}>{t("supervision.open")}</T>
+				<T style={{ fontSize: 20, color: colors.muted }}>›</T>
+			</Pressable>
 			{isSuperAdmin && (
 				<Pressable
 					accessibilityRole="button"
