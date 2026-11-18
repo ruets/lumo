@@ -3,7 +3,7 @@ import { t } from "@lumo/i18n";
 import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { ItemDialog, RewardDialog } from "../components/forms";
-import { AddButton, Field, fieldClass, PageTitle, PrimaryButton } from "../components/ui";
+import { AddButton, Field, fieldClass, PageTitle, PrimaryButton, useConfirm } from "../components/ui";
 import { api } from "../lib/api";
 import {
 	useSupervision,
@@ -38,6 +38,7 @@ export function WardPanel({ wardId }: { wardId: string }) {
 	);
 	const adjust = useSupervisionWrite((input: { amount: number; note: string }) => api.adjustWardCoins(wardId, input));
 	const archive = useSupervisionWrite((id: string) => api.archiveWardItem(wardId, id));
+	const confirm = useConfirm();
 	const end = useSupervisionWrite(() => api.endSupervision(wardId));
 
 	if (!ward) return <p className="text-muted">{t("common.loading")}</p>;
@@ -144,12 +145,14 @@ export function WardPanel({ wardId }: { wardId: string }) {
 				type="button"
 				className={`${ghost} text-bad`}
 				onClick={() => {
-					if (window.confirm(t("supervision.endConfirm", { name: ward.displayName })))
-						end.mutate(undefined, { onSuccess: () => void navigate({ to: "/supervision" }) });
+					confirm.ask(t("supervision.endConfirm", { name: ward.displayName }), t("supervision.end"), () =>
+						end.mutate(undefined, { onSuccess: () => void navigate({ to: "/supervision" }) }),
+					);
 				}}
 			>
 				{t("supervision.end")}
 			</button>
+			{confirm.dialog}
 
 			{me.data && (adding === "habit" || adding === "task") && (
 				<ItemDialog kind={adding} ward={{ id: wardId, me: me.data }} onClose={() => setAdding(null)} />

@@ -12,7 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { api } from "../lib/api";
 import { describeError, useMe, useSupervision } from "../lib/hooks";
-import { Dialog, Field, fieldClass, PrimaryButton } from "./ui";
+import { Dialog, Field, fieldClass, PrimaryButton, useConfirm } from "./ui";
 
 function useCreate<I>(call: (input: I) => Promise<unknown>, onDone: () => void) {
 	const qc = useQueryClient();
@@ -87,6 +87,7 @@ export function ItemDialog({
 		(input: Parameters<typeof api.updateItem>[1]) => api.updateItem(item?.id ?? "", input),
 		onClose,
 	);
+	const confirm = useConfirm();
 	const remove = useCreate<void>(() => api.archiveItem(item?.id ?? ""), onClose);
 	const { m, error: saveError } = item ? edited : created;
 	const error = saveError ?? remove.error;
@@ -233,12 +234,15 @@ export function ItemDialog({
 						<button
 							type="button"
 							disabled={remove.m.isPending}
-							onClick={() => window.confirm(t("items.deleteConfirm", { name: item.name })) && remove.m.mutate()}
+							onClick={() =>
+								confirm.ask(t("items.deleteConfirm", { name: item.name }), t("form.delete"), () => remove.m.mutate())
+							}
 							className="mr-auto min-h-11 cursor-pointer rounded-full border-0 bg-transparent px-4 font-body text-sm font-bold text-bad"
 						>
 							{t("form.delete")}
 						</button>
 					)}
+					{confirm.dialog}
 					<button
 						type="button"
 						onClick={onClose}
@@ -274,6 +278,7 @@ export function RewardDialog({
 		(input: Parameters<typeof api.updateReward>[1]) => api.updateReward(reward?.id ?? "", input),
 		onClose,
 	);
+	const confirm = useConfirm();
 	const remove = useCreate<void>(() => api.updateReward(reward?.id ?? "", { archived: true }), onClose);
 	const { m, error: saveError } = reward ? edited : created;
 	const error = saveError ?? remove.error;
@@ -353,12 +358,15 @@ export function RewardDialog({
 						<button
 							type="button"
 							disabled={remove.m.isPending}
-							onClick={() => window.confirm(t("wishes.deleteConfirm", { name: reward.name })) && remove.m.mutate()}
+							onClick={() =>
+								confirm.ask(t("wishes.deleteConfirm", { name: reward.name }), t("form.delete"), () => remove.m.mutate())
+							}
 							className="mr-auto min-h-11 cursor-pointer rounded-full border-0 bg-transparent px-4 font-body text-sm font-bold text-bad"
 						>
 							{t("form.delete")}
 						</button>
 					)}
+					{confirm.dialog}
 					<button
 						type="button"
 						onClick={onClose}

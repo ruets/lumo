@@ -3,7 +3,7 @@ import type { MeResponse } from "@lumo/api-client";
 import { errorMessage, t } from "@lumo/i18n";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
-import { fieldClass, PageTitle } from "../components/ui";
+import { fieldClass, PageTitle, useConfirm } from "../components/ui";
 import { useAccount, useAuthConfig, useLeaveHousehold, useLogout, useSwitchHousehold } from "../lib/hooks";
 import { LanguageSelect } from "../lib/locale";
 import { showToast } from "../lib/toast";
@@ -22,6 +22,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 export function SettingsPage({ me }: { me: MeResponse }) {
 	const household = me.household;
 	const logout = useLogout();
+	const confirm = useConfirm();
 	const leave = useLeaveHousehold();
 	const account = useAccount().data;
 	const isSuperAdmin = account?.isSuperAdmin ?? false;
@@ -58,12 +59,17 @@ export function SettingsPage({ me }: { me: MeResponse }) {
 					<button
 						type="button"
 						disabled={leave.isPending}
-						onClick={() => window.confirm(t("household.leaveConfirm", { name: household.name })) && leave.mutate()}
+						onClick={() =>
+							confirm.ask(t("household.leaveConfirm", { name: household.name }), t("household.leave"), () =>
+								leave.mutate(),
+							)
+						}
 						className="min-h-11 cursor-pointer rounded-xl border border-edge bg-transparent font-body text-sm font-semibold text-bad hover:bg-raised"
 					>
 						{t("household.leave")}
 					</button>
 				)}
+				{confirm.dialog}
 			</Section>
 			{account && (
 				<Section title={t("account.title")}>

@@ -4,7 +4,7 @@ import { type ProgressPeriod, summarizeProgress } from "@lumo/domain";
 import { dayNumber, shortDate, t, weekdayShort } from "@lumo/i18n";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { PageTitle, Segmented } from "../components/ui";
+import { PageTitle, Segmented, useConfirm } from "../components/ui";
 import { statsWindow, useLedger, useStats, useToday, useUndoRedemption } from "../lib/hooks";
 import { showToast } from "../lib/toast";
 
@@ -26,6 +26,7 @@ export function ProgressPage({ me }: { me: MeResponse }) {
 	const win = now.data ? statsWindow(now.data.date) : undefined;
 	const stats = useStats(win?.from, win?.to);
 	const ledger = useLedger();
+	const confirm = useConfirm();
 	const undoRedemption = useUndoRedemption();
 
 	if (!now.data || !stats.data) return <p className="text-muted">{t("common.loading")}</p>;
@@ -37,8 +38,11 @@ export function ProgressPage({ me }: { me: MeResponse }) {
 	// A redemption can be undone until a refund references it (the refund is newer, so it is listed).
 	const refunded = new Set(entries.filter((e) => e.reason === "undo" && e.amount > 0).map((e) => e.refId));
 	const cancel = (e: LedgerEntry) => {
-		if (!e.refId || !window.confirm(t("ledger.undoConfirm", { count: Math.abs(e.amount) }))) return;
-		undoRedemption.mutate(e.refId, { onSuccess: () => showToast(t("ledger.undone", { count: Math.abs(e.amount) })) });
+		const refId = e.refId;
+		if (!refId) return;
+		confirm.ask(t("ledger.undoConfirm", { count: Math.abs(e.amount) }), t("ledger.undoAction"), () =>
+			undoRedemption.mutate(refId, { onSuccess: () => showToast(t("ledger.undone", { count: Math.abs(e.amount) })) }),
+		);
 	};
 	const earned = entries
 		.filter((e) => e.createdAt.slice(0, 10) >= s.from && e.createdAt.slice(0, 10) <= s.to)
@@ -46,6 +50,7 @@ export function ProgressPage({ me }: { me: MeResponse }) {
 
 	return (
 		<div className="grid gap-5">
+			{confirm.dialog}
 			<header className="flex items-center justify-between gap-4">
 				<PageTitle>{t("progress.title")}</PageTitle>
 				<Segmented
