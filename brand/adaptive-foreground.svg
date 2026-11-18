@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 170" width="1024" height="1024">
+  <title>Lumo</title>
+  <g transform="translate(0 -0.5)">
+    <path d="M85 133 C62 133 49 118 49 100 C49 84 58 74 66 64 C68 72 72 78 77 80 C74 62 80 46 92 36 C90 52 100 62 108 74 C116 86 121 94 121 102 C121 120 106 133 85 133 Z" fill="#7C5CFF"/>
+    <polyline points="73,90 73,119 99,119" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

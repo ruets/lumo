@@ -8,9 +8,18 @@
 		"userInterfaceStyle": "dark",
 		"backgroundColor": "#0E1220",
 		"android": {
-			"package": "app.lumo.mobile"
+			"package": "app.lumo.mobile",
+			"adaptiveIcon": {
+				"foregroundImage": "./assets/adaptive-foreground.png",
+				"backgroundImage": "./assets/adaptive-background.png",
+				"monochromeImage": "./assets/adaptive-monochrome.png",
+				"backgroundColor": "#0E1220"
+			}
 		},
 		"plugins": ["expo-router", "expo-secure-store"],
-		"experiments": { "typedRoutes": false }
+		"experiments": {
+			"typedRoutes": false
+		},
+		"icon": "./assets/icon.png"
 	}
 }
