@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { inSpace, type MeResponse, spaceLabel, type TodayItem } from "@lumo/api-client";
+import { type Item, inSpace, type MeResponse, spaceLabel, type TodayItem } from "@lumo/api-client";
 import { addDays, startOfWeek } from "@lumo/domain";
 import { dayNumber, longDate, shortDate, t, weekdayShort } from "@lumo/i18n";
 import { useState } from "react";
@@ -17,12 +17,14 @@ function Row({
 	future,
 	onComplete,
 	onUndo,
+	onEdit,
 }: {
 	e: TodayItem;
 	space: string | null;
 	future: boolean;
 	onComplete: () => void;
 	onUndo: () => void;
+	onEdit: () => void;
 }) {
 	const multi = e.target > 1;
 	const label = e.done
@@ -68,7 +70,41 @@ function Row({
 				<span className="text-[13px] text-muted">{withSpace(space, itemMeta(e))}</span>
 			</span>
 			<Reward amount={e.item.reward} />
+			<button
+				type="button"
+				aria-label={t("items.edit", { name: e.item.name })}
+				onClick={onEdit}
+				className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-muted hover:bg-raised hover:text-ink"
+			>
+				<svg
+					aria-hidden="true"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+					strokeLinecap="round"
+					strokeLinejoin="round"
+				>
+					<path d="M12 20h9" />
+					<path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" />
+				</svg>
+			</button>
 		</div>
+	);
+}
+
+function WeekButton({ label, dir, onClick }: { label: string; dir: string; onClick: () => void }) {
+	return (
+		<button
+			type="button"
+			aria-label={label}
+			onClick={onClick}
+			className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-surface font-body text-lg font-bold text-soft hover:bg-raised"
+		>
+			{dir}
+		</button>
 	);
 }
 
@@ -77,11 +113,12 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 	const [picked, setPicked] = useState<string | null>(null);
 	const [tab, setTab] = useState<"habit" | "task">("habit");
 	const [creating, setCreating] = useState(false);
+	const [editing, setEditing] = useState<Item | null>(null);
 	const filter = useSpaceFilter(me.households);
 
 	const today = now.data?.date;
 	const day = picked ?? today;
-	const weekFrom = today ? startOfWeek(today, 1) : undefined;
+	const weekFrom = today && day ? startOfWeek(day, 1) : undefined;
 	const stats = useStats(weekFrom, weekFrom ? addDays(weekFrom, 6) : undefined);
 	const view = useToday(picked && picked !== today ? picked : undefined);
 	const complete = useComplete(picked && picked !== today ? picked : undefined);
@@ -89,6 +126,7 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 
 	if (!today || !day || !weekFrom) return <p className="text-muted">{t("common.loading")}</p>;
 
+	const goTo = (d: string) => setPicked(d === today ? null : d);
 	const days = Array.from({ length: 7 }, (_, i) => addDays(weekFrom, i));
 	const heat = new Map(stats.data?.heatmap.map((h) => [h.date, h]));
 	const entries = ((picked && picked !== today ? view.data : now.data)?.items ?? []).filter((e) =>
@@ -121,35 +159,39 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 				]}
 			/>
 
-			<fieldset className="m-0 grid min-w-0 grid-cols-7 gap-1.5 border-0 p-0">
-				<legend className="sr-only">{t("items.weekDays")}</legend>
-				{days.map((d, i) => {
-					const h = heat.get(d);
-					const on = d === day;
-					const dot =
-						!h || h.expected === 0
-							? "transparent"
-							: h.done >= h.expected
-								? "#3ddc97"
-								: h.done > 0
-									? "#ffc857"
-									: "transparent";
-					return (
-						<button
-							key={d}
-							type="button"
-							aria-pressed={on}
-							aria-label={t("items.dayLabel", { date: longDate(d), done: h?.done ?? 0, total: h?.expected ?? 0 })}
-							onClick={() => setPicked(d === today ? null : d)}
-							className={`flex h-[70px] cursor-pointer flex-col items-center justify-center gap-[3px] rounded-2xl border-0 font-body ${on ? "bg-primary text-white" : "bg-surface text-soft hover:bg-raised"}`}
-						>
-							<span className="text-xs font-semibold">{weekdayShort(i + 1)}</span>
-							<span className="font-display text-base font-bold">{dayNumber(d)}</span>
-							<span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: dot }} />
-						</button>
-					);
-				})}
-			</fieldset>
+			<div className="flex items-center gap-1.5">
+				<WeekButton label={t("items.prevWeek")} dir="‹" onClick={() => goTo(addDays(day, -7))} />
+				<fieldset className="m-0 grid min-w-0 grow grid-cols-7 gap-1.5 border-0 p-0">
+					<legend className="sr-only">{t("items.weekDays")}</legend>
+					{days.map((d, i) => {
+						const h = heat.get(d);
+						const on = d === day;
+						const dot =
+							!h || h.expected === 0
+								? "transparent"
+								: h.done >= h.expected
+									? "#3ddc97"
+									: h.done > 0
+										? "#ffc857"
+										: "transparent";
+						return (
+							<button
+								key={d}
+								type="button"
+								aria-pressed={on}
+								aria-label={t("items.dayLabel", { date: longDate(d), done: h?.done ?? 0, total: h?.expected ?? 0 })}
+								onClick={() => goTo(d)}
+								className={`flex h-[70px] cursor-pointer flex-col items-center justify-center gap-[3px] rounded-2xl border-0 font-body ${on ? "bg-primary text-white" : "bg-surface text-soft hover:bg-raised"}`}
+							>
+								<span className="text-xs font-semibold">{weekdayShort(i + 1)}</span>
+								<span className="font-display text-base font-bold">{dayNumber(d)}</span>
+								<span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: dot }} />
+							</button>
+						);
+					})}
+				</fieldset>
+				<WeekButton label={t("items.nextWeek")} dir="›" onClick={() => goTo(addDays(day, 7))} />
+			</div>
 
 			<div className="grid gap-2.5 md:grid-cols-2">
 				{list.length === 0 && <p className="m-0 text-muted md:col-span-2">{t("items.empty")}</p>}
@@ -161,12 +203,14 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 						future={day > today}
 						onComplete={() => complete.mutate(e.item.id)}
 						onUndo={() => e.completionIds[0] && undo.mutate(e.completionIds[0])}
+						onEdit={() => setEditing(e.item)}
 					/>
 				))}
 			</div>
 
 			<AddButton label={tab === "habit" ? t("items.newHabit") : t("items.newTask")} onClick={() => setCreating(true)} />
 			{creating && <ItemDialog kind={tab} onClose={() => setCreating(false)} />}
+			{editing && <ItemDialog kind={editing.kind} item={editing} onClose={() => setEditing(null)} />}
 		</div>
 	);
 }

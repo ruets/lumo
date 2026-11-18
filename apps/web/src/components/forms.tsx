@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { ApiError, type CreateItemInput, type CreateRewardInput, type MeResponse } from "@lumo/api-client";
+import { ApiError, type CreateItemInput, type CreateRewardInput, type Item, type MeResponse } from "@lumo/api-client";
 import { t, weekdayShort } from "@lumo/i18n";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { api } from "../lib/api";
-import { describeError, useMe } from "../lib/hooks";
+import { describeError, useMe, useSupervision } from "../lib/hooks";
 import { Dialog, Field, fieldClass, PrimaryButton } from "./ui";
 
 function useCreate<I>(call: (input: I) => Promise<unknown>, onDone: () => void) {
@@ -60,19 +60,32 @@ export function ItemDialog({
 	kind,
 	onClose,
 	ward,
+	item,
 }: {
 	kind: "habit" | "task";
 	onClose: () => void;
 	/** A guardian creating for someone they supervise. */
 	ward?: { id: string; me: MeResponse };
+	/** Set to edit this item instead of creating one (its space cannot change). */
+	item?: Item;
 }) {
-	const [freq, setFreq] = useState<"daily" | "timesPerWeek" | "weekly" | "monthly">("daily");
-	const [days, setDays] = useState<number[]>([1]);
-	const { m, error } = useCreate(
+	const sched = item?.schedule ?? null;
+	const [freq, setFreq] = useState<"daily" | "timesPerWeek" | "weekly" | "monthly">(sched?.type ?? "daily");
+	const [days, setDays] = useState<number[]>(sched?.type === "weekly" ? sched.days : [1]);
+	const created = useCreate(
 		(input: CreateItemInput) => (ward ? api.createWardItem(ward.id, input) : api.createItem(input)),
 		onClose,
 	);
-	const { households, target, setTarget, scope, personal } = useTarget(ward);
+	const edited = useCreate(
+		(input: Parameters<typeof api.updateItem>[1]) => api.updateItem(item?.id ?? "", input),
+		onClose,
+	);
+	const { m, error } = item ? edited : created;
+	const { households, target, setTarget, scope, personal: createPersonal } = useTarget(ward);
+	const personal = item ? item.scope === "personal" : createPersonal;
+	// Approval only concerns a supervised person: the one the item is for (a ward, or me if I have guardians).
+	const supervision = useSupervision().data;
+	const canAsk = Boolean(ward) || (supervision?.guardians.length ?? 0) > 0;
 
 	function submit(e: FormEvent<HTMLFormElement>) {
 		e.preventDefault();
@@ -80,12 +93,13 @@ export function ItemDialog({
 		const common = {
 			name: String(f.get("name") ?? ""),
 			reward: Number(f.get("reward") ?? 0),
-			...scope,
-			requiresApproval: !personal && f.get("approval") === "on",
+			requiresApproval: personal ? false : canAsk ? f.get("approval") === "on" : (item?.requiresApproval ?? false),
 		};
 		if (kind === "task") {
 			const due = String(f.get("dueAt") ?? "");
-			m.mutate({ kind: "task", ...common, ...(due ? { dueAt: new Date(`${due}T23:59:00`).toISOString() } : {}) });
+			const dueAt = due ? new Date(`${due}T23:59:00`).toISOString() : null;
+			if (item) return edited.m.mutate({ ...common, dueAt });
+			created.m.mutate({ kind: "task", ...common, ...scope, ...(dueAt ? { dueAt } : {}) });
 			return;
 		}
 		const count = Number(f.get("count") ?? 1);
@@ -97,18 +111,31 @@ export function ItemDialog({
 					: freq === "weekly"
 						? ({ type: "weekly", days } as const)
 						: ({ type: "monthly", day: Number(f.get("monthDay") ?? 1) } as const);
-		m.mutate({ kind: "habit", ...common, schedule, targetPerPeriod: Number(f.get("target") ?? 1) });
+		const targetPerPeriod = Number(f.get("target") ?? 1);
+		if (item) return edited.m.mutate({ ...common, schedule, targetPerPeriod });
+		created.m.mutate({ kind: "habit", ...common, ...scope, schedule, targetPerPeriod });
 	}
 
 	return (
-		<Dialog title={kind === "habit" ? t("items.newHabit") : t("items.newTask")} onClose={onClose}>
+		<Dialog
+			title={
+				item
+					? kind === "habit"
+						? t("items.editHabit")
+						: t("items.editTask")
+					: kind === "habit"
+						? t("items.newHabit")
+						: t("items.newTask")
+			}
+			onClose={onClose}
+		>
 			<form onSubmit={submit} className="grid gap-3">
 				<Field label={t("form.name")}>
-					<input name="name" required maxLength={120} className={fieldClass} />
+					<input name="name" required maxLength={120} defaultValue={item?.name} className={fieldClass} />
 				</Field>
-				{households.length > 0 && <ScopeField value={target} onChange={setTarget} households={households} />}
+				{!item && households.length > 0 && <ScopeField value={target} onChange={setTarget} households={households} />}
 				<Field label={t("form.reward")}>
-					<input name="reward" type="number" min={0} defaultValue={1} className={fieldClass} />
+					<input name="reward" type="number" min={0} defaultValue={item?.reward ?? 1} className={fieldClass} />
 				</Field>
 				{kind === "habit" ? (
 					<>
@@ -123,12 +150,26 @@ export function ItemDialog({
 						</Field>
 						{freq === "timesPerWeek" && (
 							<Field label={t("form.count")}>
-								<input name="count" type="number" min={1} max={7} defaultValue={3} className={fieldClass} />
+								<input
+									name="count"
+									type="number"
+									min={1}
+									max={7}
+									defaultValue={sched?.type === "timesPerWeek" ? sched.count : 3}
+									className={fieldClass}
+								/>
 							</Field>
 						)}
 						{freq === "monthly" && (
 							<Field label={t("form.monthDay")}>
-								<input name="monthDay" type="number" min={1} max={31} defaultValue={1} className={fieldClass} />
+								<input
+									name="monthDay"
+									type="number"
+									min={1}
+									max={31}
+									defaultValue={sched?.type === "monthly" ? sched.day : 1}
+									className={fieldClass}
+								/>
 							</Field>
 						)}
 						{freq === "weekly" && (
@@ -152,17 +193,24 @@ export function ItemDialog({
 							</fieldset>
 						)}
 						<Field label={t("form.target")}>
-							<input name="target" type="number" min={1} max={100} defaultValue={1} className={fieldClass} />
+							<input
+								name="target"
+								type="number"
+								min={1}
+								max={100}
+								defaultValue={item?.targetPerPeriod ?? 1}
+								className={fieldClass}
+							/>
 						</Field>
 					</>
 				) : (
 					<Field label={t("form.dueAt")}>
-						<input name="dueAt" type="date" className={fieldClass} />
+						<input name="dueAt" type="date" defaultValue={item?.dueAt?.slice(0, 10)} className={fieldClass} />
 					</Field>
 				)}
-				{!personal && (
+				{!personal && canAsk && (
 					<label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-soft">
-						<input name="approval" type="checkbox" className="size-5" />
+						<input name="approval" type="checkbox" defaultChecked={item?.requiresApproval} className="size-5" />
 						{t("form.requiresApproval")}
 					</label>
 				)}

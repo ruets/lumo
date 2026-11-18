@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { inSpace, spaceLabel, type TodayItem } from "@lumo/api-client";
+import { type Item, inSpace, spaceLabel, type TodayItem } from "@lumo/api-client";
 import { addDays, startOfWeek } from "@lumo/domain";
 import { dayNumber, longDate, shortDate, t, weekdayShort } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
@@ -22,12 +22,14 @@ function Row({
 	future,
 	onComplete,
 	onUndo,
+	onEdit,
 }: {
 	e: TodayItem;
 	space: string | null;
 	future: boolean;
 	onComplete: () => void;
 	onUndo: () => void;
+	onEdit: () => void;
 }) {
 	const multi = e.target > 1;
 	const label = e.done
@@ -71,7 +73,12 @@ function Row({
 					{e.done ? "✓" : multi ? `${e.approved}/${e.target}` : ""}
 				</T>
 			</Pressable>
-			<View style={{ flex: 1, gap: 3 }}>
+			<Pressable
+				accessibilityRole="button"
+				accessibilityLabel={t("items.edit", { name: e.item.name })}
+				onPress={onEdit}
+				style={{ flex: 1, gap: 3, minHeight: 44, justifyContent: "center" }}
+			>
 				<T
 					style={{
 						fontFamily: font.bold,
@@ -83,9 +90,22 @@ function Row({
 					{e.item.name}
 				</T>
 				<T style={{ fontSize: 13, color: colors.muted }}>{withSpace(space, itemMeta(e))}</T>
-			</View>
+			</Pressable>
 			<Reward amount={e.item.reward} />
 		</View>
+	);
+}
+
+function WeekArrow({ label, glyph, onPress }: { label: string; glyph: string; onPress: () => void }) {
+	return (
+		<Pressable
+			accessibilityRole="button"
+			accessibilityLabel={label}
+			onPress={onPress}
+			style={{ width: 28, height: 70, alignItems: "center", justifyContent: "center" }}
+		>
+			<T style={{ fontFamily: font.bold, fontSize: 24, color: colors.textSoft }}>{glyph}</T>
+		</Pressable>
 	);
 }
 
@@ -97,13 +117,14 @@ export default function HabitsScreen() {
 	const [picked, setPicked] = useState<string | null>(null);
 	const [tab, setTab] = useState<"habit" | "task">("habit");
 	const [creating, setCreating] = useState(false);
+	const [editing, setEditing] = useState<Item | null>(null);
 	const filter = useSpaceFilter(me?.households ?? []);
 
 	const now = useToday();
 	const today = now.data?.date;
 	const day = picked ?? today;
 	const view = useToday(picked && picked !== today ? picked : undefined);
-	const weekFrom = today ? startOfWeek(today, 1) : undefined;
+	const weekFrom = today && day ? startOfWeek(day, 1) : undefined;
 	const stats = useStats(weekFrom, weekFrom ? addDays(weekFrom, 6) : undefined);
 	const balance = useBalance(me?.wallets.personal.balance ?? 0);
 	if (!me || !today || !day || !weekFrom)
@@ -113,6 +134,7 @@ export default function HabitsScreen() {
 			</Screen>
 		);
 
+	const goTo = (d: string) => setPicked(d === today ? null : d);
 	const days = Array.from({ length: 7 }, (_, i) => addDays(weekFrom, i));
 	const heat = new Map(stats.data?.heatmap.map((h) => [h.date, h]));
 	const entries = ((picked && picked !== today ? view.data : now.data)?.items ?? []).filter((e) =>
@@ -150,7 +172,8 @@ export default function HabitsScreen() {
 				]}
 			/>
 
-			<View style={{ flexDirection: "row", gap: 6 }}>
+			<View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
+				<WeekArrow label={t("items.prevWeek")} glyph="‹" onPress={() => goTo(addDays(day, -7))} />
 				{days.map((d, i) => {
 					const h = heat.get(d);
 					const on = d === day;
@@ -172,7 +195,7 @@ export default function HabitsScreen() {
 								done: h?.done ?? 0,
 								total: h?.expected ?? 0,
 							})}
-							onPress={() => setPicked(d === today ? null : d)}
+							onPress={() => goTo(d)}
 							style={{
 								flex: 1,
 								height: 70,
@@ -193,6 +216,7 @@ export default function HabitsScreen() {
 						</Pressable>
 					);
 				})}
+				<WeekArrow label={t("items.nextWeek")} glyph="›" onPress={() => goTo(addDays(day, 7))} />
 			</View>
 
 			<View style={{ gap: 10 }}>
@@ -205,12 +229,14 @@ export default function HabitsScreen() {
 						future={day > today}
 						onComplete={() => void enqueueCompletion(e.item.id, day)}
 						onUndo={() => void onUndo(e)}
+						onEdit={() => setEditing(e.item)}
 					/>
 				))}
 			</View>
 
 			<AddButton label={tab === "habit" ? t("items.newHabit") : t("items.newTask")} onPress={() => setCreating(true)} />
 			<ItemSheet kind={tab} visible={creating} onClose={() => setCreating(false)} />
+			{editing && <ItemSheet kind={editing.kind} item={editing} visible onClose={() => setEditing(null)} />}
 		</Screen>
 	);
 }

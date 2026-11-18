@@ -129,6 +129,11 @@ export const en = {
 	"items.type": "Type",
 	"items.weekDays": "Days of the week",
 	"items.dayLabel": "{date}, {done} of {total} done",
+	"items.prevWeek": "Previous week",
+	"items.nextWeek": "Next week",
+	"items.editHabit": "Edit habit",
+	"items.editTask": "Edit task",
+	"items.edit": "Edit {name}",
 
 	"schedule.daily": "Every day",
 	"schedule.timesPerWeek_one": "{count} time a week",

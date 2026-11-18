@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { CreateItemInput, MeResponse } from "@lumo/api-client";
+import type { CreateItemInput, Item, MeResponse, UpdateItemInput } from "@lumo/api-client";
 import { t, weekdayShort } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Switch, View } from "react-native";
-import { describeError, useMe } from "./hooks";
+import { describeError, useMe, useSupervision } from "./hooks";
 import { api } from "./session";
 import { Button, Chip, Field, font, Sheet, T } from "./ui";
 
@@ -65,38 +65,48 @@ export function ItemSheet({
 	visible,
 	onClose,
 	ward,
+	item,
 }: {
 	kind: "habit" | "task";
 	visible: boolean;
 	onClose: () => void;
 	/** A guardian creating for someone they supervise. */
 	ward?: { id: string; me: MeResponse };
+	/** Set to edit this item instead of creating one (its space cannot change). */
+	item?: Item;
 }) {
-	const [name, setName] = useState("");
-	const [reward, setReward] = useState("1");
-	const [freq, setFreq] = useState<Freq>("daily");
-	const [count, setCount] = useState("3");
-	const [monthDay, setMonthDay] = useState("1");
-	const [days, setDays] = useState<number[]>([1]);
-	const [target, setTarget] = useState("1");
-	const [approval, setApproval] = useState(false);
-	const { households, dest, setDest, scope, personal } = useTarget(ward);
-	const { m, error } = useSubmit(
+	const sched = item?.schedule ?? null;
+	const [name, setName] = useState(item?.name ?? "");
+	const [reward, setReward] = useState(String(item?.reward ?? 1));
+	const [freq, setFreq] = useState<Freq>(sched?.type ?? "daily");
+	const [count, setCount] = useState(String(sched?.type === "timesPerWeek" ? sched.count : 3));
+	const [monthDay, setMonthDay] = useState(String(sched?.type === "monthly" ? sched.day : 1));
+	const [days, setDays] = useState<number[]>(sched?.type === "weekly" ? sched.days : [1]);
+	const [target, setTarget] = useState(String(item?.targetPerPeriod ?? 1));
+	const [approval, setApproval] = useState(item?.requiresApproval ?? false);
+	const { households, dest, setDest, scope, personal: createPersonal } = useTarget(ward);
+	const personal = item ? item.scope === "personal" : createPersonal;
+	// Approval only concerns a supervised person: the one the item is for (a ward, or me if I have guardians).
+	const supervision = useSupervision().data;
+	const canAsk = Boolean(ward) || (supervision?.guardians.length ?? 0) > 0;
+	const created = useSubmit(
 		(i: CreateItemInput) => (ward ? api.createWardItem(ward.id, i) : api.createItem(i)),
 		() => {
 			setName("");
 			onClose();
 		},
 	);
+	const edited = useSubmit((i: UpdateItemInput) => api.updateItem(item?.id ?? "", i), onClose);
+	const { m, error } = item ? edited : created;
 
 	function submit() {
 		const common = {
 			name: name.trim(),
 			reward: Number(reward) || 0,
-			...scope,
-			requiresApproval: !personal && approval,
+			requiresApproval: personal ? false : canAsk ? approval : (item?.requiresApproval ?? false),
 		};
-		if (kind === "task") return m.mutate({ kind: "task", ...common });
+		if (kind === "task")
+			return item ? edited.m.mutate(common) : created.m.mutate({ kind: "task", ...common, ...scope });
 		const schedule =
 			freq === "daily"
 				? ({ type: "daily" } as const)
@@ -105,13 +115,27 @@ export function ItemSheet({
 					: freq === "weekly"
 						? ({ type: "weekly", days } as const)
 						: ({ type: "monthly", day: Number(monthDay) || 1 } as const);
-		m.mutate({ kind: "habit", ...common, schedule, targetPerPeriod: Number(target) || 1 });
+		const targetPerPeriod = Number(target) || 1;
+		if (item) return edited.m.mutate({ ...common, schedule, targetPerPeriod });
+		created.m.mutate({ kind: "habit", ...common, ...scope, schedule, targetPerPeriod });
 	}
 
 	return (
-		<Sheet title={kind === "habit" ? t("items.newHabit") : t("items.newTask")} visible={visible} onClose={onClose}>
+		<Sheet
+			title={
+				item
+					? kind === "habit"
+						? t("items.editHabit")
+						: t("items.editTask")
+					: kind === "habit"
+						? t("items.newHabit")
+						: t("items.newTask")
+			}
+			visible={visible}
+			onClose={onClose}
+		>
 			<Field label={t("form.name")} value={name} onChangeText={setName} maxLength={120} />
-			{households.length > 0 && <ScopeChips dest={dest} onChange={setDest} households={households} />}
+			{!item && households.length > 0 && <ScopeChips dest={dest} onChange={setDest} households={households} />}
 			<Field label={t("form.reward")} value={reward} onChangeText={setReward} keyboardType="number-pad" />
 			{kind === "habit" && (
 				<>
@@ -142,7 +166,7 @@ export function ItemSheet({
 					<Field label={t("form.target")} value={target} onChangeText={setTarget} keyboardType="number-pad" />
 				</>
 			)}
-			{!personal && (
+			{!personal && canAsk && (
 				<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
 					<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.textSoft, flex: 1 }}>
 						{t("form.requiresApproval")}
