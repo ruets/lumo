@@ -129,13 +129,16 @@ export default function Login() {
 							/>
 						</>
 					)}
-					{config.data?.oidc && config.data.oidcIssuer && config.data.oidcClientId && !config.data.setupRequired && (
+					{config.data?.oidc && config.data.oidcIssuer && config.data.oidcClientId && (
 						<OidcButton
 							issuer={config.data.oidcIssuer}
 							clientId={config.data.oidcClientId}
 							invite={joinMode ? inviteCode.trim() : undefined}
 							onError={setError}
 						/>
+					)}
+					{config.data?.oidc && config.data.setupRequired && (
+						<T style={{ fontSize: 12, color: colors.muted }}>{t("auth.setup.oidcHint")}</T>
 					)}
 					{config.data?.local && (
 						<>
@@ -159,7 +162,12 @@ export default function Login() {
 								value={password}
 								onChangeText={setPassword}
 							/>
-							<Button label={joinMode ? t("join.submit") : t("auth.submit")} onPress={() => void submit()} />
+							<Button
+								label={
+									config.data.setupRequired ? t("auth.setup.submit") : joinMode ? t("join.submit") : t("auth.submit")
+								}
+								onPress={() => void submit()}
+							/>
 						</>
 					)}
 					{config.data && !config.data.setupRequired && (

@@ -86,13 +86,16 @@ export function Login({ config }: { config: AuthConfig }) {
 						</Field>
 					</div>
 				)}
-				{config.oidc && !config.setupRequired && (
+				{config.oidc && (
 					<a
 						href={oidcHref}
 						className="grid min-h-12 place-items-center rounded-full bg-primary font-bold text-white no-underline"
 					>
 						{t("auth.oidc")}
 					</a>
+				)}
+				{config.oidc && config.setupRequired && (
+					<p className="m-0 -mt-3 text-xs text-muted">{t("auth.setup.oidcHint")}</p>
 				)}
 				{config.local && (
 					<form onSubmit={submit} className="grid gap-3">
@@ -123,7 +126,7 @@ export function Login({ config }: { config: AuthConfig }) {
 							/>
 						</Field>
 						<PrimaryButton type="submit" disabled={busy}>
-							{joinMode ? t("join.submit") : t("auth.submit")}
+							{config.setupRequired ? t("auth.setup.submit") : joinMode ? t("join.submit") : t("auth.submit")}
 						</PrimaryButton>
 					</form>
 				)}

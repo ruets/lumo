@@ -359,5 +359,7 @@ export const fr: Record<MessageId, string> = {
 	"admin.household.archiveConfirm":
 		"Archiver le foyer {name} ? Ses membres ne le voient plus, rien n'est supprimé : vous pourrez le rétablir.",
 	"errors.household_archived": "Ce foyer est archivé.",
+	"auth.setup.submit": "Créer le foyer",
+	"auth.setup.oidcHint": "Ou créez le premier compte avec Authentik : il devient l'administrateur.",
 	"errors.unknown": "Une erreur est survenue.",
 };
