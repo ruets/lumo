@@ -819,3 +819,20 @@ describe("sign-in edge cases", () => {
 		expect(res.headers.location).toBe("https://lumo.test/?auth_error=account_exists");
 	});
 });
+
+describe("first account through Authentik while local sign-in is on", () => {
+	it("is offered by the config and makes the super admin with a household", async () => {
+		expect((await get("/auth/config")).json()).toMatchObject({ oidc: true, local: true, setupRequired: true });
+		ctx.oidc.grant("f1", { sub: "sub-first", name: "First" });
+		const start = await get("/auth/login");
+		const state = new URL(start.headers.location as string).searchParams.get("state") as string;
+		const res = await get(`/auth/callback?code=f1&state=${state}`);
+		expect(res.headers.location).toBe("https://lumo.test/");
+		const cookie = cookieHeader(sessionCookie(res) as string);
+		expect((await get("/account", cookie)).json()).toMatchObject({ isSuperAdmin: true, oidc: true });
+		expect((await get("/me", cookie)).json().role).toBe("owner");
+		// The instance is set up now: the local setup is closed.
+		expect((await get("/auth/config")).json().setupRequired).toBe(false);
+		expect((await post("/auth/setup", { ...OWNER, username: "late" })).statusCode).toBe(409);
+	});
+});
