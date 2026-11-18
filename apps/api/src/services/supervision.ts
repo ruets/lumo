@@ -180,3 +180,17 @@ export function listWardPending(db: DbOrTx, guardianId: string, wardId: string) 
 		.where(and(eq(completions.userId, wardId), eq(completions.status, "pending"), isNull(completions.undoneAt)))
 		.all();
 }
+
+/** Completions waiting for this guardian's approval, across all their wards. */
+export function listPendingForGuardian(db: DbOrTx, guardianId: string) {
+	return db
+		.select({ c: completions, name: items.name, wardId: users.id, wardName: users.displayName })
+		.from(guardianships)
+		.innerJoin(completions, eq(completions.userId, guardianships.wardId))
+		.innerJoin(items, eq(items.id, completions.itemId))
+		.innerJoin(users, eq(users.id, guardianships.wardId))
+		.where(
+			and(eq(guardianships.guardianId, guardianId), eq(completions.status, "pending"), isNull(completions.undoneAt)),
+		)
+		.all();
+}

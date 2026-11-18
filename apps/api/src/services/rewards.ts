@@ -92,7 +92,6 @@ export function createReward(tx: Tx, actor: ActorCtx, input: z.output<typeof cre
 	if (scope === "household" && !householdId) throw errors.noHousehold();
 	const assigneeIds = [...new Set(input.assigneeIds)];
 	if (householdId) {
-		if (!can(actorIn(actor, householdId), "reward:manage")) throw errors.forbidden("Adults only");
 		assertMembers(tx, householdId, assigneeIds);
 	} else {
 		// A personal wish is yours alone and paid from your own coins.
@@ -141,12 +140,6 @@ export function listRewards(db: DbOrTx, actor: ActorCtx, now: Date): RewardView[
 				r.limitCount === null ? null : Math.max(0, r.limitCount - usedInPeriodOf(db, actor, r, now)),
 			),
 		)
-		.filter(
-			(v) =>
-				v.householdId === null ||
-				actorIn(actor, v.householdId).role !== "child" ||
-				can(actorIn(actor, v.householdId), "reward:redeem", { fundedFrom: v.fundedFrom, assigneeIds: v.assigneeIds }),
-		)
 		.sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name, "fr"));
 }
 
@@ -159,7 +152,6 @@ export function updateReward(
 ): RewardView {
 	requireRight(actor, input.archived === true ? "delete" : "modify");
 	const row = getRewardRow(tx, actor, id, { allowArchived: true });
-	if (row.householdId && !can(actorIn(actor, row.householdId), "reward:manage")) throw errors.forbidden("Adults only");
 	if (!row.householdId) {
 		if (input.assigneeIds && input.assigneeIds.length > 0)
 			throw errors.validation("assigneeIds: a personal wish is yours alone");
@@ -249,16 +241,7 @@ export function undoRedemption(tx: Tx, actor: ActorCtx, id: string, now: Date) {
 		.get();
 	if (!row) throw notFound();
 	const { r, reward } = row;
-	const owner = reward.householdId
-		? tx
-				.select()
-				.from(memberships)
-				.where(and(eq(memberships.userId, r.userId), eq(memberships.householdId, reward.householdId)))
-				.get()
-		: undefined;
-	if (
-		!can(actorIn(actor, reward.householdId), "redemption:undo", { userId: r.userId, userRole: owner?.role ?? "adult" })
-	) {
+	if (!can(actorIn(actor, reward.householdId), "redemption:undo", { userId: r.userId })) {
 		throw errors.forbidden("Undo not allowed");
 	}
 	if (r.undoneAt) throw errors.conflict("already_undone", "This redemption is already undone");

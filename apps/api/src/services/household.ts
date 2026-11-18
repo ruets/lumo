@@ -36,7 +36,6 @@ function membersOf(db: DbOrTx, householdId: string): MemberView[] {
 			userId: u.id,
 			displayName: u.displayName,
 			role: m.role,
-			canCreateItems: m.canCreateItems,
 		}));
 }
 
@@ -96,7 +95,6 @@ export function updateMember(
 	tx.update(memberships)
 		.set({
 			...(input.role !== undefined ? { role: input.role } : {}),
-			...(input.canCreateItems !== undefined ? { canCreateItems: input.canCreateItems } : {}),
 		})
 		.where(and(eq(memberships.householdId, actor.householdId), eq(memberships.userId, userId)))
 		.run();

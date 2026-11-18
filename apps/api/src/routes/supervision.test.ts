@@ -37,15 +37,15 @@ describe("codes and consent", () => {
 		expect(mine.guardians).toEqual([{ id: h.owner.userId, displayName: "Alice" }]);
 		expect(mine.rights).toEqual({ canCreate: false, canModify: false, canDelete: false, canTransfer: true });
 		const theirs = (await h.owner.api.get("/supervision")).json();
-		expect(theirs.wards).toEqual([expect.objectContaining({ id: h.adult.userId, displayName: "bob" })]);
+		expect(theirs.wards.map((w: { id: string }) => w.id).sort()).toEqual([h.adult.userId, h.kid.userId].sort());
 		expect(theirs.rights).toBeNull();
 	});
 
 	it("a ward's code makes whoever uses it their guardian", async () => {
-		const code = (await h.kid.api.post("/supervision/codes", { kind: "be_supervised" })).json();
+		const code = (await h.adult.api.post("/supervision/codes", { kind: "be_supervised" })).json();
 		expect((await h.owner.api.post("/supervision/redeem", { code: code.token })).statusCode).toBe(201);
-		expect((await h.kid.api.get("/supervision")).json().guardians).toHaveLength(1);
-		expect((await h.owner.api.get("/supervision")).json().wards).toHaveLength(1);
+		expect((await h.adult.api.get("/supervision")).json().guardians).toHaveLength(1);
+		expect((await h.owner.api.get("/supervision")).json().wards).toHaveLength(2); // kid already was one
 	});
 
 	it("a code works once, expires, and cannot be used by its maker", async () => {
@@ -186,7 +186,7 @@ describe("what a guardian can do for a ward", () => {
 			(await h.owner.api.post(`/supervision/wards/${h.owner.userId}/adjustments`, { amount: 5, note: "me" }))
 				.statusCode,
 		).toBe(404);
-		expect((await h.owner.api.post(`${base(h.kid)}/adjustments`, { amount: 5, note: "x" })).statusCode).toBe(404);
+		expect((await h.adult.api.post(`${base(h.kid)}/adjustments`, { amount: 5, note: "x" })).statusCode).toBe(404);
 	});
 
 	it("approves or rejects the ward's completions that need approval", async () => {
@@ -214,11 +214,18 @@ describe("what a guardian can do for a ward", () => {
 
 	it("shows nothing of accounts you do not supervise, to anyone, super admins included", async () => {
 		await supervise(h.owner, h.adult);
-		// kid is nobody's ward: even alice (owner and super admin) sees a 404.
-		for (const url of [`${base(h.kid)}/items`, `${base(h.kid)}/pending`, `${base(h.kid)}/me`]) {
+		// A plain account created by the super admin: alice is super admin yet sees nothing of it.
+		const zoe = (
+			await h.owner.api.post("/admin/users", { displayName: "Zoe", username: "zoe", password: "a-long-password-here" })
+		).json();
+		for (const url of [
+			`/supervision/wards/${zoe.id}/items`,
+			`/supervision/wards/${zoe.id}/pending`,
+			`/supervision/wards/${zoe.id}/me`,
+		]) {
 			expect((await h.owner.api.get(url)).statusCode).toBe(404);
 		}
-		// bob does not supervise anybody.
+		// bob supervises nobody: kid is not his to see.
 		expect((await h.adult.api.get(`${base(h.kid)}/items`)).statusCode).toBe(404);
 		// A ward does not see their guardian's space either.
 		expect((await h.adult.api.get(`/supervision/wards/${h.owner.userId}/items`)).statusCode).toBe(404);

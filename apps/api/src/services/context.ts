@@ -9,16 +9,15 @@ import type { DbOrTx } from "./members.js";
 export interface MembershipCtx {
 	householdId: string;
 	role: Role;
-	canCreateItems: boolean;
 	/** Days back allowed in this household; `Number.POSITIVE_INFINITY` when it has no limit. */
 	backdateDays: number;
 }
 
 /**
- * The actor of a request. `role`, `canCreateItems`, `householdId` and `backdateDays` describe their *active*
+ * The actor of a request. `role`, `householdId` and `backdateDays` describe their *active*
  * household: the one named by the `X-Household-Id` header when they belong to it, otherwise their oldest
- * membership. Without any household the account still acts on its own personal items, wishes and coins, as an
- * adult who can create items. Rights on an item or wish come from the household it belongs to (`actorIn`), not
+ * membership. Without any household the account still acts on its own personal items, wishes and coins, as a
+ * plain member. Rights on an item or wish come from the household it belongs to (`actorIn`), not
  * from the active one. Time zone and first weekday belong to the person.
  */
 export interface ActorCtx extends Actor {
@@ -27,8 +26,6 @@ export interface ActorCtx extends Actor {
 	timezone: string;
 	weekStart: Weekday;
 	backdateDays: number;
-	/** What the person's guardians allow them to do by themselves; `null` when they have no guardian. */
-	supervised: WardRights | null;
 }
 
 /** Throws unless the person's guardians (if any) allow this kind of action. */
@@ -53,11 +50,11 @@ export const inHousehold = (actor: ActorCtx): actor is HouseholdActorCtx => acto
 /** The same person acting inside one household (their rights there), or on their own space for `null`. */
 export function actorIn(actor: ActorCtx, householdId: string | null): ActorCtx {
 	if (householdId === null) {
-		return { ...actor, householdId: null, role: "adult", canCreateItems: true, backdateDays: Number.POSITIVE_INFINITY };
+		return { ...actor, householdId: null, role: "member", backdateDays: Number.POSITIVE_INFINITY };
 	}
 	const m = actor.memberships.find((x) => x.householdId === householdId);
 	if (!m) throw errors.notFound("Household");
-	return { ...actor, householdId, role: m.role, canCreateItems: m.canCreateItems, backdateDays: m.backdateDays };
+	return { ...actor, householdId, role: m.role, backdateDays: m.backdateDays };
 }
 
 export function membershipsOf(db: DbOrTx, userId: string): MembershipCtx[] {
@@ -71,7 +68,6 @@ export function membershipsOf(db: DbOrTx, userId: string): MembershipCtx[] {
 		.map(({ m, h }) => ({
 			householdId: h.id,
 			role: m.role,
-			canCreateItems: m.canCreateItems,
 			backdateDays: h.backdateUnlimited ? Number.POSITIVE_INFINITY : h.backdateDays,
 		}));
 }
@@ -83,8 +79,7 @@ export function loadActor(db: DbOrTx, userId: string, preferredHouseholdId?: str
 	const list = membershipsOf(db, userId);
 	const base: ActorCtx = {
 		userId,
-		role: "adult",
-		canCreateItems: true,
+		role: "member",
 		householdId: null,
 		memberships: list,
 		timezone: user.timezone,

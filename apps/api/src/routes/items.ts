@@ -3,23 +3,15 @@ import { z } from "zod";
 import {
 	completeBody,
 	completionResult,
-	completionView,
 	createItemBody,
 	idParams,
 	itemView,
 	listItemsQuery,
-	pendingQuery,
 	todayQuery,
 	todayView,
 	updateItemBody,
 } from "../schemas.js";
-import {
-	approveCompletion,
-	createCompletion,
-	listPending,
-	rejectCompletion,
-	undoCompletion,
-} from "../services/completions.js";
+import { createCompletion, undoCompletion } from "../services/completions.js";
 import { archiveItem, createItem, listItems, updateItem } from "../services/items.js";
 import { getToday } from "../services/progress.js";
 import { route } from "./define.js";
@@ -90,15 +82,6 @@ export const itemRoutes = [
 		handler: ({ db, actor, params, body, now }) => createCompletion(db, actor, params.id, body, now),
 	}),
 	route({
-		method: "get",
-		url: "/completions",
-		summary: "Completions waiting for approval (owner and adults)",
-		tag: "Validations",
-		query: pendingQuery,
-		response: z.object({ completions: z.array(completionView) }),
-		handler: ({ db, actor }) => ({ completions: listPending(db, actor) }),
-	}),
-	route({
 		scope: "account",
 		method: "delete",
 		url: "/completions/:id",
@@ -107,23 +90,5 @@ export const itemRoutes = [
 		params: idParams,
 		response: completionResult,
 		handler: ({ db, actor, params, now }) => undoCompletion(db, actor, params.id, now),
-	}),
-	route({
-		method: "post",
-		url: "/completions/:id/approve",
-		summary: "Approve a child's completion",
-		tag: "Validations",
-		params: idParams,
-		response: completionResult,
-		handler: ({ db, actor, params, now }) => approveCompletion(db, actor, params.id, now),
-	}),
-	route({
-		method: "post",
-		url: "/completions/:id/reject",
-		summary: "Reject a child's completion",
-		tag: "Validations",
-		params: idParams,
-		response: completionResult,
-		handler: ({ db, actor, params }) => rejectCompletion(db, actor, params.id),
 	}),
 ];

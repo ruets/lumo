@@ -29,7 +29,7 @@ type QueryOf<P extends keyof paths, M extends keyof paths[P]> = paths[P][M] exte
 	? NonNullable<Q>
 	: never;
 
-export type Role = "owner" | "adult" | "child";
+export type Role = "owner" | "member";
 export type MeResponse = Response<"/api/v1/me", "get", 200>;
 export type HouseholdResponse = Response<"/api/v1/household", "get", 200>;
 export type Member = HouseholdResponse["members"][number];
@@ -164,10 +164,6 @@ export function createClient(options: ClientOptions) {
 			request<CompletionResult>("POST", `/items/${itemId}/completions`, date ? { date } : {}, opts),
 		undoCompletion: (id: string, opts?: RequestOptions) =>
 			request<CompletionResult>("DELETE", `/completions/${id}`, undefined, opts),
-		approveCompletion: (id: string) => request<CompletionResult>("POST", `/completions/${id}/approve`),
-		rejectCompletion: (id: string) => request<CompletionResult>("POST", `/completions/${id}/reject`),
-		listPendingCompletions: () =>
-			request<Response<"/api/v1/completions", "get", 200>>("GET", "/completions?status=pending"),
 		// --- Wishes, coins, progress
 		listRewards: () => request<Response<"/api/v1/rewards", "get", 200>>("GET", "/rewards"),
 		createReward: (input: CreateRewardInput) => request<Reward>("POST", "/rewards", input),
@@ -192,7 +188,7 @@ export function createClient(options: ClientOptions) {
 		updateHousehold: (input: UpdateHouseholdInput) => request<HouseholdResponse>("PATCH", "/household", input),
 		removeMember: (id: string) => request<void>("DELETE", `/members/${id}`),
 		updateMember: (id: string, input: UpdateMemberInput) => request<Member>("PATCH", `/members/${id}`, input),
-		createInvite: (role: "adult" | "child") =>
+		createInvite: (role: "owner" | "member") =>
 			request<{ token: string; expiresAt: string }>("POST", "/household/invites", { role }),
 		revokeInvite: (id: string) => request<void>("DELETE", `/household/invites/${id}`),
 		leaveHousehold: () => request<void>("POST", "/household/leave"),
@@ -222,6 +218,8 @@ export function createClient(options: ClientOptions) {
 		adminUpdateSettings: (input: UpdateInstanceSettingsInput) =>
 			request<InstanceSettings>("PATCH", "/admin/settings", input),
 		// --- Supervision: guardians, wards and the one-time codes between them
+		getGuardianPending: () =>
+			request<Response<"/api/v1/supervision/pending", "get", 200>>("GET", "/supervision/pending"),
 		getSupervision: () => request<SupervisionResponse>("GET", "/supervision"),
 		createSupervisionCode: (kind: "supervise" | "be_supervised") =>
 			request<{ token: string; expiresAt: string }>("POST", "/supervision/codes", { kind }),

@@ -83,10 +83,6 @@ export function createItem(tx: Tx, actor: ActorCtx, input: z.output<typeof creat
 	const assigneeIds = unique(input.assigneeIds ?? [actor.userId]);
 	if (!can(as, "item:create", { assigneeIds })) throw errors.forbidden("Creation not allowed");
 	if (householdId === null) {
-		// Until guardians exist: a child who may not create items in a household may not mint personal coins either.
-		if (actor.memberships.some((m) => m.role === "child" && !m.canCreateItems)) {
-			throw errors.forbidden("Creation not allowed");
-		}
 		// A personal item is yours alone: nobody to assign, no approval, and only your own coins.
 		if (assigneeIds.some((id) => id !== actor.userId))
 			throw errors.validation("assigneeIds: a personal item is yours alone");
@@ -123,31 +119,13 @@ export function createItem(tx: Tx, actor: ActorCtx, input: z.output<typeof creat
 	return toItemView(row, assigneeIds);
 }
 
-/**
- * Your personal items, plus the household's: owner and adults see all of them, a child only what is assigned to
- * them or what they created.
- */
+/** Your personal items, plus those of every household you belong to. */
 export function listItems(db: DbOrTx, actor: ActorCtx, includeArchived: boolean): ItemView[] {
-	let rows = db
+	const rows = db
 		.select()
 		.from(items)
 		.where(and(accessibleItems(actor), includeArchived ? undefined : isNull(items.archivedAt)))
 		.all();
-	{
-		const mine = new Set(
-			db
-				.select({ id: itemAssignees.itemId })
-				.from(itemAssignees)
-				.where(eq(itemAssignees.userId, actor.userId))
-				.all()
-				.map((r) => r.id),
-		);
-		// A child (in the item's own household) only sees what is assigned to them or what they created.
-		const childIn = new Set(actor.memberships.filter((m) => m.role === "child").map((m) => m.householdId));
-		rows = rows.filter(
-			(r) => !r.householdId || !childIn.has(r.householdId) || r.createdBy === actor.userId || mine.has(r.id),
-		);
-	}
 	rows.sort((a, b) => Number(b.pinned) - Number(a.pinned) || a.name.localeCompare(b.name, "fr"));
 	const assignees = assigneesOf(
 		db,

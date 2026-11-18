@@ -109,8 +109,6 @@ export const itemView = z.object({
 /** Never an amount: the server computes the coins. */
 export const completeBody = z.object({ date: localDateSchema.optional() }).strict();
 
-export const pendingQuery = z.object({ status: z.literal("pending") });
-
 /** `shared` is the household pot: `null` for an account in no household. */
 export const balancesView = z.object({ personal: z.number().int(), shared: z.number().int().nullable() });
 
@@ -278,13 +276,13 @@ export const meView = z.object({
 	user: z.object({ id: z.string(), displayName: z.string(), avatarUrl: z.string().nullable() }),
 	/** The active household (the `X-Household-Id` one, else the oldest membership); `null` in none. */
 	household: z.object({ id: z.string(), name: z.string() }).nullable(),
-	role: z.enum(["owner", "adult", "child"]).nullable(),
+	role: z.enum(["owner", "member"]).nullable(),
 	/** Every household of the account, with its role there and its pot. */
 	households: z.array(
 		z.object({
 			id: z.string(),
 			name: z.string(),
-			role: z.enum(["owner", "adult", "child"]),
+			role: z.enum(["owner", "member"]),
 			pot: z.object({ id: z.string(), balance: z.number().int() }),
 		}),
 	),
@@ -294,18 +292,17 @@ export const meView = z.object({
 	}),
 });
 
-export const inviteBody = z.object({ role: z.enum(["adult", "child"]) }).strict();
+export const inviteBody = z.object({ role: z.enum(["owner", "member"]).default("member") }).strict();
 export const inviteView = z.object({ token: z.string(), expiresAt: z.string() });
 
 // ---- Household and members --------------------------------------------------------------
 
-const roleEnum = z.enum(["owner", "adult", "child"]);
+const roleEnum = z.enum(["owner", "member"]);
 
 export const memberView = z.object({
 	userId: z.string(),
 	displayName: z.string(),
 	role: roleEnum,
-	canCreateItems: z.boolean(),
 });
 
 export const householdView = z.object({
@@ -339,11 +336,7 @@ export const updateHouseholdBody = z
 	.strict()
 	.refine((b) => Object.values(b).some((v) => v !== undefined), "provide at least one field");
 
-export const updateMemberBody = z
-	.object({ role: roleEnum, canCreateItems: z.boolean() })
-	.partial()
-	.strict()
-	.refine((b) => b.role !== undefined || b.canCreateItems !== undefined, "provide role and/or canCreateItems");
+export const updateMemberBody = z.object({ role: roleEnum }).strict();
 
 // ---- Account (with or without a household) and administration ------------------------------
 
@@ -470,4 +463,9 @@ export const updateWardRightsBody = wardRightsView
 	.refine((b) => Object.values(b).some((v) => v !== undefined), "provide at least one right");
 export const wardPendingView = z.object({
 	completions: z.array(completionView.extend({ itemName: z.string() })),
+});
+
+/** Everything waiting for a guardian's approval, across all their wards. */
+export const guardianPendingView = z.object({
+	completions: z.array(completionView.extend({ itemName: z.string(), wardId: z.string(), wardName: z.string() })),
 });

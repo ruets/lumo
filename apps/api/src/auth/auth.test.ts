@@ -214,7 +214,7 @@ describe("refresh token rotatif", () => {
 });
 
 describe("invitations and local accounts", () => {
-	async function invite(role: "adult" | "child", cookie: string) {
+	async function invite(role: "member" | "child", cookie: string) {
 		const res = await post("/household/invites", { role }, { ...cookieHeader(cookie), ...ORIGIN });
 		expect(res.statusCode).toBe(201);
 		return res.json().token as string;
@@ -234,7 +234,7 @@ describe("invitations and local accounts", () => {
 
 	it("creates a member with the invitation's role and their wallet, and burns the invitation", async () => {
 		const owner = await setupOwner(ctx);
-		const token = await invite("child", owner);
+		const token = await invite("member", owner);
 		const res = await post("/auth/local/register", {
 			invite: token,
 			displayName: "Bob",
@@ -243,7 +243,7 @@ describe("invitations and local accounts", () => {
 		});
 		expect(res.statusCode).toBe(201);
 		const me = (await get("/me", cookieHeader(sessionCookie(res) as string))).json();
-		expect(me.role).toBe("child");
+		expect(me.role).toBe("member");
 		expect(me.household.name).toBe("The Smiths");
 		expect(me.wallets.personal.id).toBeTruthy();
 
@@ -261,7 +261,7 @@ describe("invitations and local accounts", () => {
 		const household = ctx.db.select().from(memberships).get();
 		const { token } = createInvite(ctx.db, {
 			householdId: household?.householdId as string,
-			role: "adult",
+			role: "member",
 			createdBy: await ownerId(),
 			now: new Date(Date.now() - 8 * 24 * 3600 * 1000),
 		});
@@ -276,7 +276,7 @@ describe("invitations and local accounts", () => {
 
 	it("rejects a username already taken, without consuming the invitation", async () => {
 		const owner = await setupOwner(ctx);
-		const token = await invite("adult", owner);
+		const token = await invite("member", owner);
 		const clash = await post("/auth/local/register", {
 			invite: token,
 			displayName: "Autre",
@@ -295,7 +295,7 @@ describe("invitations and local accounts", () => {
 
 	it("only an owner can invite", async () => {
 		const owner = await setupOwner(ctx);
-		const token = await invite("adult", owner);
+		const token = await invite("member", owner);
 		const adult = await post("/auth/local/register", {
 			invite: token,
 			displayName: "Bob",
@@ -304,13 +304,13 @@ describe("invitations and local accounts", () => {
 		});
 		const res = await post(
 			"/household/invites",
-			{ role: "child" },
+			{ role: "member" },
 			{ ...cookieHeader(sessionCookie(adult) as string), ...ORIGIN },
 		);
 		expect(res.statusCode).toBe(403);
 		expect(
-			(await post("/household/invites", { role: "owner" }, { ...cookieHeader(owner), ...ORIGIN })).statusCode,
-		).toBe(400);
+			(await post("/household/invites", { role: "child" }, { ...cookieHeader(owner), ...ORIGIN })).statusCode,
+		).toBe(400); // the old child role no longer exists
 	});
 });
 
@@ -361,12 +361,12 @@ describe("OIDC web (Authentik)", () => {
 
 	it("creates a guest's account and links their sub", async () => {
 		const owner = await setupOwner(ctx);
-		const token = (await post("/household/invites", { role: "adult" }, { ...cookieHeader(owner), ...ORIGIN })).json()
+		const token = (await post("/household/invites", { role: "member" }, { ...cookieHeader(owner), ...ORIGIN })).json()
 			.token;
 		ctx.oidc.grant("c1", { sub: "sub-bob", name: "Bob" });
 		const res = await callback((await startLogin(token)).state, "c1");
 		const me = (await get("/me", cookieHeader(sessionCookie(res) as string))).json();
-		expect(me).toMatchObject({ role: "adult", household: { name: "The Smiths" } });
+		expect(me).toMatchObject({ role: "member", household: { name: "The Smiths" } });
 		// The sub is now linked: the same invitation no longer works, but Bob signs back in without it.
 		ctx.oidc.grant("c2", { sub: "sub-bob" });
 		const again = await callback((await startLogin()).state, "c2");
@@ -375,7 +375,7 @@ describe("OIDC web (Authentik)", () => {
 
 	it("lumo-admins group: makes a super admin, never demotes", async () => {
 		const owner = await setupOwner(ctx);
-		const token = (await post("/household/invites", { role: "adult" }, { ...cookieHeader(owner), ...ORIGIN })).json()
+		const token = (await post("/household/invites", { role: "member" }, { ...cookieHeader(owner), ...ORIGIN })).json()
 			.token;
 		ctx.oidc.grant("c1", { sub: "sub-bob" });
 		await callback((await startLogin(token)).state, "c1");
@@ -395,7 +395,7 @@ describe("OIDC web (Authentik)", () => {
 		await ctx.close();
 		ctx = await createTestContext({ OIDC_ADMIN_GROUP: "" });
 		const owner = await setupOwner(ctx);
-		const token = (await post("/household/invites", { role: "adult" }, { ...cookieHeader(owner), ...ORIGIN })).json()
+		const token = (await post("/household/invites", { role: "member" }, { ...cookieHeader(owner), ...ORIGIN })).json()
 			.token;
 		ctx.oidc.grant("c1", { sub: "sub-bob", groups: ["lumo-admins"] });
 		await callback((await startLogin(token)).state, "c1");
@@ -470,11 +470,11 @@ describe("OIDC mobile (expo-auth-session)", () => {
 
 	it("accepts an invitation", async () => {
 		const owner = await setupOwner(ctx);
-		const token = (await post("/household/invites", { role: "child" }, { ...cookieHeader(owner), ...ORIGIN })).json()
+		const token = (await post("/household/invites", { role: "member" }, { ...cookieHeader(owner), ...ORIGIN })).json()
 			.token;
 		ctx.oidc.grant("m1", { sub: "sub-kid" });
 		const res = await post("/auth/mobile/exchange", body({ invite: token }));
-		expect((await get("/me", { authorization: `Bearer ${res.json().accessToken}` })).json().role).toBe("child");
+		expect((await get("/me", { authorization: `Bearer ${res.json().accessToken}` })).json().role).toBe("member");
 	});
 
 	it("returns oidc_failed if Authentik rejects the code", async () => {

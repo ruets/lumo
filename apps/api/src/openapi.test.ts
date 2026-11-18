@@ -30,8 +30,6 @@ describe("spec OpenAPI", () => {
 			["/api/v1/today", "get"],
 			["/api/v1/items/{id}/completions", "post"],
 			["/api/v1/completions/{id}", "delete"],
-			["/api/v1/completions/{id}/approve", "post"],
-			["/api/v1/completions/{id}/reject", "post"],
 			["/api/v1/rewards", "get"],
 			["/api/v1/rewards/{id}/redemptions", "post"],
 			["/api/v1/transfers", "post"],

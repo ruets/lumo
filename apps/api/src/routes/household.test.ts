@@ -31,90 +31,82 @@ describe("GET /household", () => {
 			expect(res.members).toHaveLength(3);
 		}
 		const members = (await h.kid.api.get("/household")).json().members;
-		expect(members).toContainEqual({
-			userId: h.owner.userId,
-			displayName: "Alice",
-			role: "owner",
-			canCreateItems: false,
-		});
-		expect(members).toContainEqual({
-			userId: h.adult.userId,
-			displayName: "bob",
-			role: "adult",
-			canCreateItems: false,
-		});
-		expect(members).toContainEqual({ userId: h.kid.userId, displayName: "kid", role: "child", canCreateItems: false });
+		expect(members).toContainEqual({ userId: h.owner.userId, displayName: "Alice", role: "owner" });
+		expect(members).toContainEqual({ userId: h.adult.userId, displayName: "bob", role: "member" });
+		expect(members).toContainEqual({ userId: h.kid.userId, displayName: "kid", role: "member" });
 	});
 
 	it("pending invitations are only visible to the owner", async () => {
-		await h.owner.api.post("/household/invites", { role: "child" });
+		await h.owner.api.post("/household/invites", { role: "member" });
 		const mine = (await h.owner.api.get("/household")).json().invites;
 		expect(mine).toHaveLength(1);
-		expect(mine[0]).toMatchObject({ role: "child" });
+		expect(mine[0]).toMatchObject({ role: "member" });
 		expect(mine[0].token).toBeUndefined(); // the token is only shown once, at creation
 		expect((await h.adult.api.get("/household")).json().invites).toEqual([]);
 	});
 
 	it("used and expired invitations are not listed", async () => {
-		const used = (await h.owner.api.post("/household/invites", { role: "adult" })).json();
+		const used = (await h.owner.api.post("/household/invites", { role: "member" })).json();
 		await register(used.token, "carol");
-		await h.owner.api.post("/household/invites", { role: "child" });
+		await h.owner.api.post("/household/invites", { role: "member" });
 		ctx.clock.now = new Date("2026-11-30T10:00:00Z"); // 13 days later: the 7-day invitation has expired
 		expect((await h.owner.api.get("/household")).json().invites).toEqual([]);
 	});
 });
 
 describe("PATCH /members/:id", () => {
-	it("the owner changes a role and the child's permission to create items", async () => {
-		const res = await h.owner.api.patch(`/members/${h.kid.userId}`, { role: "adult", canCreateItems: true });
+	it("the owner changes a role", async () => {
+		const res = await h.owner.api.patch(`/members/${h.adult.userId}`, { role: "owner" });
 		expect(res.statusCode).toBe(200);
-		expect(res.json()).toMatchObject({ userId: h.kid.userId, role: "adult", canCreateItems: true });
+		expect(res.json()).toMatchObject({ userId: h.adult.userId, role: "owner" });
 		const members = (await h.owner.api.get("/household")).json().members;
-		expect(members.find((m: { userId: string }) => m.userId === h.kid.userId)).toMatchObject({ role: "adult" });
+		expect(members.find((m: { userId: string }) => m.userId === h.adult.userId)).toMatchObject({ role: "owner" });
 	});
 
-	it("the new rights apply right away", async () => {
-		const create = () =>
-			h.kid.api.post("/items", { kind: "habit", name: "Read", schedule: { type: "daily" }, reward: 1 });
-		expect((await create()).statusCode).toBe(403);
-		await h.owner.api.patch(`/members/${h.kid.userId}`, { canCreateItems: true });
-		expect((await create()).statusCode).toBe(201);
+	it("the new role applies right away", async () => {
+		expect((await h.adult.api.post("/household/invites", { role: "member" })).statusCode).toBe(403);
+		await h.owner.api.patch(`/members/${h.adult.userId}`, { role: "owner" });
+		expect((await h.adult.api.post("/household/invites", { role: "member" })).statusCode).toBe(201);
+	});
+
+	it("the old canCreateItems setting is gone: guardians set the rights now", async () => {
+		expect((await h.owner.api.patch(`/members/${h.kid.userId}`, { canCreateItems: true })).statusCode).toBe(400);
 	});
 
 	it("only the owner manages members", async () => {
-		expect((await h.adult.api.patch(`/members/${h.kid.userId}`, { role: "adult" })).statusCode).toBe(403);
+		expect((await h.adult.api.patch(`/members/${h.kid.userId}`, { role: "member" })).statusCode).toBe(403);
 		expect((await h.kid.api.patch(`/members/${h.kid.userId}`, { role: "owner" })).statusCode).toBe(403);
 		expect(
 			(await h.owner.api.get("/household")).json().members.find((m: { userId: string }) => m.userId === h.kid.userId)
 				.role,
-		).toBe("child");
+		).toBe("member");
 	});
 
 	it("refuses to demote the last owner (409 last_owner)", async () => {
-		const res = await h.owner.api.patch(`/members/${h.owner.userId}`, { role: "adult" });
+		const res = await h.owner.api.patch(`/members/${h.owner.userId}`, { role: "member" });
 		expect(res.statusCode).toBe(409);
 		expect(res.json().code).toBe("last_owner");
 	});
 
 	it("an owner can step down once another owner exists", async () => {
 		expect((await h.owner.api.patch(`/members/${h.adult.userId}`, { role: "owner" })).statusCode).toBe(200);
-		expect((await h.owner.api.patch(`/members/${h.owner.userId}`, { role: "adult" })).statusCode).toBe(200);
+		expect((await h.owner.api.patch(`/members/${h.owner.userId}`, { role: "member" })).statusCode).toBe(200);
 		// Alice is now an adult: she cannot manage members any more, Bob can.
-		expect((await h.owner.api.patch(`/members/${h.kid.userId}`, { role: "adult" })).statusCode).toBe(403);
-		expect((await h.adult.api.patch(`/members/${h.kid.userId}`, { role: "adult" })).statusCode).toBe(200);
+		expect((await h.owner.api.patch(`/members/${h.kid.userId}`, { role: "member" })).statusCode).toBe(403);
+		expect((await h.adult.api.patch(`/members/${h.kid.userId}`, { role: "member" })).statusCode).toBe(200);
 	});
 
 	it("validates the body and the target", async () => {
 		expect((await h.owner.api.patch(`/members/${h.kid.userId}`, {})).statusCode).toBe(400);
 		expect((await h.owner.api.patch(`/members/${h.kid.userId}`, { role: "king" })).statusCode).toBe(400);
-		expect((await h.owner.api.patch(`/members/${h.kid.userId}`, { role: "adult", name: "x" })).statusCode).toBe(400);
-		expect((await h.owner.api.patch("/members/unknown", { role: "adult" })).statusCode).toBe(404);
+		expect((await h.owner.api.patch(`/members/${h.kid.userId}`, { role: "member", name: "x" })).statusCode).toBe(400);
+		expect((await h.owner.api.patch("/members/unknown", { role: "member" })).statusCode).toBe(404);
 	});
 });
 
 describe("DELETE /household/invites/:id", () => {
 	it("the owner revokes a pending invitation, which can no longer be used", async () => {
-		const invite = (await h.owner.api.post("/household/invites", { role: "child" })).json();
+		const invite = (await h.owner.api.post("/household/invites", { role: "member" })).json();
 		const [pending] = (await h.owner.api.get("/household")).json().invites;
 		expect((await h.owner.api.del(`/household/invites/${pending.id}`)).statusCode).toBe(204);
 		expect((await h.owner.api.get("/household")).json().invites).toEqual([]);
@@ -124,7 +116,7 @@ describe("DELETE /household/invites/:id", () => {
 	});
 
 	it("only the owner revokes, and unknown or used invitations are 404", async () => {
-		await h.owner.api.post("/household/invites", { role: "child" });
+		await h.owner.api.post("/household/invites", { role: "member" });
 		const [pending] = (await h.owner.api.get("/household")).json().invites;
 		expect((await h.adult.api.del(`/household/invites/${pending.id}`)).statusCode).toBe(403);
 		expect((await h.owner.api.del("/household/invites/unknown")).statusCode).toBe(404);
@@ -164,20 +156,20 @@ describe("DELETE /members/:id", () => {
 	it("unassigns the member from items and drops their pending approvals", async () => {
 		const item = await makeHabit(h.adult, { assigneeIds: [h.kid.userId], requiresApproval: true });
 		await h.kid.api.post(`/items/${item.id}/completions`);
-		expect((await h.adult.api.get("/completions?status=pending")).json().completions).toHaveLength(1);
+		expect((await h.owner.api.get("/supervision/pending")).json().completions).toHaveLength(1);
 
 		await h.owner.api.del(`/members/${h.kid.userId}`);
 		expect(ctx.db.select().from(itemAssignees).where(eq(itemAssignees.userId, h.kid.userId)).all()).toEqual([]);
-		expect((await h.adult.api.get("/completions?status=pending")).json().completions).toEqual([]);
+		expect((await h.owner.api.get("/supervision/pending")).json().completions).toEqual([]);
 	});
 
 	it("a removed OIDC member can still sign in, and an invitation brings them back", async () => {
-		const invite = (await h.owner.api.post("/household/invites", { role: "adult" })).json();
+		const invite = (await h.owner.api.post("/household/invites", { role: "member" })).json();
 		const claims = { sub: "sub-zoe", name: "Zoe", email: null, picture: null, groups: [] };
 		const { userId } = resolveOidcLogin(ctx.db, ctx.config, claims, invite.token);
 		await h.owner.api.del(`/members/${userId}`);
 		expect(() => resolveOidcLogin(ctx.db, ctx.config, claims, null)).not.toThrow();
-		const again = (await h.owner.api.post("/household/invites", { role: "adult" })).json();
+		const again = (await h.owner.api.post("/household/invites", { role: "member" })).json();
 		expect(() => resolveOidcLogin(ctx.db, ctx.config, claims, again.token)).not.toThrow();
 	});
 

@@ -371,23 +371,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/completions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Completions waiting for approval (owner and adults) */
-        get: operations["getApiV1Completions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/completions/{id}": {
         parameters: {
             query?: never;
@@ -400,40 +383,6 @@ export interface paths {
         post?: never;
         /** Undo a completion (counter-entry in the ledger) */
         delete: operations["deleteApiV1CompletionsId"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/completions/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Approve a child's completion */
-        post: operations["postApiV1CompletionsIdApprove"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/completions/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reject a child's completion */
-        post: operations["postApiV1CompletionsIdReject"];
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -585,6 +534,23 @@ export interface paths {
         };
         /** Who supervises me and who I supervise */
         get: operations["getApiV1Supervision"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/supervision/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Everything waiting for my approval, across the people I supervise */
+        get: operations["getApiV1SupervisionPending"];
         put?: never;
         post?: never;
         delete?: never;
@@ -973,12 +939,12 @@ export interface operations {
                             id: string;
                             name: string;
                         } | null;
-                        role: ("owner" | "adult" | "child") | null;
+                        role: ("owner" | "member") | null;
                         households: {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            role: "owner" | "adult" | "child";
+                            role: "owner" | "member";
                             pot: {
                                 id: string;
                                 balance: number;
@@ -1025,8 +991,11 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    role: "adult" | "child";
+                    /**
+                     * @default member
+                     * @enum {string}
+                     */
+                    role?: "owner" | "member";
                 };
             };
         };
@@ -1087,7 +1056,7 @@ export interface operations {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            role: "owner" | "adult" | "child";
+                            role: "owner" | "member";
                         }[];
                         timezone: string;
                         weekStart: number;
@@ -1150,7 +1119,7 @@ export interface operations {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            role: "owner" | "adult" | "child";
+                            role: "owner" | "member";
                         }[];
                         timezone: string;
                         weekStart: number;
@@ -1334,7 +1303,7 @@ export interface operations {
                                 id: string;
                                 name: string;
                                 /** @enum {string} */
-                                role: "owner" | "adult" | "child";
+                                role: "owner" | "member";
                             }[];
                             createdAt: string;
                         }[];
@@ -1396,7 +1365,7 @@ export interface operations {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            role: "owner" | "adult" | "child";
+                            role: "owner" | "member";
                         }[];
                         createdAt: string;
                     };
@@ -1497,7 +1466,7 @@ export interface operations {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            role: "owner" | "adult" | "child";
+                            role: "owner" | "member";
                         }[];
                         createdAt: string;
                     };
@@ -1538,7 +1507,7 @@ export interface operations {
                 "application/json": {
                     householdId: string;
                     /** @enum {string} */
-                    role: "owner" | "adult" | "child";
+                    role: "owner" | "member";
                 };
             };
         };
@@ -1560,7 +1529,7 @@ export interface operations {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            role: "owner" | "adult" | "child";
+                            role: "owner" | "member";
                         }[];
                         createdAt: string;
                     };
@@ -1971,13 +1940,12 @@ export interface operations {
                             userId: string;
                             displayName: string;
                             /** @enum {string} */
-                            role: "owner" | "adult" | "child";
-                            canCreateItems: boolean;
+                            role: "owner" | "member";
                         }[];
                         invites: {
                             id: string;
                             /** @enum {string} */
-                            role: "owner" | "adult" | "child";
+                            role: "owner" | "member";
                             expiresAt: string;
                             createdAt: string;
                         }[];
@@ -2037,13 +2005,12 @@ export interface operations {
                             userId: string;
                             displayName: string;
                             /** @enum {string} */
-                            role: "owner" | "adult" | "child";
-                            canCreateItems: boolean;
+                            role: "owner" | "member";
                         }[];
                         invites: {
                             id: string;
                             /** @enum {string} */
-                            role: "owner" | "adult" | "child";
+                            role: "owner" | "member";
                             expiresAt: string;
                             createdAt: string;
                         }[];
@@ -2123,8 +2090,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    role?: "owner" | "adult" | "child";
-                    canCreateItems?: boolean;
+                    role: "owner" | "member";
                 };
             };
         };
@@ -2139,8 +2105,7 @@ export interface operations {
                         userId: string;
                         displayName: string;
                         /** @enum {string} */
-                        role: "owner" | "adult" | "child";
-                        canCreateItems: boolean;
+                        role: "owner" | "member";
                     };
                 };
             };
@@ -2706,171 +2671,7 @@ export interface operations {
             };
         };
     };
-    getApiV1Completions: {
-        parameters: {
-            query: {
-                status: "pending";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        completions: {
-                            id: string;
-                            itemId: string;
-                            userId: string;
-                            localDate: string;
-                            /** @enum {string} */
-                            status: "pending" | "approved" | "rejected";
-                            approvedBy: string | null;
-                            completedAt: string;
-                            undoneAt: string | null;
-                        }[];
-                    };
-                };
-            };
-            /** @description Error (RFC 9457) with a stable `code` */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": {
-                        type: string;
-                        title: string;
-                        status: number;
-                        code: string;
-                        detail?: string;
-                        instance?: string;
-                    };
-                };
-            };
-        };
-    };
     deleteApiV1CompletionsId: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Unique UUID per request; a duplicate returns the response already stored. */
-                "Idempotency-Key": string;
-            };
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        completion: {
-                            id: string;
-                            itemId: string;
-                            userId: string;
-                            localDate: string;
-                            /** @enum {string} */
-                            status: "pending" | "approved" | "rejected";
-                            approvedBy: string | null;
-                            completedAt: string;
-                            undoneAt: string | null;
-                        };
-                        balances: {
-                            personal: number;
-                            shared: number | null;
-                        };
-                    };
-                };
-            };
-            /** @description Error (RFC 9457) with a stable `code` */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": {
-                        type: string;
-                        title: string;
-                        status: number;
-                        code: string;
-                        detail?: string;
-                        instance?: string;
-                    };
-                };
-            };
-        };
-    };
-    postApiV1CompletionsIdApprove: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Unique UUID per request; a duplicate returns the response already stored. */
-                "Idempotency-Key": string;
-            };
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        completion: {
-                            id: string;
-                            itemId: string;
-                            userId: string;
-                            localDate: string;
-                            /** @enum {string} */
-                            status: "pending" | "approved" | "rejected";
-                            approvedBy: string | null;
-                            completedAt: string;
-                            undoneAt: string | null;
-                        };
-                        balances: {
-                            personal: number;
-                            shared: number | null;
-                        };
-                    };
-                };
-            };
-            /** @description Error (RFC 9457) with a stable `code` */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": {
-                        type: string;
-                        title: string;
-                        status: number;
-                        code: string;
-                        detail?: string;
-                        instance?: string;
-                    };
-                };
-            };
-        };
-    };
-    postApiV1CompletionsIdReject: {
         parameters: {
             query?: never;
             header: {
@@ -3530,6 +3331,57 @@ export interface operations {
             };
         };
     };
+    getApiV1SupervisionPending: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        completions: {
+                            id: string;
+                            itemId: string;
+                            userId: string;
+                            localDate: string;
+                            /** @enum {string} */
+                            status: "pending" | "approved" | "rejected";
+                            approvedBy: string | null;
+                            completedAt: string;
+                            undoneAt: string | null;
+                            itemName: string;
+                            wardId: string;
+                            wardName: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Error (RFC 9457) with a stable `code` */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        type: string;
+                        title: string;
+                        status: number;
+                        code: string;
+                        detail?: string;
+                        instance?: string;
+                    };
+                };
+            };
+        };
+    };
     postApiV1SupervisionCodes: {
         parameters: {
             query?: never;
@@ -4040,12 +3892,12 @@ export interface operations {
                             id: string;
                             name: string;
                         } | null;
-                        role: ("owner" | "adult" | "child") | null;
+                        role: ("owner" | "member") | null;
                         households: {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            role: "owner" | "adult" | "child";
+                            role: "owner" | "member";
                             pot: {
                                 id: string;
                                 balance: number;

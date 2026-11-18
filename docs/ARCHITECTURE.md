@@ -23,7 +23,7 @@ License: **AGPL-3.0** (LICENSE file + SPDX header in every package).
 | ------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
 | Habits        | Schedule (daily, X times a week, fixed days, monthly), per-day goal (e.g. 3 glasses of water), reward, archiving, pinning | Free-form RRULEs, timed habits    |
 | Tasks         | One-off with a due date, reward, assigned to one or more members                                                          | Subtasks, recurring reminders     |
-| Completions   | Complete, undo, complete a past day (configurable window), adult approval if the item requires it                         | Notification of pending approvals |
+| Completions   | Complete, undo, complete a past day (configurable window), guardian approval if the item requires it                      | Notification of pending approvals |
 | Coins         | Personal wallet per member + household pot, history, personal → pot transfers, manual adjustment by an admin              | Streak bonus                      |
 | Wishes        | Price, per-period usage limit, link, redemption for coins, wishes funded by the pot                                       |                                   |
 | Progress      | Week and month rates, current and best streak, heatmap                                                                    | CSV export                        |
@@ -125,8 +125,8 @@ Guards: never delete or demote the last super admin, never delete yourself, neve
 - Super admins, the Admin panel, accounts without a household (slice A).
 - Personal ownership (slice B1): items and wishes belong to a household or to an account (`owner_id`), the personal wallet belongs to the account and follows it between households (`wallets.household_id` is null), `ledger_entries.household_id` is nullable, and the app works fully for an account in no household. Personal items are visible to their owner only, credit the personal wallet only and never need approval.
 - Several households per account (slice B2): `memberships` has no per-user uniqueness. Time zone and first weekday belong to the account (`users.timezone`, `users.week_start`, edited in Settings); a household keeps only its name and backdate window. Lists (items, wishes, today, stats) merge every household of the person and their personal space. Rights on an item or wish come from the household it belongs to, and coins credited to a pot go to that household's pot, whichever household is active. The client sends the household it is looking at in the `X-Household-Id` header; household management routes (members, invites, pot transfers, ledger of the pot, approvals, leaving) apply to that active household, which falls back to the person's oldest membership. Until guardians exist, a child without the right to create items in any household cannot create personal items either.
-- Guardianships (slice C1): `guardianships` rows, one-time `guardianship_codes` (7 days, single use) in both directions (a guardian's code makes the person who uses it their ward; a ward's code makes the person who uses it their guardian), and a guardian can also create a supervised local account. A supervised account is limited by `users.can_create/can_modify/can_delete/can_transfer` (strict defaults: only giving to a pot is allowed) and its completions of items that need approval go pending like a child's. Guardians act on a ward's own space through `/supervision/wards/:wardId/...` (same routes and rules as the ward, minus completing and redeeming), set the ward's rights, adjust the ward's coins with a note, approve or reject completions, and end the supervision; a ward cannot end it. Nothing is revealed about accounts you do not supervise (404), super admins included. No loops: a supervised account cannot supervise. Household roles still include `child`; replacing it by supervision is the next step.
-- Still to do: removing the household `child` role in favour of supervision, pot withdrawal policy, feature toggles, claim codes, `OIDC_AUTO_CREATE_USERS`.
+- Guardianships (slice C1): `guardianships` rows, one-time `guardianship_codes` (7 days, single use) in both directions (a guardian's code makes the person who uses it their ward; a ward's code makes the person who uses it their guardian), and a guardian can also create a supervised local account. A supervised account is limited by `users.can_create/can_modify/can_delete/can_transfer` (strict defaults: only giving to a pot is allowed) and its completions of items that need approval go pending like a child's. Guardians act on a ward's own space through `/supervision/wards/:wardId/...` (same routes and rules as the ward, minus completing and redeeming), set the ward's rights, adjust the ward's coins with a note, approve or reject completions, and end the supervision; a ward cannot end it. Nothing is revealed about accounts you do not supervise (404), super admins included. No loops: a supervised account cannot supervise. Household roles are `owner` and `member`: the former `child` is a supervised account, the former `can_create_items` is the ward's `can_create`.
+- Still to do: pot withdrawal policy (until then a supervised account cannot pay a wish from the pot, anyone else can), feature toggles, claim codes, `OIDC_AUTO_CREATE_USERS`.
 
 ### Still open
 
@@ -146,7 +146,7 @@ SQLite in WAL mode, a single file, schema managed by Drizzle ORM (better-sqlite3
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
 | `households`       | id, name, timezone, week_start, backdate_days                                                                                                                                                          | The household and its settings                                                                                           |
 | `users`            | id, display_name, avatar_url, oidc_subject, username, email, password_hash (nullable)                                                                                                                  | A person, linked to Authentik or to a local account (`username` unique, lowercase, for local sign-in)                    |
-| `memberships`      | household_id, user_id, role (`owner`, `adult`, `child`), can_create_items                                                                                                                              | Membership and role; `can_create_items` = "if allowed" for a child                                                       |
+| `memberships`      | household_id, user_id, role (`owner`, `member`)                                                                                                                                                        | Membership and role; `can_create_items` = "if allowed" for a child                                                       |
 | `wallets`          | id, household_id, kind (`personal`, `shared`), user_id (null for `shared`)                                                                                                                             | One wallet per member + one pot per household                                                                            |
 | `items`            | id, household_id, kind (`habit`, `task`), name, description, schedule (JSON), target_per_period, reward, credits_to (`personal`, `shared`), due_at, pinned, requires_approval, archived_at, created_by | Habits and tasks                                                                                                         |
 | `item_assignees`   | item_id, user_id                                                                                                                                                                                       | Who must do what                                                                                                         |
@@ -173,7 +173,7 @@ Pure TypeScript, no dependency on the database or the framework, unit-tested. Mo
 - **Schedule.** `schedule` validated by Zod: `{type:"daily"}`, `{type:"weekly",days:[1,3,5]}`, `{type:"timesPerWeek",count:3}`, `{type:"monthly",day:1}`. `isDue(item, date)` says whether the item shows up on a given day.
 - **Per-day goal.** `target_per_period = 3` → 3 completions possible, each earns `reward`. Beyond that: 409 `target_reached`.
 - **Atomic coins.** Completing = one transaction that inserts the completion and the `+reward` entry in the wallet designated by `credits_to` (the member's own or the pot). Undoing = `undone_at` + `−reward` entry. The client never sends an amount.
-- **Adult approval.** If `requires_approval` and the actor is `child`: completion in `pending`, no entry. An `owner` or `adult` approves it (entry created) or rejects it.
+- **Guardian approval.** If `requires_approval` and the actor is supervised (has a guardian): completion in `pending`, no entry. One of their guardians approves it (entry created) or rejects it, through `/supervision/wards/:wardId/completions/:id/approve|reject`; `GET /supervision/pending` lists what waits for you across your wards.
 - **Transfers.** Personal → pot: two entries (−n personal, +n pot) in the same transaction, linked by `transfer_id`. Insufficient balance: 409 `insufficient_balance`.
 - **Wish redemption.** `BEGIN IMMEDIATE` transaction: check balance and period limit, insert the redemption and the `−cost` entry in the `funded_from` wallet. A wish funded by the pot is reserved for the `owner` and `adult` roles.
 - **Idempotency.** Every write request carries an `Idempotency-Key` (client UUID); a duplicate returns the response already stored.
@@ -213,7 +213,7 @@ Implementation (step 2):
 - Bodies are strict: an unknown field, including any `amount`, is rejected with 400.
 - Every write requires `Idempotency-Key` (400 `idempotency_key_required` otherwise). Looking up the key, the action and storing the response all happen in the same `BEGIN IMMEDIATE` transaction; a replay returns the stored response with the `Idempotent-Replayed: true` header. Only successful responses are stored. Keys are specific to each user.
 - Business error codes: 409 `target_reached`, `insufficient_balance`, `limit_reached`, `not_due`, `not_pending`, `already_undone`; 403 `backdate_not_allowed`, `forbidden`; 400 `future_date`, `invalid_amount`, `validation_error`.
-- `GET /completions?status=pending` (owner and adults) lists the completions to approve. `PATCH /rewards/:id` accepts `archived`. `GET /ledger` paginates by cursor, newest first.
+- `PATCH /rewards/:id` accepts `archived`. `GET /ledger` paginates by cursor, newest first.
 
 Rules clarified during implementation:
 
@@ -247,13 +247,15 @@ Rules clarified during implementation:
 | `POST /auth/logout`                                   | Revokes the current session                                                                                                                |
 | `POST /household/invites`                             | Creates an invitation (owner)                                                                                                              |
 
-| Action                                                   | owner | adult | child      |
-| -------------------------------------------------------- | ----- | ----- | ---------- |
-| Complete own items, redeem a personal wish               | yes   | yes   | yes        |
-| Create or edit own habits and tasks                      | yes   | yes   | if allowed |
-| Create for others, approve a child, redeem a shared wish | yes   | yes   | no         |
-| Adjust coins, complete outside the window                | yes   | no    | no         |
-| Manage members and settings                              | yes   | no    | no         |
+| Action                                          | owner | member | supervised member               |
+| ----------------------------------------------- | ----- | ------ | ------------------------------- |
+| Complete own items, redeem a personal wish      | yes   | yes    | yes (approval if the item asks) |
+| Create, edit or delete habits, tasks and wishes | yes   | yes    | only what their guardians allow |
+| Redeem a shared wish (paid from the pot)        | yes   | yes    | no                              |
+| Give to a pot                                   | yes   | yes    | if their guardians allow it     |
+| Undo someone else's completion, adjust the pot  | yes   | no     | no                              |
+| Complete outside the backdate window            | yes   | no     | no                              |
+| Manage members and settings                     | yes   | no     | no                              |
 
 Rights are checked on the API side by `can(actor, action, resource)` from the `domain` package.
 
@@ -283,7 +285,7 @@ Two separate apps (React for web, React Native/Expo for mobile). They share `dom
 
 Reference mock-up: the "Lumo — app mock-up" canvas (dark theme, Unbounded and Manrope fonts, purple `#6B4BF2`, coins in `#FFC857`). Colors live in `packages/tokens`; the web copies them into the Tailwind `@theme` of `apps/web/src/styles.css` (keep them in sync).
 
-- **Screens** (same on web and mobile): Today (day ring, still to do, pending approvals for adults, next wish), Habits (week, Habits/Tasks tabs, complete or undo, creation), Progress (week or month rate, bars, streaks, latest coins), Wishes (balance, redeem, creation), Settings (account and sign-out, language, and on mobile the server), opened from the avatar next to the balance. From 768 px up the web adds a sidebar and two-column grids; below that, the same tab bar as mobile.
+- **Screens** (same on web and mobile): Today (day ring, still to do, pending approvals for guardians, next wish), Habits (week, Habits/Tasks tabs, complete or undo, creation), Progress (week or month rate, bars, streaks, latest coins), Wishes (balance, redeem, creation), Settings (account and sign-out, language, and on mobile the server), opened from the avatar next to the balance. From 768 px up the web adds a sidebar and two-column grids; below that, the same tab bar as mobile.
 - **Web**: TanStack Router routes in code (no file generation), TanStack Query, session cookie, optimistic updates rolled back if the server refuses. Fonts served by `@fontsource` (no CDN: the instance stays self-contained). Routes: `/`, `/habits`, `/progress`, `/wishes`.
 - **Mobile**: Expo Router (`Stack.Protected` for sign-in, tabs), TanStack Query with a cache persisted in AsyncStorage (24 h). **NativeWind is not used**: `StyleSheet` and the tokens are enough, with no extra dependency on the Metro/Tailwind chain.
 - **Shared logic**: `domain/progress` (`summarizeProgress`: bars, rates, trend), `i18n/format` (localised dates, schedule labels, error messages by code).

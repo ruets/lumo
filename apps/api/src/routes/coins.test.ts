@@ -189,31 +189,33 @@ describe("undo", () => {
 		expect(again.json().code).toBe("already_undone");
 	});
 
-	it("rights: a child cannot undo an adult's completion; an adult can undo a child's", async () => {
+	it("rights: you undo your own; an owner undoes anybody's; another member cannot", async () => {
 		const adultItem = await makeHabit(h.adult);
 		const adultDone = (await complete(h.adult, adultItem.id)).json().completion;
 		expect((await h.kid.api.del(`/completions/${adultDone.id}`)).statusCode).toBe(403);
+		expect((await h.owner.api.del(`/completions/${adultDone.id}`)).statusCode).toBe(200);
 
 		const kidItem = await makeHabit(h.adult, { assigneeIds: [h.kid.userId] });
 		const kidDone = (await complete(h.kid, kidItem.id)).json().completion;
-		expect((await h.adult.api.del(`/completions/${kidDone.id}`)).statusCode).toBe(200);
+		expect((await h.adult.api.del(`/completions/${kidDone.id}`)).statusCode).toBe(403);
 	});
 });
 
-describe("adult approval", () => {
+describe("guardian approval", () => {
 	let item: { id: string };
+	const ward = () => `/supervision/wards/${h.kid.userId}`;
 	beforeEach(async () => {
 		item = await makeHabit(h.adult, { reward: 5, requiresApproval: true, assigneeIds: [h.kid.userId, h.adult.userId] });
 	});
 
-	it("child: pending completion, no entry, no balance", async () => {
+	it("a supervised account: pending completion, no entry, no balance", async () => {
 		const res = await complete(h.kid, item.id);
 		expect(res.json().completion.status).toBe("pending");
 		expect(ctx.db.select().from(ledgerEntries).all()).toHaveLength(0);
 		expect(await balances(h.kid)).toEqual({ personal: 0, shared: 0 });
 	});
 
-	it("an adult on the same item is credited right away", async () => {
+	it("an unsupervised member on the same item is credited right away", async () => {
 		expect((await complete(h.adult, item.id)).json().completion.status).toBe("approved");
 		expect((await balances(h.adult)).personal).toBe(5);
 	});
@@ -223,19 +225,19 @@ describe("adult approval", () => {
 		expect((await complete(h.kid, item.id)).json().code).toBe("target_reached");
 	});
 
-	it("approving creates the entry in the child's wallet", async () => {
+	it("approving creates the entry in the ward's wallet", async () => {
 		const pending = (await complete(h.kid, item.id)).json().completion;
-		const res = await h.adult.api.post(`/completions/${pending.id}/approve`);
+		const res = await h.owner.api.post(`${ward()}/completions/${pending.id}/approve`);
 		expect(res.statusCode).toBe(200);
-		expect(res.json().completion).toMatchObject({ status: "approved", approvedBy: h.adult.userId });
+		expect(res.json().completion).toMatchObject({ status: "approved", approvedBy: h.owner.userId });
 		expect(await balances(h.kid)).toEqual({ personal: 5, shared: 0 });
 		const [entry] = ctx.db.select().from(ledgerEntries).where(eq(ledgerEntries.refId, pending.id)).all();
-		expect(entry).toMatchObject({ amount: 5, reason: "completion", createdBy: h.adult.userId });
+		expect(entry).toMatchObject({ amount: 5, reason: "completion", createdBy: h.owner.userId });
 	});
 
 	it("rejecting credits nothing", async () => {
 		const pending = (await complete(h.kid, item.id)).json().completion;
-		const res = await h.adult.api.post(`/completions/${pending.id}/reject`);
+		const res = await h.owner.api.post(`${ward()}/completions/${pending.id}/reject`);
 		expect(res.json().completion.status).toBe("rejected");
 		expect(await balances(h.kid)).toEqual({ personal: 0, shared: 0 });
 		expect(ctx.db.select().from(ledgerEntries).all()).toHaveLength(0);
@@ -243,23 +245,28 @@ describe("adult approval", () => {
 
 	it("approving twice is rejected (409 not_pending), no double credit", async () => {
 		const pending = (await complete(h.kid, item.id)).json().completion;
-		await h.adult.api.post(`/completions/${pending.id}/approve`);
-		const again = await h.adult.api.post(`/completions/${pending.id}/approve`);
+		await h.owner.api.post(`${ward()}/completions/${pending.id}/approve`);
+		const again = await h.owner.api.post(`${ward()}/completions/${pending.id}/approve`);
 		expect(again.statusCode).toBe(409);
 		expect(again.json().code).toBe("not_pending");
 		expect((await balances(h.kid)).personal).toBe(5);
 	});
 
-	it("a child cannot approve, not even their own completion", async () => {
+	it("only a guardian approves: not the ward, not another member", async () => {
 		const pending = (await complete(h.kid, item.id)).json().completion;
-		expect((await h.kid.api.post(`/completions/${pending.id}/approve`)).statusCode).toBe(403);
+		for (const who of [h.kid, h.adult]) {
+			expect((await who.api.post(`${ward()}/completions/${pending.id}/approve`)).statusCode).toBe(404);
+		}
+		expect((await h.kid.api.post(`/completions/${pending.id}/approve`)).statusCode).toBe(404); // no household route any more
 	});
 
-	it("pending completions can be listed (adults), and an adult cannot approve their own", async () => {
+	it("pending completions are listed for the guardian, across all their wards", async () => {
 		const pending = (await complete(h.kid, item.id)).json().completion;
-		const list = (await h.adult.api.get("/completions?status=pending")).json().completions;
-		expect(list.map((c: { id: string }) => c.id)).toEqual([pending.id]);
-		expect((await h.kid.api.get("/completions?status=pending")).statusCode).toBe(403);
+		const list = (await h.owner.api.get("/supervision/pending")).json().completions;
+		expect(list).toEqual([
+			expect.objectContaining({ id: pending.id, wardId: h.kid.userId, wardName: "kid", itemName: "Drink water" }),
+		]);
+		expect((await h.adult.api.get("/supervision/pending")).json().completions).toEqual([]);
 	});
 
 	it("undoing a pending completion does not touch the ledger", async () => {
@@ -495,13 +502,14 @@ describe("undoing a wish redemption", () => {
 		expect((await h.adult.api.del(`/redemptions/${id}`)).json().balances.shared).toBe(6);
 	});
 
-	it("rights: a child cannot undo an adult's redemption; an adult can undo a child's", async () => {
+	it("rights: you undo your own; an owner undoes anybody's; another member cannot", async () => {
 		await h.owner.api.post("/ledger/adjustments", { userId: h.adult.userId, amount: 20, note: "test" });
 		const cheap = (await makeReward({ cost: 1 })).json();
 		const adults = await redeem(h.adult, cheap.id);
 		expect((await h.kid.api.del(`/redemptions/${adults}`)).statusCode).toBe(403);
+		expect((await h.owner.api.del(`/redemptions/${adults}`)).statusCode).toBe(200);
 		const kids = await redeem(h.kid, cheap.id);
-		expect((await h.adult.api.del(`/redemptions/${kids}`)).statusCode).toBe(200);
+		expect((await h.adult.api.del(`/redemptions/${kids}`)).statusCode).toBe(403);
 	});
 
 	it("introuvable : 404", async () => {

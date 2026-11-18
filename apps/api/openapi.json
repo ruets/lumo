@@ -68,7 +68,7 @@
 											"anyOf": [
 												{
 													"type": "string",
-													"enum": ["owner", "adult", "child"]
+													"enum": ["owner", "member"]
 												},
 												{
 													"type": "null"
@@ -88,7 +88,7 @@
 													},
 													"role": {
 														"type": "string",
-														"enum": ["owner", "adult", "child"]
+														"enum": ["owner", "member"]
 													},
 													"pot": {
 														"type": "object",
@@ -216,11 +216,11 @@
 								"type": "object",
 								"properties": {
 									"role": {
+										"default": "member",
 										"type": "string",
-										"enum": ["adult", "child"]
+										"enum": ["owner", "member"]
 									}
 								},
-								"required": ["role"],
 								"additionalProperties": false
 							}
 						}
@@ -334,7 +334,7 @@
 													},
 													"role": {
 														"type": "string",
-														"enum": ["owner", "adult", "child"]
+														"enum": ["owner", "member"]
 													}
 												},
 												"required": ["id", "name", "role"],
@@ -484,7 +484,7 @@
 													},
 													"role": {
 														"type": "string",
-														"enum": ["owner", "adult", "child"]
+														"enum": ["owner", "member"]
 													}
 												},
 												"required": ["id", "name", "role"],
@@ -855,7 +855,7 @@
 																},
 																"role": {
 																	"type": "string",
-																	"enum": ["owner", "adult", "child"]
+																	"enum": ["owner", "member"]
 																}
 															},
 															"required": ["id", "name", "role"],
@@ -1010,7 +1010,7 @@
 													},
 													"role": {
 														"type": "string",
-														"enum": ["owner", "adult", "child"]
+														"enum": ["owner", "member"]
 													}
 												},
 												"required": ["id", "name", "role"],
@@ -1163,7 +1163,7 @@
 													},
 													"role": {
 														"type": "string",
-														"enum": ["owner", "adult", "child"]
+														"enum": ["owner", "member"]
 													}
 												},
 												"required": ["id", "name", "role"],
@@ -1343,7 +1343,7 @@
 									},
 									"role": {
 										"type": "string",
-										"enum": ["owner", "adult", "child"]
+										"enum": ["owner", "member"]
 									}
 								},
 								"required": ["householdId", "role"],
@@ -1391,7 +1391,7 @@
 													},
 													"role": {
 														"type": "string",
-														"enum": ["owner", "adult", "child"]
+														"enum": ["owner", "member"]
 													}
 												},
 												"required": ["id", "name", "role"],
@@ -2244,13 +2244,10 @@
 													},
 													"role": {
 														"type": "string",
-														"enum": ["owner", "adult", "child"]
-													},
-													"canCreateItems": {
-														"type": "boolean"
+														"enum": ["owner", "member"]
 													}
 												},
-												"required": ["userId", "displayName", "role", "canCreateItems"],
+												"required": ["userId", "displayName", "role"],
 												"additionalProperties": false
 											}
 										},
@@ -2264,7 +2261,7 @@
 													},
 													"role": {
 														"type": "string",
-														"enum": ["owner", "adult", "child"]
+														"enum": ["owner", "member"]
 													},
 													"expiresAt": {
 														"type": "string"
@@ -2417,13 +2414,10 @@
 													},
 													"role": {
 														"type": "string",
-														"enum": ["owner", "adult", "child"]
-													},
-													"canCreateItems": {
-														"type": "boolean"
+														"enum": ["owner", "member"]
 													}
 												},
-												"required": ["userId", "displayName", "role", "canCreateItems"],
+												"required": ["userId", "displayName", "role"],
 												"additionalProperties": false
 											}
 										},
@@ -2437,7 +2431,7 @@
 													},
 													"role": {
 														"type": "string",
-														"enum": ["owner", "adult", "child"]
+														"enum": ["owner", "member"]
 													},
 													"expiresAt": {
 														"type": "string"
@@ -2535,12 +2529,10 @@
 								"properties": {
 									"role": {
 										"type": "string",
-										"enum": ["owner", "adult", "child"]
-									},
-									"canCreateItems": {
-										"type": "boolean"
+										"enum": ["owner", "member"]
 									}
 								},
+								"required": ["role"],
 								"additionalProperties": false
 							}
 						}
@@ -2562,13 +2554,10 @@
 										},
 										"role": {
 											"type": "string",
-											"enum": ["owner", "adult", "child"]
-										},
-										"canCreateItems": {
-											"type": "boolean"
+											"enum": ["owner", "member"]
 										}
 									},
-									"required": ["userId", "displayName", "role", "canCreateItems"],
+									"required": ["userId", "displayName", "role"],
 									"additionalProperties": false
 								}
 							}
@@ -4301,429 +4290,11 @@
 				]
 			}
 		},
-		"/api/v1/completions": {
-			"get": {
-				"summary": "Completions waiting for approval (owner and adults)",
-				"tags": ["Validations"],
-				"operationId": "getApiV1Completions",
-				"parameters": [
-					{
-						"name": "status",
-						"in": "query",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"const": "pending"
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Success",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"completions": {
-											"type": "array",
-											"items": {
-												"type": "object",
-												"properties": {
-													"id": {
-														"type": "string"
-													},
-													"itemId": {
-														"type": "string"
-													},
-													"userId": {
-														"type": "string"
-													},
-													"localDate": {
-														"type": "string",
-														"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-													},
-													"status": {
-														"type": "string",
-														"enum": ["pending", "approved", "rejected"]
-													},
-													"approvedBy": {
-														"type": ["string", "null"]
-													},
-													"completedAt": {
-														"type": "string"
-													},
-													"undoneAt": {
-														"type": ["string", "null"]
-													}
-												},
-												"required": [
-													"id",
-													"itemId",
-													"userId",
-													"localDate",
-													"status",
-													"approvedBy",
-													"completedAt",
-													"undoneAt"
-												],
-												"additionalProperties": false
-											}
-										}
-									},
-									"required": ["completions"],
-									"additionalProperties": false
-								}
-							}
-						}
-					},
-					"default": {
-						"description": "Error (RFC 9457) with a stable `code`",
-						"content": {
-							"application/problem+json": {
-								"schema": {
-									"type": "object",
-									"required": ["type", "title", "status", "code"],
-									"properties": {
-										"type": {
-											"type": "string"
-										},
-										"title": {
-											"type": "string"
-										},
-										"status": {
-											"type": "integer"
-										},
-										"code": {
-											"type": "string"
-										},
-										"detail": {
-											"type": "string"
-										},
-										"instance": {
-											"type": "string"
-										}
-									}
-								}
-							}
-						}
-					}
-				},
-				"security": [
-					{
-						"session": []
-					},
-					{
-						"bearer": []
-					}
-				]
-			}
-		},
 		"/api/v1/completions/{id}": {
 			"delete": {
 				"summary": "Undo a completion (counter-entry in the ledger)",
 				"tags": ["Validations"],
 				"operationId": "deleteApiV1CompletionsId",
-				"parameters": [
-					{
-						"name": "id",
-						"in": "path",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"minLength": 1,
-							"maxLength": 100
-						}
-					},
-					{
-						"name": "Idempotency-Key",
-						"in": "header",
-						"required": true,
-						"description": "Unique UUID per request; a duplicate returns the response already stored.",
-						"schema": {
-							"type": "string",
-							"maxLength": 200
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Success",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"completion": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string"
-												},
-												"itemId": {
-													"type": "string"
-												},
-												"userId": {
-													"type": "string"
-												},
-												"localDate": {
-													"type": "string",
-													"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-												},
-												"status": {
-													"type": "string",
-													"enum": ["pending", "approved", "rejected"]
-												},
-												"approvedBy": {
-													"type": ["string", "null"]
-												},
-												"completedAt": {
-													"type": "string"
-												},
-												"undoneAt": {
-													"type": ["string", "null"]
-												}
-											},
-											"required": [
-												"id",
-												"itemId",
-												"userId",
-												"localDate",
-												"status",
-												"approvedBy",
-												"completedAt",
-												"undoneAt"
-											],
-											"additionalProperties": false
-										},
-										"balances": {
-											"type": "object",
-											"properties": {
-												"personal": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
-												},
-												"shared": {
-													"anyOf": [
-														{
-															"type": "integer",
-															"minimum": -9007199254740991,
-															"maximum": 9007199254740991
-														},
-														{
-															"type": "null"
-														}
-													]
-												}
-											},
-											"required": ["personal", "shared"],
-											"additionalProperties": false
-										}
-									},
-									"required": ["completion", "balances"],
-									"additionalProperties": false
-								}
-							}
-						}
-					},
-					"default": {
-						"description": "Error (RFC 9457) with a stable `code`",
-						"content": {
-							"application/problem+json": {
-								"schema": {
-									"type": "object",
-									"required": ["type", "title", "status", "code"],
-									"properties": {
-										"type": {
-											"type": "string"
-										},
-										"title": {
-											"type": "string"
-										},
-										"status": {
-											"type": "integer"
-										},
-										"code": {
-											"type": "string"
-										},
-										"detail": {
-											"type": "string"
-										},
-										"instance": {
-											"type": "string"
-										}
-									}
-								}
-							}
-						}
-					}
-				},
-				"security": [
-					{
-						"session": []
-					},
-					{
-						"bearer": []
-					}
-				]
-			}
-		},
-		"/api/v1/completions/{id}/approve": {
-			"post": {
-				"summary": "Approve a child's completion",
-				"tags": ["Validations"],
-				"operationId": "postApiV1CompletionsIdApprove",
-				"parameters": [
-					{
-						"name": "id",
-						"in": "path",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"minLength": 1,
-							"maxLength": 100
-						}
-					},
-					{
-						"name": "Idempotency-Key",
-						"in": "header",
-						"required": true,
-						"description": "Unique UUID per request; a duplicate returns the response already stored.",
-						"schema": {
-							"type": "string",
-							"maxLength": 200
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Success",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"completion": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string"
-												},
-												"itemId": {
-													"type": "string"
-												},
-												"userId": {
-													"type": "string"
-												},
-												"localDate": {
-													"type": "string",
-													"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-												},
-												"status": {
-													"type": "string",
-													"enum": ["pending", "approved", "rejected"]
-												},
-												"approvedBy": {
-													"type": ["string", "null"]
-												},
-												"completedAt": {
-													"type": "string"
-												},
-												"undoneAt": {
-													"type": ["string", "null"]
-												}
-											},
-											"required": [
-												"id",
-												"itemId",
-												"userId",
-												"localDate",
-												"status",
-												"approvedBy",
-												"completedAt",
-												"undoneAt"
-											],
-											"additionalProperties": false
-										},
-										"balances": {
-											"type": "object",
-											"properties": {
-												"personal": {
-													"type": "integer",
-													"minimum": -9007199254740991,
-													"maximum": 9007199254740991
-												},
-												"shared": {
-													"anyOf": [
-														{
-															"type": "integer",
-															"minimum": -9007199254740991,
-															"maximum": 9007199254740991
-														},
-														{
-															"type": "null"
-														}
-													]
-												}
-											},
-											"required": ["personal", "shared"],
-											"additionalProperties": false
-										}
-									},
-									"required": ["completion", "balances"],
-									"additionalProperties": false
-								}
-							}
-						}
-					},
-					"default": {
-						"description": "Error (RFC 9457) with a stable `code`",
-						"content": {
-							"application/problem+json": {
-								"schema": {
-									"type": "object",
-									"required": ["type", "title", "status", "code"],
-									"properties": {
-										"type": {
-											"type": "string"
-										},
-										"title": {
-											"type": "string"
-										},
-										"status": {
-											"type": "integer"
-										},
-										"code": {
-											"type": "string"
-										},
-										"detail": {
-											"type": "string"
-										},
-										"instance": {
-											"type": "string"
-										}
-									}
-								}
-							}
-						}
-					}
-				},
-				"security": [
-					{
-						"session": []
-					},
-					{
-						"bearer": []
-					}
-				]
-			}
-		},
-		"/api/v1/completions/{id}/reject": {
-			"post": {
-				"summary": "Reject a child's completion",
-				"tags": ["Validations"],
-				"operationId": "postApiV1CompletionsIdReject",
 				"parameters": [
 					{
 						"name": "id",
@@ -6568,6 +6139,125 @@
 				]
 			}
 		},
+		"/api/v1/supervision/pending": {
+			"get": {
+				"summary": "Everything waiting for my approval, across the people I supervise",
+				"tags": ["Supervision"],
+				"operationId": "getApiV1SupervisionPending",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"completions": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"itemId": {
+														"type": "string"
+													},
+													"userId": {
+														"type": "string"
+													},
+													"localDate": {
+														"type": "string",
+														"pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+													},
+													"status": {
+														"type": "string",
+														"enum": ["pending", "approved", "rejected"]
+													},
+													"approvedBy": {
+														"type": ["string", "null"]
+													},
+													"completedAt": {
+														"type": "string"
+													},
+													"undoneAt": {
+														"type": ["string", "null"]
+													},
+													"itemName": {
+														"type": "string"
+													},
+													"wardId": {
+														"type": "string"
+													},
+													"wardName": {
+														"type": "string"
+													}
+												},
+												"required": [
+													"id",
+													"itemId",
+													"userId",
+													"localDate",
+													"status",
+													"approvedBy",
+													"completedAt",
+													"undoneAt",
+													"itemName",
+													"wardId",
+													"wardName"
+												],
+												"additionalProperties": false
+											}
+										}
+									},
+									"required": ["completions"],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error (RFC 9457) with a stable `code`",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"type": "object",
+									"required": ["type", "title", "status", "code"],
+									"properties": {
+										"type": {
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"status": {
+											"type": "integer"
+										},
+										"code": {
+											"type": "string"
+										},
+										"detail": {
+											"type": "string"
+										},
+										"instance": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					},
+					{
+						"bearer": []
+					}
+				]
+			}
+		},
 		"/api/v1/supervision/codes": {
 			"post": {
 				"summary": "Create a one-time code: to supervise whoever uses it, or to be supervised by whoever uses it",
@@ -7779,7 +7469,7 @@
 											"anyOf": [
 												{
 													"type": "string",
-													"enum": ["owner", "adult", "child"]
+													"enum": ["owner", "member"]
 												},
 												{
 													"type": "null"
@@ -7799,7 +7489,7 @@
 													},
 													"role": {
 														"type": "string",
-														"enum": ["owner", "adult", "child"]
+														"enum": ["owner", "member"]
 													},
 													"pot": {
 														"type": "object",

@@ -37,7 +37,7 @@ function UserRow({ user, households }: { user: AdminUser; households: AdminHouse
 	const takeOut = useAdminWrite((householdId: string) => api.adminRemoveFromHousehold(user.id, householdId));
 	const joinable = households.filter((h) => !user.households.some((m) => m.id === h.id));
 	const assign = useAdminWrite((householdId: string) =>
-		api.adminAssignHousehold(user.id, { householdId, role: "adult" }),
+		api.adminAssignHousehold(user.id, { householdId, role: "member" }),
 	);
 	const [picking, setPicking] = useState(false);
 	return (

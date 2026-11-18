@@ -75,8 +75,8 @@ export const useStats = (from: string | undefined, to: string | undefined) =>
 
 export const useLedger = () => useQuery({ queryKey: keys.ledger, queryFn: () => api.getLedger({ limit: 100 }) });
 
-export const usePending = (enabled: boolean) =>
-	useQuery({ queryKey: keys.pending, queryFn: () => api.listPendingCompletions(), enabled });
+/** Everything waiting for the approval of this person as a guardian (empty when they supervise nobody). */
+export const usePending = () => useQuery({ queryKey: keys.pending, queryFn: () => api.getGuardianPending() });
 
 /** 56-day window for the Progress screen (current and previous period). */
 export const statsWindow = (today: string) => ({ from: addDays(today, -55), to: today });
@@ -165,8 +165,8 @@ export function useUndoRedemption() {
 export function useReview() {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
-			approve ? api.approveCompletion(id) : api.rejectCompletion(id),
+		mutationFn: ({ wardId, id, approve }: { wardId: string; id: string; approve: boolean }) =>
+			api.reviewWardCompletion(wardId, id, approve),
 		onError: (err) => showToast(describeError(err)),
 		onSettled: () => invalidateAfterWrite(qc),
 	});
@@ -198,7 +198,7 @@ export const useUpdateMember = () =>
 	useHouseholdWrite(({ id, input }: { id: string; input: Parameters<typeof api.updateMember>[1] }) =>
 		api.updateMember(id, input),
 	);
-export const useCreateInvite = () => useHouseholdWrite((role: "adult" | "child") => api.createInvite(role));
+export const useCreateInvite = () => useHouseholdWrite((role: "owner" | "member") => api.createInvite(role));
 export const useRevokeInvite = () => useHouseholdWrite((id: string) => api.revokeInvite(id));
 export const useRemoveMember = () => useHouseholdWrite((id: string) => api.removeMember(id));
 

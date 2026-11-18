@@ -18,7 +18,7 @@ import { currentServerUrl } from "../src/server";
 import { showToast } from "../src/store";
 import { Avatar, Button, Chip, Field, font, Screen, T } from "../src/ui";
 
-const ROLES = ["owner", "adult", "child"] as const;
+const ROLES = ["owner", "member"] as const;
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
@@ -83,22 +83,6 @@ function MemberRow({
 							/>
 						))}
 					</View>
-					{member.role === "child" && (
-						<View
-							style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}
-						>
-							<T style={{ fontFamily: font.semi, fontSize: 14, color: colors.textSoft, flex: 1 }}>
-								{t("household.canCreate")}
-							</T>
-							<Switch
-								value={member.canCreateItems}
-								onValueChange={(v) =>
-									update.mutate({ id: member.userId, input: { canCreateItems: v } }, { onSuccess: saved })
-								}
-								trackColor={{ true: colors.primary }}
-							/>
-						</View>
-					)}
 					{!isYou && (
 						<Button
 							label={t("household.member.remove")}
@@ -165,7 +149,7 @@ function InviteSection() {
 	const household = useHousehold();
 	const create = useCreateInvite();
 	const revoke = useRevokeInvite();
-	const [role, setRole] = useState<"adult" | "child">("child");
+	const [role, setRole] = useState<"owner" | "member">("member");
 	const [created, setCreated] = useState<{ token: string; expiresAt: string } | null>(null);
 	const pending = household.data?.invites ?? [];
 	const link = created ? `${currentServerUrl()}/?invite=${created.token}` : "";
@@ -174,8 +158,8 @@ function InviteSection() {
 		<>
 			<Section title={t("household.invite.title")}>
 				<View style={{ flexDirection: "row", gap: 8 }}>
-					<Chip label={t("role.adult")} on={role === "adult"} onPress={() => setRole("adult")} />
-					<Chip label={t("role.child")} on={role === "child"} onPress={() => setRole("child")} />
+					<Chip label={t("role.member")} on={role === "member"} onPress={() => setRole("member")} />
+					<Chip label={t("role.owner")} on={role === "owner"} onPress={() => setRole("owner")} />
 				</View>
 				<Button
 					label={t("household.invite.create")}

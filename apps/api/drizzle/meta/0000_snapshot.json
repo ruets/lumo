@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d6fafdbc-dac4-4e05-8378-e77fc860457b",
+  "id": "20ee7ea5-6217-4929-8a9a-1072e53f2665",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "completions": {
@@ -692,7 +692,7 @@
       "checkConstraints": {
         "invites_role_check": {
           "name": "invites_role_check",
-          "value": "role IN ('owner', 'adult', 'child')"
+          "value": "role IN ('owner', 'member')"
         }
       }
     },
@@ -1139,14 +1139,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "can_create_items": {
-          "name": "can_create_items",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -1206,7 +1198,7 @@
       "checkConstraints": {
         "memberships_role_check": {
           "name": "memberships_role_check",
-          "value": "role IN ('owner', 'adult', 'child')"
+          "value": "role IN ('owner', 'member')"
         }
       }
     },

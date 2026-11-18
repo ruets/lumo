@@ -25,7 +25,7 @@ describe("several households", () => {
 		const me = (await h.adult.api.get("/me")).json();
 		expect(me.households.map((x: { id: string; role: string }) => [x.id, x.role]).sort()).toEqual(
 			[
-				[smiths, "adult"],
+				[smiths, "member"],
 				[flat, "owner"],
 			].sort(),
 		);
@@ -55,22 +55,31 @@ describe("several households", () => {
 		const { flat, inFlat } = await bobWithFlat();
 		const dishes = await makeHabit(h.owner, { name: "Dishes", assigneeIds: [h.adult.userId, h.kid.userId] });
 		// bob is only an adult in The Smiths, but the owner of Flat: he can invite there, not in The Smiths.
-		expect((await h.adult.api.post("/household/invites", { role: "adult" }, inFlat)).statusCode).toBe(201);
-		expect((await h.adult.api.post("/household/invites", { role: "adult" })).statusCode).toBe(403);
+		expect((await h.adult.api.post("/household/invites", { role: "member" }, inFlat)).statusCode).toBe(201);
+		expect((await h.adult.api.post("/household/invites", { role: "member" })).statusCode).toBe(403);
 		// Even when Flat is the active household, bob completes The Smiths' item with his Smiths role.
 		const done = await h.adult.api.post(`/items/${dishes.id}/completions`, {}, inFlat);
 		expect(done.statusCode).toBe(201);
 		expect(flat).toBeTruthy();
 	});
 
-	it("a child in one household and an adult in another follows each household's rules", async () => {
+	it("a supervised account is limited in every household, owner or not", async () => {
 		const flat = (await h.owner.api.post("/households", { name: "Flat" })).json().householdId as string;
-		const invite = (await h.owner.api.post("/household/invites", { role: "adult" }, { "x-household-id": flat })).json();
+		const invite = (
+			await h.owner.api.post("/household/invites", { role: "member" }, { "x-household-id": flat })
+		).json();
 		expect((await h.kid.api.post("/household/join", { code: invite.token })).statusCode).toBe(201);
 		const inFlat = { "x-household-id": flat };
-		// In Flat the kid is an adult but the child restriction elsewhere still blocks personal minting.
+		// Supervision follows the person: nothing can be created, in Flat or in The Smiths, until the guardian allows it.
 		expect((await h.kid.api.post("/items", { kind: "task", name: "x", scope: "personal" })).statusCode).toBe(403);
-		// Adult in Flat: can create there.
+		const inFlatCreate = await h.kid.api.post(
+			"/items",
+			{ kind: "task", name: "Flat task", scope: "household", householdId: flat },
+			inFlat,
+		);
+		expect(inFlatCreate.statusCode).toBe(403);
+		expect(inFlatCreate.json().code).toBe("supervised");
+		await h.owner.api.patch(`/supervision/wards/${h.kid.userId}/rights`, { canCreate: true });
 		expect(
 			(
 				await h.kid.api.post(
@@ -80,10 +89,6 @@ describe("several households", () => {
 				)
 			).statusCode,
 		).toBe(201);
-		// Child in The Smiths without the right: refused there.
-		expect((await h.kid.api.post("/items", { kind: "task", name: "Smiths task", scope: "household" })).statusCode).toBe(
-			403,
-		);
 	});
 
 	it("the pot is the one of the item's household, whichever is active", async () => {

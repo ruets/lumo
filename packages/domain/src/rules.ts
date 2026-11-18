@@ -29,14 +29,14 @@ export class DomainError extends Error {
 }
 
 /**
- * Complete an item. Only a child on an item that "needs approval" goes pending (no entry);
- * the server then credits `credit` coins, never an amount coming from the client.
+ * Complete an item. Only a supervised account on an item that "needs approval" goes pending (no entry, until a
+ * guardian approves); the server then credits `credit` coins, never an amount coming from the client.
  */
-export function planCompletion(input: { actorRole: Role; requiresApproval: boolean; reward: number }): {
+export function planCompletion(input: { supervised: boolean; requiresApproval: boolean; reward: number }): {
 	status: "approved" | "pending";
 	credit: number;
 } {
-	if (input.requiresApproval && input.actorRole === "child") return { status: "pending", credit: 0 };
+	if (input.requiresApproval && input.supervised) return { status: "pending", credit: 0 };
 	return { status: "approved", credit: input.reward };
 }
 

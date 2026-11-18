@@ -15,7 +15,7 @@ const id = () => text("id").primaryKey();
 const ts = (name: string) => integer(name, { mode: "timestamp_ms" });
 const createdAt = () => ts("created_at").notNull().default(sql`(unixepoch('subsec') * 1000)`);
 
-export const ROLES = ["owner", "adult", "child"] as const;
+export const ROLES = ["owner", "member"] as const;
 export const ITEM_KINDS = ["habit", "task"] as const;
 export const WALLET_KINDS = ["personal", "shared"] as const;
 export const COMPLETION_STATUSES = ["pending", "approved", "rejected"] as const;
@@ -87,8 +87,6 @@ export const memberships = sqliteTable(
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 		role: text("role", { enum: ROLES }).notNull(),
-		/** Can a child create their own items? ("if allowed") */
-		canCreateItems: integer("can_create_items", { mode: "boolean" }).notNull().default(false),
 		createdAt: createdAt(),
 	},
 	(t) => [
