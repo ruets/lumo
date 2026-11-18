@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { RewardList } from "@lumo/api-client";
+import { inSpace, type RewardList, spaceLabel } from "@lumo/api-client";
 import { t } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useState } from "react";
 import { View } from "react-native";
 import { RewardSheet } from "../../src/forms";
 import { useBalance, useMe, useRedeem, useRewards, useToday } from "../../src/hooks";
+import { withSpace } from "../../src/itemMeta";
 import { useRefresh } from "../../src/refresh";
+import { SpacePills } from "../../src/SpacePills";
+import { useSpaceFilter } from "../../src/space";
 import { AddButton, Bar, Button, CoinIcon, font, Screen, T, Title } from "../../src/ui";
 
 type Reward = RewardList[number];
@@ -29,7 +32,9 @@ export default function WishesScreen() {
 	const [creating, setCreating] = useState(false);
 	const [last, setLast] = useState<Reward | null>(null);
 	const balance = useBalance(me?.wallets.personal.balance ?? 0);
+	const filter = useSpaceFilter(me?.households ?? []);
 	if (!me) return null;
+	const shown = (rewards.data?.rewards ?? []).filter((r) => inSpace(filter, r));
 	const earnedToday = (today.data?.items ?? []).reduce((sum, e) => sum + e.item.reward * e.approved, 0);
 
 	return (
@@ -56,9 +61,11 @@ export default function WishesScreen() {
 				)}
 			</View>
 
-			{rewards.data?.rewards.length === 0 && <T style={{ color: colors.muted }}>{t("wishes.empty")}</T>}
+			<SpacePills households={me.households} value={filter} />
+
+			{shown.length === 0 && <T style={{ color: colors.muted }}>{t("wishes.empty")}</T>}
 			<View style={{ gap: 10 }}>
-				{rewards.data?.rewards.map((r) => {
+				{shown.map((r) => {
 					const wallet = r.fundedFrom === "shared" ? (me.wallets.shared?.balance ?? 0) : balance;
 					const exhausted = r.limitCount !== null && (r.remaining ?? 0) <= 0;
 					const canBuy = wallet >= r.cost && !exhausted;
@@ -76,7 +83,9 @@ export default function WishesScreen() {
 							<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
 								<View style={{ flex: 1, gap: 3 }}>
 									<T style={{ fontFamily: font.bold, fontSize: 16 }}>{r.name}</T>
-									<T style={{ fontSize: 13, color: colors.muted }}>{meta(r)}</T>
+									<T style={{ fontSize: 13, color: colors.muted }}>
+										{withSpace(spaceLabel(r, me.households, t("space.personal")), meta(r))}
+									</T>
 								</View>
 								{canBuy ? (
 									<Button

@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { MeResponse, RewardList } from "@lumo/api-client";
+import { inSpace, type MeResponse, type RewardList, spaceLabel } from "@lumo/api-client";
 import { t } from "@lumo/i18n";
 import { useState } from "react";
 import { RewardDialog } from "../components/forms";
+import { withSpace } from "../components/itemMeta";
+import { SpacePills } from "../components/SpacePills";
 import { AddButton, Bar, CoinIcon, PageTitle } from "../components/ui";
 import { useRedeem, useRewards, useToday } from "../lib/hooks";
+import { useSpaceFilter } from "../lib/space";
 
 type Reward = RewardList[number];
 
@@ -22,8 +25,10 @@ export function WishesPage({ me }: { me: MeResponse }) {
 	const redeem = useRedeem();
 	const today = useToday();
 	const [creating, setCreating] = useState(false);
+	const filter = useSpaceFilter(me.households);
 	const [last, setLast] = useState<Reward | null>(null);
 	const balance = me.wallets.personal.balance;
+	const shown = (rewards.data?.rewards ?? []).filter((r) => inSpace(filter, r));
 	const earnedToday = (today.data?.items ?? []).reduce((s, e) => s + e.item.reward * e.approved, 0);
 
 	return (
@@ -50,9 +55,11 @@ export function WishesPage({ me }: { me: MeResponse }) {
 				)}
 			</section>
 
-			{rewards.data?.rewards.length === 0 && <p className="m-0 text-muted">{t("wishes.empty")}</p>}
+			<SpacePills households={me.households} value={filter} />
+
+			{shown.length === 0 && <p className="m-0 text-muted">{t("wishes.empty")}</p>}
 			<ul className="m-0 grid list-none gap-2.5 p-0 md:grid-cols-2">
-				{rewards.data?.rewards.map((r) => {
+				{shown.map((r) => {
 					const wallet = r.fundedFrom === "shared" ? (me.wallets.shared?.balance ?? 0) : balance;
 					const exhausted = r.limitCount !== null && (r.remaining ?? 0) <= 0;
 					const canBuy = wallet >= r.cost && !exhausted;
@@ -61,7 +68,9 @@ export function WishesPage({ me }: { me: MeResponse }) {
 							<div className="flex items-center justify-between gap-3">
 								<span className="grid gap-[3px]">
 									<span className="text-base font-bold">{r.name}</span>
-									<span className="text-[13px] text-muted">{meta(r)}</span>
+									<span className="text-[13px] text-muted">
+										{withSpace(spaceLabel(r, me.households, t("space.personal")), meta(r))}
+									</span>
 								</span>
 								{canBuy ? (
 									<button

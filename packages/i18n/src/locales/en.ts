@@ -276,7 +276,6 @@ export const en = {
 	"settings.noHousehold": "No household",
 	"settings.accessTitle": "Household",
 	"noHousehold.settingsHint": "You are not in a household. Your habits, wishes and coins are yours alone.",
-	"items.personalBadge": "Personal",
 	"account.title": "Personal settings",
 	"account.timezone": "Time zone",
 	"account.timezoneHint": "For example Europe/Paris. Your days are counted in this time zone.",
@@ -287,5 +286,8 @@ export const en = {
 	"errors.already_member": "You are already in this household.",
 	"admin.user.assignTo": "Put in {name}",
 	"admin.user.takeOutOf": "Take out of {name}",
+	"space.filter": "Space",
+	"space.all": "All",
+	"space.personal": "Personal",
 	"errors.unknown": "Something went wrong.",
 } as const satisfies Record<string, string>;

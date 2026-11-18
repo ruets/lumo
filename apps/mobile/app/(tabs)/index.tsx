@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { TodayItem } from "@lumo/api-client";
+import { inSpace, spaceLabel, type TodayItem } from "@lumo/api-client";
 import { longDate, t } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
 import { useRouter } from "expo-router";
@@ -15,12 +15,14 @@ import {
 	useStats,
 	useToday,
 } from "../../src/hooks";
-import { awaitingReview, itemMeta } from "../../src/itemMeta";
+import { awaitingReview, itemMeta, withSpace } from "../../src/itemMeta";
 import { enqueueCompletion, useQueue } from "../../src/queue";
 import { useRefresh } from "../../src/refresh";
+import { SpacePills } from "../../src/SpacePills";
+import { useSpaceFilter } from "../../src/space";
 import { Avatar, BalanceChip, Bar, Button, CoinIcon, font, Reward, Ring, Screen, T, Title } from "../../src/ui";
 
-function RemainingRow({ e, onTap }: { e: TodayItem; onTap: () => void }) {
+function RemainingRow({ e, space, onTap }: { e: TodayItem; space: string | null; onTap: () => void }) {
 	const waiting = awaitingReview(e);
 	const multi = e.target > 1;
 	const label = multi
@@ -61,7 +63,7 @@ function RemainingRow({ e, onTap }: { e: TodayItem; onTap: () => void }) {
 			</View>
 			<View style={{ flex: 1, gap: 2 }}>
 				<T style={{ fontFamily: font.bold, fontSize: 15 }}>{e.item.name}</T>
-				<T style={{ fontSize: 13, color: colors.muted }}>{itemMeta(e)}</T>
+				<T style={{ fontSize: 13, color: colors.muted }}>{withSpace(space, itemMeta(e))}</T>
 			</View>
 			<Reward amount={e.item.reward} />
 		</Pressable>
@@ -120,15 +122,16 @@ export default function TodayScreen() {
 	const stats = useStats(win?.from, win?.to);
 	const refresh = useRefresh();
 	const balance = useBalance(me?.wallets.personal.balance ?? 0);
+	const filter = useSpaceFilter(me?.households ?? []);
 	if (!me) return null;
 
-	const entries = today.data?.items ?? [];
+	const entries = (today.data?.items ?? []).filter((e) => inSpace(filter, e.item));
 	const done = entries.filter((e) => e.done).length;
 	const pct = entries.length ? Math.round((100 * done) / entries.length) : 0;
 	const earned = entries.reduce((sum, e) => sum + e.item.reward * e.approved, 0);
 	const remaining = entries.filter((e) => !e.done);
 	const streak = Math.max(0, ...(stats.data?.habits.map((h) => h.streak.current) ?? []));
-	const personal = rewards.data?.rewards.filter((r) => r.fundedFrom === "personal") ?? [];
+	const personal = rewards.data?.rewards.filter((r) => r.fundedFrom === "personal" && inSpace(filter, r)) ?? [];
 	const wish = personal.find((r) => r.cost > balance) ?? personal[0];
 
 	return (
@@ -179,6 +182,8 @@ export default function TodayScreen() {
 				</View>
 			</View>
 
+			<SpacePills households={me.households} value={filter} />
+
 			{me.role !== "child" && <Approvals />}
 
 			<View style={{ gap: 10 }}>
@@ -201,6 +206,7 @@ export default function TodayScreen() {
 					<RemainingRow
 						key={e.item.id}
 						e={e}
+						space={spaceLabel(e.item, me.households, t("space.personal"))}
 						onTap={() => today.data && void enqueueCompletion(e.item.id, today.data.date)}
 					/>
 				))}

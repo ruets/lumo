@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { MeResponse, TodayItem } from "@lumo/api-client";
+import { inSpace, type MeResponse, spaceLabel, type TodayItem } from "@lumo/api-client";
 import { longDate, t } from "@lumo/i18n";
 import { Link } from "@tanstack/react-router";
 import { HeaderActions } from "../components/AppShell";
-import { awaitingReview, itemMeta } from "../components/itemMeta";
+import { awaitingReview, itemMeta, withSpace } from "../components/itemMeta";
+import { SpacePills } from "../components/SpacePills";
 import { Bar, CoinIcon, PageTitle, Reward, Ring } from "../components/ui";
 import {
 	statsWindow,
@@ -16,8 +17,9 @@ import {
 	useStats,
 	useToday,
 } from "../lib/hooks";
+import { useSpaceFilter } from "../lib/space";
 
-function RemainingRow({ e, onTap }: { e: TodayItem; onTap: () => void }) {
+function RemainingRow({ e, space, onTap }: { e: TodayItem; space: string | null; onTap: () => void }) {
 	const waiting = awaitingReview(e);
 	const multi = e.target > 1;
 	return (
@@ -40,7 +42,7 @@ function RemainingRow({ e, onTap }: { e: TodayItem; onTap: () => void }) {
 			</span>
 			<span className="flex grow flex-col gap-0.5">
 				<span className="text-[15px] font-bold">{e.item.name}</span>
-				<span className="text-[13px] text-muted">{itemMeta(e)}</span>
+				<span className="text-[13px] text-muted">{withSpace(space, itemMeta(e))}</span>
 			</span>
 			<Reward amount={e.item.reward} />
 		</button>
@@ -85,20 +87,21 @@ export function TodayPage({ me }: { me: MeResponse }) {
 	const today = useToday();
 	const complete = useComplete();
 	const rewards = useRewards();
+	const filter = useSpaceFilter(me.households);
 	const win = today.data ? statsWindow(today.data.date) : undefined;
 	const stats = useStats(win?.from, win?.to);
 
 	if (today.isPending) return <p className="text-muted">{t("common.loading")}</p>;
 	if (today.isError) return <p role="alert">{t("common.error")}</p>;
 
-	const entries = today.data.items;
+	const entries = today.data.items.filter((e) => inSpace(filter, e.item));
 	const done = entries.filter((e) => e.done).length;
 	const pct = entries.length ? Math.round((100 * done) / entries.length) : 0;
 	const earned = entries.reduce((s, e) => s + e.item.reward * e.approved, 0);
 	const remaining = entries.filter((e) => !e.done);
 	const streak = Math.max(0, ...(stats.data?.habits.map((h) => h.streak.current) ?? []));
 	const balance = me.wallets.personal.balance;
-	const personal = rewards.data?.rewards.filter((r) => r.fundedFrom === "personal") ?? [];
+	const personal = rewards.data?.rewards.filter((r) => r.fundedFrom === "personal" && inSpace(filter, r)) ?? [];
 	const wish = personal.find((r) => r.cost > balance) ?? personal[0];
 
 	return (
@@ -127,6 +130,8 @@ export function TodayPage({ me }: { me: MeResponse }) {
 						</div>
 					</section>
 
+					<SpacePills households={me.households} value={filter} />
+
 					{me.role !== "child" && <Approvals />}
 
 					<section className="grid gap-2.5">
@@ -137,7 +142,12 @@ export function TodayPage({ me }: { me: MeResponse }) {
 							</p>
 						)}
 						{remaining.map((e) => (
-							<RemainingRow key={e.item.id} e={e} onTap={() => complete.mutate(e.item.id)} />
+							<RemainingRow
+								key={e.item.id}
+								e={e}
+								space={spaceLabel(e.item, me.households, t("space.personal"))}
+								onTap={() => complete.mutate(e.item.id)}
+							/>
 						))}
 					</section>
 				</div>

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { TodayItem } from "@lumo/api-client";
+import { inSpace, spaceLabel, type TodayItem } from "@lumo/api-client";
 import { addDays, startOfWeek } from "@lumo/domain";
 import { dayNumber, longDate, shortDate, t, weekdayShort } from "@lumo/i18n";
 import { colors } from "@lumo/tokens";
@@ -8,19 +8,23 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { ItemSheet } from "../../src/forms";
 import { useBalance, useMe, useStats, useToday, useUndo } from "../../src/hooks";
-import { itemMeta } from "../../src/itemMeta";
+import { itemMeta, withSpace } from "../../src/itemMeta";
 import { dequeueLast, enqueueCompletion } from "../../src/queue";
 import { useRefresh } from "../../src/refresh";
+import { SpacePills } from "../../src/SpacePills";
+import { useSpaceFilter } from "../../src/space";
 import { showToast } from "../../src/store";
 import { AddButton, BalanceChip, font, Reward, Screen, Segmented, T, Title } from "../../src/ui";
 
 function Row({
 	e,
+	space,
 	future,
 	onComplete,
 	onUndo,
 }: {
 	e: TodayItem;
+	space: string | null;
 	future: boolean;
 	onComplete: () => void;
 	onUndo: () => void;
@@ -78,7 +82,7 @@ function Row({
 				>
 					{e.item.name}
 				</T>
-				<T style={{ fontSize: 13, color: colors.muted }}>{itemMeta(e)}</T>
+				<T style={{ fontSize: 13, color: colors.muted }}>{withSpace(space, itemMeta(e))}</T>
 			</View>
 			<Reward amount={e.item.reward} />
 		</View>
@@ -93,6 +97,7 @@ export default function HabitsScreen() {
 	const [picked, setPicked] = useState<string | null>(null);
 	const [tab, setTab] = useState<"habit" | "task">("habit");
 	const [creating, setCreating] = useState(false);
+	const filter = useSpaceFilter(me?.households ?? []);
 
 	const now = useToday();
 	const today = now.data?.date;
@@ -110,7 +115,9 @@ export default function HabitsScreen() {
 
 	const days = Array.from({ length: 7 }, (_, i) => addDays(weekFrom, i));
 	const heat = new Map(stats.data?.heatmap.map((h) => [h.date, h]));
-	const entries = (picked && picked !== today ? view.data : now.data)?.items ?? [];
+	const entries = ((picked && picked !== today ? view.data : now.data)?.items ?? []).filter((e) =>
+		inSpace(filter, e.item),
+	);
 	const list = entries.filter((e) => e.item.kind === tab);
 	const doneCount = entries.filter((e) => e.done).length;
 
@@ -131,6 +138,8 @@ export default function HabitsScreen() {
 				</View>
 				<BalanceChip balance={balance} onPress={() => router.navigate("/wishes")} />
 			</View>
+
+			<SpacePills households={me?.households ?? []} value={filter} />
 
 			<Segmented
 				value={tab}
@@ -192,6 +201,7 @@ export default function HabitsScreen() {
 					<Row
 						key={e.item.id}
 						e={e}
+						space={spaceLabel(e.item, me?.households ?? [], t("space.personal"))}
 						future={day > today}
 						onComplete={() => void enqueueCompletion(e.item.id, day)}
 						onUndo={() => void onUndo(e)}
