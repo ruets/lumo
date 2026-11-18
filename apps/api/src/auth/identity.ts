@@ -6,6 +6,7 @@ import type { Db } from "../db/client.js";
 import { memberships, users } from "../db/schema.js";
 import { errors } from "../errors.js";
 import {
+	createAccount,
 	createHousehold,
 	createMember,
 	joinHousehold,
@@ -22,9 +23,11 @@ const adminGroup = (config: Config) => config.OIDC_ADMIN_GROUP ?? null;
 /**
  * Links an OIDC identity to a Lumo user.
  *  1. Known identity (issuer + `sub`) → sign-in (super admin if in the admin group; a disabled account is refused).
- *  2. Invitation provided → account created and put in the invitation's household with its role.
+ *  2. A code provided (household invitation, guardian's code, administrator's invitation) → account created and
+ *     set up as the code says.
  *  3. No user in the instance → first account: super admin, with a new household.
- *  4. Otherwise → refused: no account without an invitation.
+ *  4. `OIDC_AUTO_CREATE_USERS` → an account without household or supervision.
+ *  5. Otherwise → refused: no account without a code.
  */
 export function resolveOidcLogin(
 	db: Db,
@@ -80,6 +83,8 @@ export function resolveOidcLogin(
 			const householdId = createHousehold(tx, { name: "My household" });
 			return { userId: createMember(tx, { householdId, role: "owner", user: { ...newUser, isSuperAdmin: true } }) };
 		}
+
+		if (config.OIDC_AUTO_CREATE_USERS) return { userId: createAccount(tx, newUser) };
 
 		throw errors.invitationRequired();
 	});
