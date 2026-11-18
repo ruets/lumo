@@ -129,6 +129,11 @@ export const fr: Record<MessageId, string> = {
 	"items.type": "Type",
 	"items.weekDays": "Jours de la semaine",
 	"items.dayLabel": "{date}, {done} sur {total} faites",
+	"items.prevWeek": "Semaine précédente",
+	"items.nextWeek": "Semaine suivante",
+	"items.editHabit": "Modifier l'habitude",
+	"items.editTask": "Modifier la tâche",
+	"items.edit": "Modifier {name}",
 
 	"schedule.daily": "Chaque jour",
 	"schedule.timesPerWeek_one": "{count} fois par semaine",
