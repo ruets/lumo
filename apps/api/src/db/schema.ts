@@ -44,6 +44,8 @@ export const households = sqliteTable(
 		backdateDays: integer("backdate_days").notNull().default(2),
 		/** When true there is no backdate limit (`backdate_days` keeps its last value, for when it is turned back on). */
 		backdateUnlimited: integer("backdate_unlimited", { mode: "boolean" }).notNull().default(false),
+		/** An archived household is hidden and unusable but keeps its history (the coin ledger is append-only). */
+		archivedAt: ts("archived_at"),
 		createdAt: createdAt(),
 	},
 	(t) => [

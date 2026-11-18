@@ -4,6 +4,7 @@ import type { Role } from "@lumo/domain";
 import { count, eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { households, memberships, users, wallets } from "../db/schema.js";
+import { errors } from "../errors.js";
 
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 export type DbOrTx = Db | Tx;
@@ -57,6 +58,12 @@ export function createAccount(tx: Tx, user: NewUser): string {
 
 /** Puts an existing account into a household with the given role. */
 export function joinHousehold(tx: Tx, input: { householdId: string; userId: string; role: Role }): void {
+	const target = tx
+		.select({ archivedAt: households.archivedAt })
+		.from(households)
+		.where(eq(households.id, input.householdId))
+		.get();
+	if (target?.archivedAt) throw errors.conflict("household_archived", "This household is archived");
 	tx.insert(memberships).values({ householdId: input.householdId, userId: input.userId, role: input.role }).run();
 }
 

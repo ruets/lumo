@@ -10,7 +10,7 @@ import {
 	type WardRights,
 	type Weekday,
 } from "@lumo/domain";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { guardianships, households, memberships, users } from "../db/schema.js";
 import { errors } from "../errors.js";
 import type { DbOrTx } from "./members.js";
@@ -99,7 +99,7 @@ export function membershipsOf(db: DbOrTx, userId: string): MembershipCtx[] {
 		.select({ m: memberships, h: households })
 		.from(memberships)
 		.innerJoin(households, eq(households.id, memberships.householdId))
-		.where(eq(memberships.userId, userId))
+		.where(and(eq(memberships.userId, userId), isNull(households.archivedAt)))
 		.orderBy(memberships.createdAt, memberships.householdId)
 		.all()
 		.map(({ m, h }) => ({
@@ -149,7 +149,7 @@ export function loadAccount(db: DbOrTx, userId: string): AccountCtx | null {
 		.select({ m: memberships, h: households })
 		.from(memberships)
 		.innerJoin(households, eq(households.id, memberships.householdId))
-		.where(eq(memberships.userId, userId))
+		.where(and(eq(memberships.userId, userId), isNull(households.archivedAt)))
 		.orderBy(memberships.createdAt, memberships.householdId)
 		.all();
 	return {

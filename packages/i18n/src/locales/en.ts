@@ -250,8 +250,6 @@ export const en = {
 	"admin.household.create": "Create a household",
 	"admin.household.name": "Household name",
 	"admin.household.rename": "Rename",
-	"admin.household.delete": "Delete",
-	"admin.household.deleteConfirm": "Delete the household {name}?",
 	"admin.household.members_one": "{count} member",
 	"admin.household.members_other": "{count} members",
 	"admin.pot.adjust": "Adjust the pot",
@@ -266,7 +264,6 @@ export const en = {
 	"errors.account_disabled": "This account is disabled.",
 	"errors.cannot_target_self": "You cannot do that to your own account.",
 	"errors.last_super_admin": "The instance needs at least one super admin.",
-	"errors.household_not_empty": "Remove the members before deleting the household.",
 	"form.scope": "Who is it for",
 	"form.scope.household": "The household",
 	"form.scope.personal": "Just me",
@@ -353,7 +350,12 @@ export const en = {
 	"admin.invite.code": "Code",
 	"supervision.codeHint":
 		"Works for someone who already has an account and for someone who does not: they create it with this code.",
-	"errors.household_has_history": "This household has coin history and cannot be deleted.",
 	"errors.account_exists": "This Authentik account already exists: use the code from the Supervision page instead.",
+	"admin.household.archive": "Archive",
+	"admin.household.unarchive": "Unarchive",
+	"admin.household.archived": "Archived",
+	"admin.household.archiveConfirm":
+		"Archive the household {name}? Its members no longer see it, and nothing is deleted: you can bring it back.",
+	"errors.household_archived": "This household is archived.",
 	"errors.unknown": "Something went wrong.",
 } as const satisfies Record<string, string>;
