@@ -58,7 +58,9 @@ jobs:
           ANDROID_VERSION_CODE: ${{ github.run_number }}
       - name: Build the release APK
         working-directory: apps/mobile/android
-        run: ./gradlew assembleRelease --no-daemon
+        # arm64-v8a only: every recent phone uses it, and compiling the native code for the four ABIs
+        # was most of the 23 minutes.
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
       - name: Name the APK
         id: apk
         run: |
