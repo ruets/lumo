@@ -45,7 +45,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - run: pnpm install --frozen-lockfile
       # The app imports the workspace packages from their built output.
       - run: pnpm turbo run build --filter='./packages/*'
