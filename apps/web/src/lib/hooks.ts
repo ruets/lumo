@@ -177,8 +177,11 @@ export function useLogout() {
 	const qc = useQueryClient();
 	return async () => {
 		await api.logout().catch(() => undefined);
-		qc.clear();
+		setActiveHouseholdId(null);
+		// `qc.clear()` would detach the observer the root screen is watching, which then never hears that the
+		// account is gone. Say "signed out" on the existing query first, then drop everything else.
 		qc.setQueryData(keys.account, null);
+		qc.removeQueries({ predicate: (q) => q.queryKey[0] !== keys.account[0] });
 	};
 }
 
