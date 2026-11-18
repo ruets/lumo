@@ -277,7 +277,6 @@ export const fr: Record<MessageId, string> = {
 	"settings.noHousehold": "Sans foyer",
 	"settings.accessTitle": "Foyer",
 	"noHousehold.settingsHint": "Vous n'êtes dans aucun foyer. Vos habitudes, envies et pièces ne sont qu'à vous.",
-	"items.personalBadge": "Perso",
 	"account.title": "Réglages personnels",
 	"account.timezone": "Fuseau horaire",
 	"account.timezoneHint": "Par exemple Europe/Paris. Vos jours sont comptés dans ce fuseau.",
@@ -288,5 +287,8 @@ export const fr: Record<MessageId, string> = {
 	"errors.already_member": "Vous êtes déjà dans ce foyer.",
 	"admin.user.assignTo": "Mettre dans {name}",
 	"admin.user.takeOutOf": "Sortir de {name}",
+	"space.filter": "Espace",
+	"space.all": "Tout",
+	"space.personal": "Perso",
 	"errors.unknown": "Une erreur est survenue.",
 };

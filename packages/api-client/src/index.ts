@@ -9,6 +9,7 @@
 
 import type { paths } from "./generated/schema.js";
 
+export * from "./spaces.js";
 export type { paths };
 
 type JsonOf<T> = T extends { content: { "application/json": infer J } } ? J : never;

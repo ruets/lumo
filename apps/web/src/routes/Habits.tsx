@@ -1,21 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { MeResponse, TodayItem } from "@lumo/api-client";
+import { inSpace, type MeResponse, spaceLabel, type TodayItem } from "@lumo/api-client";
 import { addDays, startOfWeek } from "@lumo/domain";
 import { dayNumber, longDate, shortDate, t, weekdayShort } from "@lumo/i18n";
 import { useState } from "react";
 import { HeaderActions } from "../components/AppShell";
 import { ItemDialog } from "../components/forms";
-import { itemMeta } from "../components/itemMeta";
+import { itemMeta, withSpace } from "../components/itemMeta";
+import { SpacePills } from "../components/SpacePills";
 import { AddButton, PageTitle, Reward, Segmented } from "../components/ui";
 import { useComplete, useStats, useToday, useUndo } from "../lib/hooks";
+import { useSpaceFilter } from "../lib/space";
 
 function Row({
 	e,
+	space,
 	future,
 	onComplete,
 	onUndo,
 }: {
 	e: TodayItem;
+	space: string | null;
 	future: boolean;
 	onComplete: () => void;
 	onUndo: () => void;
@@ -61,7 +65,7 @@ function Row({
 				<span className={`text-[15px] font-bold ${e.done ? "text-[#8f8ea8] line-through" : "text-ink"}`}>
 					{e.item.name}
 				</span>
-				<span className="text-[13px] text-muted">{itemMeta(e)}</span>
+				<span className="text-[13px] text-muted">{withSpace(space, itemMeta(e))}</span>
 			</span>
 			<Reward amount={e.item.reward} />
 		</div>
@@ -73,6 +77,7 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 	const [picked, setPicked] = useState<string | null>(null);
 	const [tab, setTab] = useState<"habit" | "task">("habit");
 	const [creating, setCreating] = useState(false);
+	const filter = useSpaceFilter(me.households);
 
 	const today = now.data?.date;
 	const day = picked ?? today;
@@ -86,7 +91,9 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 
 	const days = Array.from({ length: 7 }, (_, i) => addDays(weekFrom, i));
 	const heat = new Map(stats.data?.heatmap.map((h) => [h.date, h]));
-	const entries = (picked && picked !== today ? view.data : now.data)?.items ?? [];
+	const entries = ((picked && picked !== today ? view.data : now.data)?.items ?? []).filter((e) =>
+		inSpace(filter, e.item),
+	);
 	const list = entries.filter((e) => e.item.kind === tab);
 	const doneCount = entries.filter((e) => e.done).length;
 
@@ -101,6 +108,8 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 				</div>
 				<HeaderActions balance={me.wallets.personal.balance} name={me.user.displayName} />
 			</header>
+
+			<SpacePills households={me.households} value={filter} />
 
 			<Segmented
 				label={t("items.type")}
@@ -148,6 +157,7 @@ export function HabitsPage({ me }: { me: MeResponse }) {
 					<Row
 						key={e.item.id}
 						e={e}
+						space={spaceLabel(e.item, me.households, t("space.personal"))}
 						future={day > today}
 						onComplete={() => complete.mutate(e.item.id)}
 						onUndo={() => e.completionIds[0] && undo.mutate(e.completionIds[0])}

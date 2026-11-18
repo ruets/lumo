@@ -10,5 +10,8 @@ export function itemMeta(e: TodayItem): string {
 	return t("items.kind.task");
 }
 
+/** "Maison · Habit · Every day": the space name leads when there is more than one space. */
+export const withSpace = (space: string | null, meta: string): string => (space ? `${space} · ${meta}` : meta);
+
 /** Completed and waiting for an adult: nothing more for the member to do. */
 export const awaitingReview = (e: TodayItem) => !e.done && e.approved + e.pending >= e.target;
