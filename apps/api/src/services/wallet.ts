@@ -136,27 +136,14 @@ function movePotCoins(tx: Tx, actor: HouseholdActorCtx, m: { from: string; to: s
 	return { transferId, balances: balancesFor(tx, actor) };
 }
 
-/** Manual adjustment (owner): `userId` null = pot. A note always explains the adjustment. */
-export function adjust(
-	tx: Tx,
-	actor: HouseholdActorCtx,
-	input: { userId: string | null; amount: number; note: string },
-	now: Date,
-) {
+/**
+ * Manual adjustment of the household pot (owner). A note always explains it. Nobody adjusts a personal wallet
+ * through a household: guardians correct their wards' coins, and nobody adjusts their own.
+ */
+export function adjust(tx: Tx, actor: HouseholdActorCtx, input: { amount: number; note: string }, now: Date) {
 	if (!can(actor, "ledger:adjust")) throw errors.forbidden("Owner only");
-	let walletId: string;
-	if (input.userId === null) {
-		assertFeature(actor.features, "pot");
-		walletId = sharedWalletId(tx, actor.householdId);
-	} else {
-		const member = tx
-			.select()
-			.from(memberships)
-			.where(and(eq(memberships.userId, input.userId), eq(memberships.householdId, actor.householdId)))
-			.get();
-		if (!member) throw errors.validation("body.userId: unknown member");
-		walletId = personalWalletId(tx, input.userId);
-	}
+	assertFeature(actor.features, "pot");
+	const walletId = sharedWalletId(tx, actor.householdId);
 	const id = addEntry(tx, {
 		householdId: actor.householdId,
 		walletId,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUID } from "node:crypto";
 import { assertCanSupervise, DEFAULT_WARD_RIGHTS, type WardRights } from "@lumo/domain";
-import { and, asc, eq, gt, isNull } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, or } from "drizzle-orm";
 import { hashToken, randomToken } from "../auth/tokens.js";
 import { completions, guardianshipCodes, guardianships, items, users } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
@@ -119,11 +119,37 @@ export function supervisionView(db: DbOrTx, userId: string) {
 
 // ---- Guardian powers ----------------------------------------------------------------------
 
+/**
+ * A ward with no guardian left is no longer supervised, and nobody could ever approve what still waits for a
+ * guardian: those completions are rejected (nothing is credited) so they stop blocking the day's goal.
+ */
+export function releaseIfUnguarded(tx: Tx, wardId: string): void {
+	if (wardRightsOf(tx, wardId) !== null) return;
+	tx.update(completions)
+		.set({ status: "rejected" })
+		.where(and(eq(completions.userId, wardId), eq(completions.status, "pending")))
+		.run();
+}
+
 export function endSupervision(tx: Tx, guardianId: string, wardId: string): void {
 	assertGuardian(tx, guardianId, wardId);
 	tx.delete(guardianships)
 		.where(and(eq(guardianships.guardianId, guardianId), eq(guardianships.wardId, wardId)))
 		.run();
+	releaseIfUnguarded(tx, wardId);
+}
+
+/** An account is leaving for good: its supervisions end, and wards left without a guardian are released. */
+export function endAllSupervisionsOf(tx: Tx, userId: string): void {
+	const wards = tx
+		.select({ id: guardianships.wardId })
+		.from(guardianships)
+		.where(eq(guardianships.guardianId, userId))
+		.all();
+	tx.delete(guardianships)
+		.where(or(eq(guardianships.guardianId, userId), eq(guardianships.wardId, userId)))
+		.run();
+	for (const w of wards) releaseIfUnguarded(tx, w.id);
 }
 
 export function updateWardRights(tx: Tx, guardianId: string, wardId: string, patch: Partial<WardRights>) {

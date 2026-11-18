@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { balances, createHousehold, createTestContext, makeHabit, type TestContext } from "../test/helpers.js";
+import {
+	balances,
+	createHousehold,
+	createTestContext,
+	giveCoins,
+	makeHabit,
+	type TestContext,
+} from "../test/helpers.js";
 
 let ctx: TestContext;
 let h: Awaited<ReturnType<typeof createHousehold>>;
@@ -75,7 +82,7 @@ describe("household features", () => {
 	});
 
 	it("pot off: no pot anywhere, no transfers, withdrawals, payouts or shared-credit items", async () => {
-		await h.owner.api.post("/ledger/adjustments", { userId: h.owner.userId, amount: 10, note: "seed" });
+		giveCoins(ctx, h.owner.userId, 10);
 		await turnOff("pot");
 		const me = (await h.owner.api.get("/me")).json();
 		expect(me.wallets.shared).toBeNull();
@@ -85,7 +92,7 @@ describe("household features", () => {
 			await h.owner.api.post("/household/pot/withdrawals", { amount: 1 }),
 			await h.owner.api.post("/household/pot/payouts", { userId: h.adult.userId, amount: 1 }),
 			await h.owner.api.get("/ledger?wallet=shared"),
-			await h.owner.api.post("/ledger/adjustments", { userId: null, amount: 1, note: "x" }),
+			await h.owner.api.post("/ledger/adjustments", { amount: 1, note: "x" }),
 			await h.owner.api.post("/items", { kind: "task", name: "x", reward: 2, creditsTo: "shared" }),
 			await h.owner.api.post("/rewards", { name: "x", cost: 1, fundedFrom: "shared" }),
 		]) {

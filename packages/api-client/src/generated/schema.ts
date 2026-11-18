@@ -3307,7 +3307,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    userId: string | null;
                     amount: number;
                     note: string;
                 };

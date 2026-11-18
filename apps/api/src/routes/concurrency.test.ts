@@ -5,7 +5,15 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../app.js";
 import { openDatabase } from "../db/client.js";
 import { completions, ledgerEntries, redemptions } from "../db/schema.js";
-import { api, balances, createHousehold, createTestContext, makeHabit, type TestContext } from "../test/helpers.js";
+import {
+	api,
+	balances,
+	createHousehold,
+	createTestContext,
+	giveCoins,
+	makeHabit,
+	type TestContext,
+} from "../test/helpers.js";
 
 let ctx: TestContext;
 let h: Awaited<ReturnType<typeof createHousehold>>;
@@ -126,7 +134,7 @@ describe("real concurrency: several SQLite connections in parallel (threads)", (
 	}, 30_000);
 
 	it("5 threads transferring 4 coins each with 10 in hand: 2 transfers, never a negative balance", async () => {
-		await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 10, note: "start" });
+		giveCoins(ctx, h.kid.userId, 10);
 		const codes = await race({
 			threads: 5,
 			perThread: 1,
@@ -141,7 +149,7 @@ describe("real concurrency: several SQLite connections in parallel (threads)", (
 
 describe("other coin writes under concurrency", () => {
 	beforeEach(async () => {
-		await h.owner.api.post("/ledger/adjustments", { userId: h.kid.userId, amount: 10, note: "start" });
+		giveCoins(ctx, h.kid.userId, 10);
 	});
 
 	it("redemptions: never a negative balance (10 coins, price 4, 5 attempts → 2 successes)", async () => {

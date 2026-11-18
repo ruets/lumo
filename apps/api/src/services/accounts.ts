@@ -2,12 +2,13 @@
 import type { Role } from "@lumo/domain";
 import { assertInstanceAccessChange } from "@lumo/domain";
 import { and, asc, count, eq, isNull } from "drizzle-orm";
-import { devices, households, memberships, sessions, users } from "../db/schema.js";
+import { devices, households, ledgerEntries, memberships, sessions, users } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { AccountCtx } from "./context.js";
 import { detachFromHousehold } from "./household.js";
 import { addEntry, sharedWalletId, walletBalance } from "./ledger.js";
 import { createHousehold, type DbOrTx, joinHousehold, superAdminCount, type Tx } from "./members.js";
+import { endAllSupervisionsOf } from "./supervision.js";
 
 const notFound = (what: string) => new AppError(404, "not_found", `${what} not found`);
 const iso = (d: Date) => d.toISOString();
@@ -93,6 +94,7 @@ export function deleteUser(tx: Tx, actor: AccountCtx, targetId: string, now: Dat
 		superAdminCount: superAdminCount(tx),
 	});
 	for (const home of householdsOf(tx, targetId)) detachFromHousehold(tx, home.id, targetId);
+	endAllSupervisionsOf(tx, targetId);
 	tx.delete(sessions).where(eq(sessions.userId, targetId)).run();
 	tx.delete(devices).where(eq(devices.userId, targetId)).run();
 	tx.update(users)
@@ -159,6 +161,10 @@ export function deleteHousehold(tx: Tx, id: string) {
 	household(tx, id);
 	if (householdView(tx, household(tx, id)).memberCount > 0) {
 		throw errors.conflict("household_not_empty", "Remove the members before deleting the household");
+	}
+	// Ledger entries are append-only and would be wiped with the household: one that ever moved coins stays.
+	if (tx.select({ id: ledgerEntries.id }).from(ledgerEntries).where(eq(ledgerEntries.householdId, id)).get()) {
+		throw errors.conflict("household_has_history", "This household has coin history and cannot be deleted");
 	}
 	tx.delete(households).where(eq(households.id, id)).run();
 }

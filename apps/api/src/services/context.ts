@@ -26,6 +26,7 @@ export const featuresOf = (h: typeof households.$inferSelect): HouseholdFeatures
 /** One membership of the actor, with what the household sets for them. */
 export interface MembershipCtx {
 	householdId: string;
+	name: string;
 	role: Role;
 	potWithdrawals: PotPolicy;
 	features: HouseholdFeatures;
@@ -103,6 +104,7 @@ export function membershipsOf(db: DbOrTx, userId: string): MembershipCtx[] {
 		.all()
 		.map(({ m, h }) => ({
 			householdId: h.id,
+			name: h.name,
 			role: m.role,
 			potWithdrawals: h.potWithdrawals,
 			features: featuresOf(h),

@@ -18,7 +18,7 @@ import { loadWardActor } from "../services/supervision.js";
  */
 export type RouteScope = "household" | "account";
 
-export interface RouteContext<B, Q, P, A = HouseholdActorCtx, X = undefined> {
+export interface RouteContext<B, Q, P, A = HouseholdActorCtx> {
 	/** Write: the request's `BEGIN IMMEDIATE` transaction. Read: the database (same queries, no writes). */
 	db: Tx;
 	config: Config;
@@ -29,8 +29,6 @@ export interface RouteContext<B, Q, P, A = HouseholdActorCtx, X = undefined> {
 	body: B;
 	query: Q;
 	params: P;
-	/** Result of the route's async `prepare` step (for work that cannot run inside the sync transaction). */
-	prepared: X;
 	now: Date;
 }
 
@@ -48,13 +46,11 @@ export interface RouteDef {
 	ward: boolean;
 	/** Only super admins may call it (403 otherwise). */
 	superAdmin: boolean;
-	// biome-ignore lint/suspicious/noExplicitAny: typed by `route()`
-	prepare?: (body: any) => Promise<unknown>;
 	status: number;
 	/** Write: run in a single transaction, `Idempotency-Key` required. */
 	idempotent: boolean;
 	// biome-ignore lint/suspicious/noExplicitAny: the fine-grained typing is carried by `route()`
-	handler: (ctx: RouteContext<any, any, any, any, any>) => unknown;
+	handler: (ctx: RouteContext<any, any, any, any>) => unknown;
 }
 
 type Out<T extends z.ZodType | undefined> = T extends z.ZodType ? z.output<T> : undefined;
@@ -66,14 +62,11 @@ export function route<
 	TP extends z.ZodType | undefined = undefined,
 	TR extends z.ZodType | undefined = undefined,
 	S extends RouteScope = "household",
-	X = undefined,
 >(def: {
 	/** Defaults to `household`. */
 	scope?: S;
 	/** Restricts the route to super admins. */
 	superAdmin?: boolean;
-	/** Async step run before the transaction (password hashing...); its result reaches the handler as `prepared`. */
-	prepare?: (body: Out<TB>) => Promise<X>;
 	method: RouteDef["method"];
 	url: string;
 	summary: string;
@@ -85,7 +78,7 @@ export function route<
 	status?: number;
 	idempotent?: boolean;
 	handler: (
-		ctx: RouteContext<Out<TB>, Out<TQ>, Out<TP>, S extends "account" ? ActorCtx : HouseholdActorCtx, X>,
+		ctx: RouteContext<Out<TB>, Out<TQ>, Out<TP>, S extends "account" ? ActorCtx : HouseholdActorCtx>,
 	) => // biome-ignore lint/suspicious/noConfusingVoidType: handlers without a body (204) return void
 	TR extends z.ZodType ? z.input<TR> : undefined | void;
 }): RouteDef {
@@ -102,7 +95,6 @@ export function route<
 		scope: def.scope ?? "household",
 		superAdmin: def.superAdmin ?? false,
 		ward: false,
-		...(def.prepare ? { prepare: def.prepare as RouteDef["prepare"] } : {}),
 		status: def.status ?? 200,
 		idempotent: def.idempotent ?? write,
 		handler: def.handler as RouteDef["handler"],
@@ -147,7 +139,6 @@ export function registerRoutes(
 				const query = parse(def.query, req.query, "query");
 				const body = parse(def.body, req.body, "body");
 				const now = clock();
-				const prepared = def.prepare ? await def.prepare(body) : undefined;
 
 				const run = (dbx: Tx) => {
 					const account = loadAccount(dbx, userId);
@@ -161,7 +152,7 @@ export function registerRoutes(
 						: loadActor(dbx, userId, preferred);
 					if (!actor) throw errors.unauthenticated();
 					if (def.scope === "household" && !actor.householdId) throw errors.noHousehold();
-					return def.handler({ db: dbx, config, actor, account, body, query, params, prepared, now });
+					return def.handler({ db: dbx, config, actor, account, body, query, params, now });
 				};
 				const reply_ = (r: Stored) => (r.status === 204 ? reply.code(204).send() : reply.code(r.status).send(r.body));
 

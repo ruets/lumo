@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { balances, createHousehold, createTestContext, type TestContext } from "../test/helpers.js";
+import { balances, createHousehold, createTestContext, giveCoins, type TestContext } from "../test/helpers.js";
 
 let ctx: TestContext;
 let h: Awaited<ReturnType<typeof createHousehold>>;
@@ -8,7 +8,7 @@ beforeEach(async () => {
 	ctx = await createTestContext();
 	h = await createHousehold(ctx);
 	// 10 coins in the pot, given by alice.
-	await h.owner.api.post("/ledger/adjustments", { userId: h.owner.userId, amount: 10, note: "seed" });
+	giveCoins(ctx, h.owner.userId, 10);
 	await h.owner.api.post("/transfers", { amount: 10 });
 });
 afterEach(async () => {

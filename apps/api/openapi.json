@@ -5951,18 +5951,6 @@
 							"schema": {
 								"type": "object",
 								"properties": {
-									"userId": {
-										"anyOf": [
-											{
-												"type": "string",
-												"minLength": 1,
-												"maxLength": 100
-											},
-											{
-												"type": "null"
-											}
-										]
-									},
 									"amount": {
 										"type": "integer",
 										"minimum": -9007199254740991,
@@ -5974,7 +5962,7 @@
 										"maxLength": 500
 									}
 								},
-								"required": ["userId", "amount", "note"],
+								"required": ["amount", "note"],
 								"additionalProperties": false
 							}
 						}

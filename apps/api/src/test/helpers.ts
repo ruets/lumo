@@ -10,6 +10,8 @@ import { SESSION_COOKIE } from "../auth/guard.js";
 import type { OidcClaims, OidcProvider } from "../auth/oidc.js";
 import { type Config, loadConfig } from "../config.js";
 import { type Db, openDatabase } from "../db/client.js";
+import { addEntry, personalWalletId } from "../services/ledger.js";
+import { writeTx } from "../services/members.js";
 
 export const PUBLIC_URL = "https://lumo.test";
 
@@ -234,4 +236,19 @@ export async function newLoneAccount(ctx: TestContext, admin: { api: Api }, user
 	const created = await signUp(ctx, invite.token, username);
 	if (created.status !== 201) throw new Error(`sign-up refused (${created.status})`);
 	return created;
+}
+
+/** Puts coins in someone's personal wallet for a test: nobody can do this through the API (that is the point). */
+export function giveCoins(ctx: TestContext, userId: string, amount: number, note = "test"): void {
+	writeTx(ctx.db, (tx) => {
+		addEntry(tx, {
+			householdId: null,
+			walletId: personalWalletId(tx, userId),
+			amount,
+			reason: "adjustment",
+			note,
+			createdBy: userId,
+			now: ctx.clock.now,
+		});
+	});
 }

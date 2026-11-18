@@ -518,7 +518,7 @@ describe("linking an OIDC identity to a signed-in account", () => {
 		const start = await get("/auth/link", cookieHeader(cookie));
 		expect(start.statusCode).toBe(302);
 		const state = new URL(start.headers.location as string).searchParams.get("state") as string;
-		return get(`/auth/callback?code=${code}&state=${state}`);
+		return get(`/auth/callback?code=${code}&state=${state}`, cookieHeader(cookie));
 	};
 	const bobRow = () => ctx.db.select().from(users).where(eq(users.username, "bob")).get();
 
@@ -543,6 +543,19 @@ describe("linking an OIDC identity to a signed-in account", () => {
 		const me = await get("/me", cookieHeader(sessionCookie(res) as string));
 		expect(me.json().user.displayName).toBe("Bob");
 		expect(ctx.db.select().from(users).all()).toHaveLength(2);
+	});
+
+	it("is refused when the browser finishing the flow is not the one that started it", async () => {
+		const { owner, bob } = await members();
+		// Someone else's browser (another account, or no session at all) completes bob's link request.
+		for (const headers of [cookieHeader(owner), {}]) {
+			ctx.oidc.grant("x1", { sub: "sub-victim" });
+			const s = await get("/auth/link", cookieHeader(bob));
+			const st = new URL(s.headers.location as string).searchParams.get("state") as string;
+			const res = await get(`/auth/callback?code=x1&state=${st}`, headers);
+			expect(res.headers.location).toBe("https://lumo.test/settings?auth_error=forbidden");
+		}
+		expect(bobRow()?.oidcSubject).toBeNull();
 	});
 
 	it("requires being signed in", async () => {
@@ -756,5 +769,53 @@ describe("OIDC_AUTO_CREATE_USERS", () => {
 			const me = await get("/account", { authorization: `Bearer ${res.json().accessToken}` });
 			expect(me.json().households).toEqual([]);
 		});
+	});
+});
+
+describe("sign-in edge cases", () => {
+	const login = async (code: string, sub: string, query = "", over: Record<string, unknown> = {}) => {
+		ctx.oidc.grant(code, { sub, name: "Someone", ...over });
+		const start = await get(`/auth/login${query}`);
+		const state = new URL(start.headers.location as string).searchParams.get("state") as string;
+		return get(`/auth/callback?code=${code}&state=${state}`);
+	};
+
+	it("two identities with the same e-mail both get an account; only the first keeps the e-mail", async () => {
+		await ctx.close();
+		ctx = await createTestContext({ OIDC_AUTO_CREATE_USERS: "true" });
+		await setupOwner(ctx);
+		expect((await login("e1", "sub-a", "", { email: "same@example.org" })).headers.location).toBe("https://lumo.test/");
+		expect((await login("e2", "sub-b", "", { email: "same@example.org" })).headers.location).toBe("https://lumo.test/");
+		const rows = ctx.db.select().from(users).all();
+		expect(rows.filter((u) => u.email === "same@example.org")).toHaveLength(1);
+		expect(rows.filter((u) => u.oidcSubject)).toHaveLength(2);
+	});
+
+	it("a guardian's link followed by an identity that already has an account makes it supervised", async () => {
+		await ctx.close();
+		ctx = await createTestContext({ OIDC_AUTO_CREATE_USERS: "true" });
+		const owner = await setupOwner(ctx);
+		const child = await login("c1", "sub-child");
+		const code = (
+			await post(
+				"/supervision/codes",
+				{ kind: "supervise" },
+				{ ...cookieHeader(owner), ...ORIGIN, "idempotency-key": crypto.randomUUID() },
+			)
+		).json();
+		const res = await login("c2", "sub-child", `?invite=${code.token}`);
+		expect(res.headers.location).toBe("https://lumo.test/");
+		const view = (await get("/supervision", cookieHeader(sessionCookie(child) as string))).json();
+		expect(view.guardians).toHaveLength(1);
+	});
+
+	it("an administrator's invitation followed by an identity that already has an account is refused, not ignored", async () => {
+		await ctx.close();
+		ctx = await createTestContext({ OIDC_AUTO_CREATE_USERS: "true" });
+		const owner = await setupOwner(ctx);
+		await login("c1", "sub-known");
+		const invite = (await post("/admin/account-invites", {}, { ...cookieHeader(owner), ...ORIGIN })).json().token;
+		const res = await login("c2", "sub-known", `?invite=${invite}`);
+		expect(res.headers.location).toBe("https://lumo.test/?auth_error=account_exists");
 	});
 });
