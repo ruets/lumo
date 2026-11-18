@@ -133,7 +133,7 @@ function InviteUser() {
 
 function HouseholdRow({ household }: { household: AdminHousehold }) {
 	const rename = useAdminWrite((name: string) => api.adminRenameHousehold(household.id, name));
-	const remove = useAdminWrite(() => api.adminDeleteHousehold(household.id));
+	const archive = useAdminWrite((archived: boolean) => api.adminArchiveHousehold(household.id, archived));
 	const adjust = useAdminWrite((input: { amount: number; note: string }) => api.adminAdjustPot(household.id, input));
 	const [open, setOpen] = useState<"rename" | "pot" | null>(null);
 	const [name, setName] = useState(household.name);
@@ -143,6 +143,7 @@ function HouseholdRow({ household }: { household: AdminHousehold }) {
 		<View style={{ gap: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
 			<T style={{ fontFamily: font.bold, fontSize: 15 }}>
 				{household.name} · {t("admin.household.members", { count: household.memberCount })}
+				{household.archived ? ` · ${t("admin.household.archived")}` : ""}
 			</T>
 			<Button
 				variant="ghost"
@@ -197,11 +198,13 @@ function HouseholdRow({ household }: { household: AdminHousehold }) {
 			)}
 			<Button
 				variant="ghost"
-				label={t("admin.household.delete")}
+				label={household.archived ? t("admin.household.unarchive") : t("admin.household.archive")}
 				onPress={() =>
-					confirm(t("admin.household.delete"), t("admin.household.deleteConfirm", { name: household.name }), () =>
-						remove.mutate(undefined, { onSuccess: saved }),
-					)
+					household.archived
+						? archive.mutate(false, { onSuccess: saved })
+						: confirm(t("admin.household.archive"), t("admin.household.archiveConfirm", { name: household.name }), () =>
+								archive.mutate(true, { onSuccess: saved }),
+							)
 				}
 			/>
 		</View>

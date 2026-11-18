@@ -1510,7 +1510,7 @@
 		},
 		"/api/v1/admin/households": {
 			"get": {
-				"summary": "All households with their member count",
+				"summary": "All households with their member count and whether they are archived",
 				"tags": ["Admin"],
 				"operationId": "getApiV1AdminHouseholds",
 				"responses": {
@@ -1532,6 +1532,9 @@
 													"name": {
 														"type": "string"
 													},
+													"archived": {
+														"type": "boolean"
+													},
 													"memberCount": {
 														"type": "integer",
 														"minimum": -9007199254740991,
@@ -1541,7 +1544,7 @@
 														"type": "string"
 													}
 												},
-												"required": ["id", "name", "memberCount", "createdAt"],
+												"required": ["id", "name", "archived", "memberCount", "createdAt"],
 												"additionalProperties": false
 											}
 										}
@@ -1642,6 +1645,9 @@
 										"name": {
 											"type": "string"
 										},
+										"archived": {
+											"type": "boolean"
+										},
 										"memberCount": {
 											"type": "integer",
 											"minimum": -9007199254740991,
@@ -1651,7 +1657,7 @@
 											"type": "string"
 										}
 									},
-									"required": ["id", "name", "memberCount", "createdAt"],
+									"required": ["id", "name", "archived", "memberCount", "createdAt"],
 									"additionalProperties": false
 								}
 							}
@@ -1701,7 +1707,7 @@
 		},
 		"/api/v1/admin/households/{id}": {
 			"patch": {
-				"summary": "Rename a household",
+				"summary": "Rename a household, or archive / unarchive it (a household is never deleted)",
 				"tags": ["Admin"],
 				"operationId": "patchApiV1AdminHouseholdsId",
 				"parameters": [
@@ -1737,9 +1743,11 @@
 										"type": "string",
 										"minLength": 1,
 										"maxLength": 80
+									},
+									"archived": {
+										"type": "boolean"
 									}
 								},
-								"required": ["name"],
 								"additionalProperties": false
 							}
 						}
@@ -1759,6 +1767,9 @@
 										"name": {
 											"type": "string"
 										},
+										"archived": {
+											"type": "boolean"
+										},
 										"memberCount": {
 											"type": "integer",
 											"minimum": -9007199254740991,
@@ -1768,82 +1779,11 @@
 											"type": "string"
 										}
 									},
-									"required": ["id", "name", "memberCount", "createdAt"],
+									"required": ["id", "name", "archived", "memberCount", "createdAt"],
 									"additionalProperties": false
 								}
 							}
 						}
-					},
-					"default": {
-						"description": "Error (RFC 9457) with a stable `code`",
-						"content": {
-							"application/problem+json": {
-								"schema": {
-									"type": "object",
-									"required": ["type", "title", "status", "code"],
-									"properties": {
-										"type": {
-											"type": "string"
-										},
-										"title": {
-											"type": "string"
-										},
-										"status": {
-											"type": "integer"
-										},
-										"code": {
-											"type": "string"
-										},
-										"detail": {
-											"type": "string"
-										},
-										"instance": {
-											"type": "string"
-										}
-									}
-								}
-							}
-						}
-					}
-				},
-				"security": [
-					{
-						"session": []
-					},
-					{
-						"bearer": []
-					}
-				]
-			},
-			"delete": {
-				"summary": "Delete an empty household",
-				"tags": ["Admin"],
-				"operationId": "deleteApiV1AdminHouseholdsId",
-				"parameters": [
-					{
-						"name": "id",
-						"in": "path",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"minLength": 1,
-							"maxLength": 100
-						}
-					},
-					{
-						"name": "Idempotency-Key",
-						"in": "header",
-						"required": true,
-						"description": "Unique UUID per request; a duplicate returns the response already stored.",
-						"schema": {
-							"type": "string",
-							"maxLength": 200
-						}
-					}
-				],
-				"responses": {
-					"204": {
-						"description": "No content"
 					},
 					"default": {
 						"description": "Error (RFC 9457) with a stable `code`",

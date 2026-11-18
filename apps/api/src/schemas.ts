@@ -414,11 +414,17 @@ export const adminAssignHouseholdBody = z.object({ householdId: z.string().min(1
 export const adminHouseholdView = z.object({
 	id: z.string(),
 	name: z.string(),
+	archived: z.boolean(),
 	memberCount: z.number().int(),
 	createdAt: z.string(),
 });
 export const adminHouseholdsView = z.object({ households: z.array(adminHouseholdView) });
 export const adminHouseholdBody = z.object({ name: z.string().trim().min(1).max(80) }).strict();
+export const adminUpdateHouseholdBody = z
+	.object({ name: z.string().trim().min(1).max(80), archived: z.boolean() })
+	.partial()
+	.strict()
+	.refine((b) => b.name !== undefined || b.archived !== undefined, "provide name and/or archived");
 export const potAdjustmentBody = z
 	.object({
 		amount: z

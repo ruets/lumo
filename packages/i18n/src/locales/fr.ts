@@ -251,8 +251,6 @@ export const fr: Record<MessageId, string> = {
 	"admin.household.create": "Créer un foyer",
 	"admin.household.name": "Nom du foyer",
 	"admin.household.rename": "Renommer",
-	"admin.household.delete": "Supprimer",
-	"admin.household.deleteConfirm": "Supprimer le foyer {name} ?",
 	"admin.household.members_one": "{count} membre",
 	"admin.household.members_other": "{count} membres",
 	"admin.pot.adjust": "Ajuster la cagnotte",
@@ -267,7 +265,6 @@ export const fr: Record<MessageId, string> = {
 	"errors.account_disabled": "Ce compte est désactivé.",
 	"errors.cannot_target_self": "Vous ne pouvez pas faire cela sur votre propre compte.",
 	"errors.last_super_admin": "L'instance doit garder au moins un super admin.",
-	"errors.household_not_empty": "Retirez les membres avant de supprimer le foyer.",
 	"form.scope": "Pour qui",
 	"form.scope.household": "Le foyer",
 	"form.scope.personal": "Moi seul",
@@ -355,7 +352,12 @@ export const fr: Record<MessageId, string> = {
 	"admin.invite.code": "Code",
 	"supervision.codeHint":
 		"Marche pour quelqu'un qui a déjà un compte comme pour quelqu'un qui n'en a pas : il le crée avec ce code.",
-	"errors.household_has_history": "Ce foyer a un historique de pièces et ne peut pas être supprimé.",
 	"errors.account_exists": "Ce compte Authentik existe déjà : utilisez plutôt le code depuis la page Supervision.",
+	"admin.household.archive": "Archiver",
+	"admin.household.unarchive": "Désarchiver",
+	"admin.household.archived": "Archivé",
+	"admin.household.archiveConfirm":
+		"Archiver le foyer {name} ? Ses membres ne le voient plus, rien n'est supprimé : vous pourrez le rétablir.",
+	"errors.household_archived": "Ce foyer est archivé.",
 	"errors.unknown": "Une erreur est survenue.",
 };

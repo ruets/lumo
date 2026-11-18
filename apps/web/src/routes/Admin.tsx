@@ -123,7 +123,7 @@ function InviteUser() {
 
 function HouseholdRow({ household }: { household: AdminHousehold }) {
 	const rename = useAdminWrite((name: string) => api.adminRenameHousehold(household.id, name));
-	const remove = useAdminWrite(() => api.adminDeleteHousehold(household.id));
+	const archive = useAdminWrite((archived: boolean) => api.adminArchiveHousehold(household.id, archived));
 	const adjust = useAdminWrite((input: { amount: number; note: string }) => api.adminAdjustPot(household.id, input));
 	const [pot, setPot] = useState(false);
 	function submitPot(e: FormEvent<HTMLFormElement>) {
@@ -144,6 +144,7 @@ function HouseholdRow({ household }: { household: AdminHousehold }) {
 			<span className="flex flex-wrap items-baseline gap-2">
 				<strong className="text-[15px]">{household.name}</strong>
 				<span className="text-xs text-muted">{t("admin.household.members", { count: household.memberCount })}</span>
+				{household.archived && <span className="text-xs font-bold text-bad">{t("admin.household.archived")}</span>}
 			</span>
 			<span className="flex flex-wrap gap-2">
 				<button
@@ -161,13 +162,13 @@ function HouseholdRow({ household }: { household: AdminHousehold }) {
 				</button>
 				<button
 					type="button"
-					className={danger}
+					className={household.archived ? ghost : danger}
 					onClick={() => {
-						if (window.confirm(t("admin.household.deleteConfirm", { name: household.name })))
-							remove.mutate(undefined, { onSuccess: saved });
+						if (household.archived || window.confirm(t("admin.household.archiveConfirm", { name: household.name })))
+							archive.mutate(!household.archived, { onSuccess: saved });
 					}}
 				>
-					{t("admin.household.delete")}
+					{household.archived ? t("admin.household.unarchive") : t("admin.household.archive")}
 				</button>
 			</span>
 			{pot && (

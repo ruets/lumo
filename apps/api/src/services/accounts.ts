@@ -2,7 +2,7 @@
 import type { Role } from "@lumo/domain";
 import { assertInstanceAccessChange } from "@lumo/domain";
 import { and, asc, count, eq, isNull } from "drizzle-orm";
-import { devices, households, ledgerEntries, memberships, sessions, users } from "../db/schema.js";
+import { devices, households, memberships, sessions, users } from "../db/schema.js";
 import { AppError, errors } from "../errors.js";
 import type { AccountCtx } from "./context.js";
 import { detachFromHousehold } from "./household.js";
@@ -13,12 +13,13 @@ import { endAllSupervisionsOf } from "./supervision.js";
 const notFound = (what: string) => new AppError(404, "not_found", `${what} not found`);
 const iso = (d: Date) => d.toISOString();
 
-function householdsOf(db: DbOrTx, userId: string) {
+/** The person's households; archived ones only with `withArchived` (an account being deleted leaves them too). */
+function householdsOf(db: DbOrTx, userId: string, withArchived = false) {
 	return db
 		.select({ id: households.id, name: households.name, role: memberships.role })
 		.from(memberships)
 		.innerJoin(households, eq(households.id, memberships.householdId))
-		.where(eq(memberships.userId, userId))
+		.where(and(eq(memberships.userId, userId), withArchived ? undefined : isNull(households.archivedAt)))
 		.orderBy(memberships.createdAt, households.id)
 		.all();
 }
@@ -93,7 +94,7 @@ export function deleteUser(tx: Tx, actor: AccountCtx, targetId: string, now: Dat
 		targetIsSuperAdmin: target.isSuperAdmin,
 		superAdminCount: superAdminCount(tx),
 	});
-	for (const home of householdsOf(tx, targetId)) detachFromHousehold(tx, home.id, targetId);
+	for (const home of householdsOf(tx, targetId, true)) detachFromHousehold(tx, home.id, targetId);
 	endAllSupervisionsOf(tx, targetId);
 	tx.delete(sessions).where(eq(sessions.userId, targetId)).run();
 	tx.delete(devices).where(eq(devices.userId, targetId)).run();
@@ -132,7 +133,7 @@ export function removeFromHousehold(tx: Tx, targetId: string, householdId: strin
 
 function householdView(db: DbOrTx, h: typeof households.$inferSelect) {
 	const members = db.select({ n: count() }).from(memberships).where(eq(memberships.householdId, h.id)).get()?.n ?? 0;
-	return { id: h.id, name: h.name, memberCount: members, createdAt: iso(h.createdAt) };
+	return { id: h.id, name: h.name, archived: h.archivedAt !== null, memberCount: members, createdAt: iso(h.createdAt) };
 }
 
 function household(db: DbOrTx, id: string) {
@@ -150,23 +151,22 @@ export function adminCreateHousehold(tx: Tx, name: string) {
 	return householdView(tx, household(tx, createHousehold(tx, { name })));
 }
 
-export function renameHousehold(tx: Tx, id: string, name: string) {
-	household(tx, id);
-	tx.update(households).set({ name }).where(eq(households.id, id)).run();
+/**
+ * Renames and/or archives a household. Archiving hides it from its members and from everyone, without deleting
+ * anything: its history stays (the coin ledger is append-only) and unarchiving brings it back as it was.
+ */
+export function updateHouseholdAdmin(
+	tx: Tx,
+	id: string,
+	input: { name?: string | undefined; archived?: boolean | undefined },
+	now: Date,
+) {
+	const current = household(tx, id);
+	const set: Partial<typeof households.$inferInsert> = {};
+	if (input.name !== undefined) set.name = input.name;
+	if (input.archived !== undefined) set.archivedAt = input.archived ? (current.archivedAt ?? now) : null;
+	if (Object.keys(set).length > 0) tx.update(households).set(set).where(eq(households.id, id)).run();
 	return householdView(tx, household(tx, id));
-}
-
-/** Only an empty household can be deleted: members must be moved or removed first. */
-export function deleteHousehold(tx: Tx, id: string) {
-	household(tx, id);
-	if (householdView(tx, household(tx, id)).memberCount > 0) {
-		throw errors.conflict("household_not_empty", "Remove the members before deleting the household");
-	}
-	// Ledger entries are append-only and would be wiped with the household: one that ever moved coins stays.
-	if (tx.select({ id: ledgerEntries.id }).from(ledgerEntries).where(eq(ledgerEntries.householdId, id)).get()) {
-		throw errors.conflict("household_has_history", "This household has coin history and cannot be deleted");
-	}
-	tx.delete(households).where(eq(households.id, id)).run();
 }
 
 /** A super admin corrects a household pot (never sees what is in it); the note explains why. */

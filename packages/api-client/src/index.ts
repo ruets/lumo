@@ -214,7 +214,8 @@ export function createClient(options: ClientOptions) {
 		adminCreateHousehold: (name: string) => request<AdminHousehold>("POST", "/admin/households", { name }),
 		adminRenameHousehold: (id: string, name: string) =>
 			request<AdminHousehold>("PATCH", `/admin/households/${id}`, { name }),
-		adminDeleteHousehold: (id: string) => request<void>("DELETE", `/admin/households/${id}`),
+		adminArchiveHousehold: (id: string, archived: boolean) =>
+			request<AdminHousehold>("PATCH", `/admin/households/${id}`, { archived }),
 		adminAdjustPot: (id: string, input: { amount: number; note: string }) =>
 			request<{ balance: number }>("POST", `/admin/households/${id}/pot/adjustments`, input),
 		adminGetSettings: () => request<InstanceSettings>("GET", "/admin/settings"),

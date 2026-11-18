@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4c6b081b-102a-4c53-9621-900bc4ddd992",
+  "id": "e3bacd1e-3527-47d8-a533-472f64af692d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_invites": {
@@ -590,6 +590,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "created_at": {
           "name": "created_at",

@@ -200,7 +200,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** All households with their member count */
+        /** All households with their member count and whether they are archived */
         get: operations["getApiV1AdminHouseholds"];
         put?: never;
         /** Create an empty household */
@@ -221,11 +221,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete an empty household */
-        delete: operations["deleteApiV1AdminHouseholdsId"];
+        delete?: never;
         options?: never;
         head?: never;
-        /** Rename a household */
+        /** Rename a household, or archive / unarchive it (a household is never deleted) */
         patch: operations["patchApiV1AdminHouseholdsId"];
         trace?: never;
     };
@@ -1631,6 +1630,7 @@ export interface operations {
                         households: {
                             id: string;
                             name: string;
+                            archived: boolean;
                             memberCount: number;
                             createdAt: string;
                         }[];
@@ -1682,49 +1682,11 @@ export interface operations {
                     "application/json": {
                         id: string;
                         name: string;
+                        archived: boolean;
                         memberCount: number;
                         createdAt: string;
                     };
                 };
-            };
-            /** @description Error (RFC 9457) with a stable `code` */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": {
-                        type: string;
-                        title: string;
-                        status: number;
-                        code: string;
-                        detail?: string;
-                        instance?: string;
-                    };
-                };
-            };
-        };
-    };
-    deleteApiV1AdminHouseholdsId: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Unique UUID per request; a duplicate returns the response already stored. */
-                "Idempotency-Key": string;
-            };
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description Error (RFC 9457) with a stable `code` */
             default: {
@@ -1759,7 +1721,8 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    name: string;
+                    name?: string;
+                    archived?: boolean;
                 };
             };
         };
@@ -1773,6 +1736,7 @@ export interface operations {
                     "application/json": {
                         id: string;
                         name: string;
+                        archived: boolean;
                         memberCount: number;
                         createdAt: string;
                     };

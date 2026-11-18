@@ -254,35 +254,71 @@ describe("admin: accounts", () => {
 });
 
 describe("admin: households", () => {
-	it("creates, renames, lists and deletes an empty household", async () => {
+	it("creates, renames and lists households, with their archived state", async () => {
 		const created = await h.owner.api.post("/admin/households", { name: "Flat 3" });
 		expect(created.statusCode).toBe(201);
 		const id = created.json().id as string;
-		expect(created.json()).toMatchObject({ name: "Flat 3", memberCount: 0 });
+		expect(created.json()).toMatchObject({ name: "Flat 3", memberCount: 0, archived: false });
 
 		expect((await h.owner.api.patch(`/admin/households/${id}`, { name: "Flat 4" })).json().name).toBe("Flat 4");
 		const list = (await h.owner.api.get("/admin/households")).json().households;
 		expect(list).toHaveLength(2);
-		expect(list.find((x: { id: string }) => x.id === h.owner.userId)).toBeUndefined();
 		expect(list.find((x: { name: string }) => x.name === "The Smiths")).toMatchObject({ memberCount: 3 });
-
-		expect((await h.owner.api.del(`/admin/households/${id}`)).statusCode).toBe(204);
-		expect((await h.owner.api.get("/admin/households")).json().households).toHaveLength(1);
+		expect((await h.owner.api.patch(`/admin/households/${id}`, {})).statusCode).toBe(400);
 	});
 
-	it("refuses to delete a household that has coin history: the ledger is append-only", async () => {
+	it("a household cannot be deleted, only archived", async () => {
 		const created = (await h.owner.api.post("/admin/households", { name: "Flat 3" })).json();
-		await h.owner.api.post(`/admin/households/${created.id}/pot/adjustments`, { amount: 5, note: "seed" });
-		const res = await h.owner.api.del(`/admin/households/${created.id}`);
-		expect(res.statusCode).toBe(409);
-		expect(res.json().code).toBe("household_has_history");
+		expect((await h.owner.api.del(`/admin/households/${created.id}`)).statusCode).toBe(404);
 	});
 
-	it("refuses to delete a household that still has members", async () => {
-		const smiths = (await h.owner.api.get("/admin/households")).json().households[0].id;
-		const res = await h.owner.api.del(`/admin/households/${smiths}`);
-		expect(res.statusCode).toBe(409);
-		expect(res.json().code).toBe("household_not_empty");
+	it("archiving hides the household from its members and keeps everything; unarchiving brings it back", async () => {
+		const smiths = (await h.owner.api.get("/admin/households")).json().households[0].id as string;
+		await makeHabit(h.owner, { name: "Dishes" });
+		await makeHabit(h.owner, { name: "Mine", scope: "personal" });
+		await h.owner.api.post(`/admin/households/${smiths}/pot/adjustments`, { amount: 7, note: "seed" });
+
+		const archived = await h.owner.api.patch(`/admin/households/${smiths}`, { archived: true });
+		expect(archived.json()).toMatchObject({ archived: true, memberCount: 3 });
+
+		// Members no longer see it: no household, no pot, its items are hidden, personal items stay.
+		const me = (await h.adult.api.get("/me")).json();
+		expect(me).toMatchObject({ household: null, role: null, households: [] });
+		expect((await h.adult.api.get("/household")).json().code).toBe("no_household");
+		expect((await h.owner.api.get("/items")).json().items.map((i: { name: string }) => i.name)).toEqual(["Mine"]);
+		expect((await h.owner.api.get("/account")).json().households).toEqual([]);
+		// Nobody can create things in it or join it again, but the admin still lists it and can correct its pot.
+		const invite = (await h.owner.api.get("/admin/households")).json().households[0];
+		expect(invite).toMatchObject({ id: smiths, archived: true });
+		const lone = await newAccount("zoe");
+		const join = await h.owner.api.post(`/admin/users/${lone.id}/households`, { householdId: smiths, role: "member" });
+		expect(join.statusCode).toBe(409);
+		expect(join.json().code).toBe("household_archived");
+
+		// Unarchiving restores everything, coins included.
+		await h.owner.api.patch(`/admin/households/${smiths}`, { archived: false });
+		expect((await h.adult.api.get("/me")).json().household.name).toBe("The Smiths");
+		expect((await h.owner.api.get("/items")).json().items).toHaveLength(2);
+		expect((await balances(h.kid)).shared).toBe(7);
+	});
+
+	it("an invitation to an archived household is refused, at sign-up and when joining", async () => {
+		const smiths = (await h.owner.api.get("/admin/households")).json().households[0].id as string;
+		const invite = (await h.owner.api.post("/household/invites", { role: "member" })).json();
+		await h.owner.api.patch(`/admin/households/${smiths}`, { archived: true });
+		const res = await signUp(ctx, invite.token, "late");
+		expect(res.status).toBe(409);
+		const lone = await newAccount("zoe");
+		expect((await lone.api.post("/household/join", { code: invite.token })).json().code).toBe("household_archived");
+	});
+
+	it("an account that was only in an archived household still has its personal space and coins", async () => {
+		const habit = await makeHabit(h.adult, { name: "Read", scope: "personal", reward: 4 });
+		await h.adult.api.post(`/items/${habit.id}/completions`);
+		const smiths = (await h.owner.api.get("/admin/households")).json().households[0].id as string;
+		await h.owner.api.patch(`/admin/households/${smiths}`, { archived: true });
+		expect((await h.adult.api.get("/me")).json().wallets.personal.balance).toBe(4);
+		expect((await h.adult.api.get("/items")).json().items.map((i: { name: string }) => i.name)).toEqual(["Read"]);
 	});
 
 	it("a super admin adjusts a household's pot, and the members see it", async () => {
