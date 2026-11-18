@@ -86,17 +86,6 @@ export function Login({ config }: { config: AuthConfig }) {
 						</Field>
 					</div>
 				)}
-				{config.oidc && (
-					<a
-						href={oidcHref}
-						className="grid min-h-12 place-items-center rounded-full bg-primary font-bold text-white no-underline"
-					>
-						{t("auth.oidc")}
-					</a>
-				)}
-				{config.oidc && config.setupRequired && (
-					<p className="m-0 -mt-3 text-xs text-muted">{t("auth.setup.oidcHint")}</p>
-				)}
 				{config.local && (
 					<form onSubmit={submit} className="grid gap-3">
 						<h2 className="m-0 text-base font-bold text-muted">
@@ -129,6 +118,15 @@ export function Login({ config }: { config: AuthConfig }) {
 							{config.setupRequired ? t("auth.setup.submit") : joinMode ? t("join.submit") : t("auth.submit")}
 						</PrimaryButton>
 					</form>
+				)}
+				{config.oidc && config.local && <hr className="m-0 w-full border-0 border-t border-line" />}
+				{config.oidc && (
+					<a
+						href={oidcHref}
+						className="grid min-h-12 place-items-center rounded-full bg-primary font-bold text-white no-underline"
+					>
+						{t("auth.oidc")}
+					</a>
 				)}
 				{!config.setupRequired && (
 					<button type="button" onClick={() => setJoining(!joining)} className={linkButton}>

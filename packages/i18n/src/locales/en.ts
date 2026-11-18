@@ -358,6 +358,5 @@ export const en = {
 		"Archive the household {name}? Its members no longer see it, and nothing is deleted: you can bring it back.",
 	"errors.household_archived": "This household is archived.",
 	"auth.setup.submit": "Create the household",
-	"auth.setup.oidcHint": "Or create the first account with Authentik: it becomes the administrator.",
 	"errors.unknown": "Something went wrong.",
 } as const satisfies Record<string, string>;
