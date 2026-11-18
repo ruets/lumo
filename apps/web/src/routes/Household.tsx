@@ -3,7 +3,7 @@ import type { HouseholdResponse, Member, MeResponse } from "@lumo/api-client";
 import { shortDate, t } from "@lumo/i18n";
 import { useState } from "react";
 import { Avatar } from "../components/AppShell";
-import { Field, fieldClass, PageTitle, PrimaryButton } from "../components/ui";
+import { Field, fieldClass, PageTitle, PrimaryButton, useConfirm } from "../components/ui";
 import { api } from "../lib/api";
 import {
 	useCreateInvite,
@@ -24,13 +24,15 @@ const FEATURES = ["habits", "tasks", "wishes", "pot"] as const;
 
 function MemberRow({ member, isYou, canManage }: { member: Member; isYou: boolean; canManage: boolean }) {
 	const update = useUpdateMember();
+	const confirm = useConfirm();
 	const remove = useRemoveMember();
 	const saved = () => showToast(t("household.saved"), 1500);
 	const confirmRemove = () => {
-		if (!window.confirm(t("household.member.removeConfirm", { name: member.displayName }))) return;
-		remove.mutate(member.userId, {
-			onSuccess: () => showToast(t("household.member.removed", { name: member.displayName })),
-		});
+		confirm.ask(t("household.member.removeConfirm", { name: member.displayName }), t("household.member.remove"), () =>
+			remove.mutate(member.userId, {
+				onSuccess: () => showToast(t("household.member.removed", { name: member.displayName })),
+			}),
+		);
 	};
 	return (
 		<li className="flex flex-wrap items-center gap-3 border-b border-line py-3 last:border-b-0">
@@ -74,6 +76,7 @@ function MemberRow({ member, isYou, canManage }: { member: Member; isYou: boolea
 					)}
 				</>
 			)}
+			{confirm.dialog}
 		</li>
 	);
 }

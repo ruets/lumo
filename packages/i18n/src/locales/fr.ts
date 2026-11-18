@@ -210,6 +210,13 @@ export const fr: Record<MessageId, string> = {
 	"form.limitUnit.year": "an",
 	"form.link": "Lien (facultatif)",
 	"form.save": "Enregistrer",
+	"form.delete": "Supprimer",
+	"items.deleteConfirm":
+		"Supprimer {name} ? Il disparaît de tes listes ; son historique et les coins gagnés sont conservés.",
+	"wishes.edit": "Modifier l’envie",
+	"wishes.editLabel": "Modifier {name}",
+	"wishes.deleteConfirm":
+		"Supprimer {name} ? Elle disparaît de ta liste d’envies ; les coins déjà dépensés sont conservés.",
 	"form.dueAt": "Échéance (facultatif)",
 
 	"errors.target_reached": "Objectif du jour déjà atteint.",

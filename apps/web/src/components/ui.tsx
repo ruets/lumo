@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { type ReactNode, useEffect, useRef } from "react";
+import { t } from "@lumo/i18n";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 export function CoinIcon({ size = 18 }: { size?: number }) {
 	return (
@@ -128,6 +129,41 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 			{children}
 		</label>
 	);
+}
+
+/**
+ * Asks before a destructive action, inside the app: `window.confirm` is blocked or skipped by some embedded
+ * browsers and webviews. `ask(message, label, run)` opens the dialog; render `dialog` next to the trigger.
+ */
+export function useConfirm() {
+	const [pending, setPending] = useState<{ message: string; label: string; run: () => void } | null>(null);
+	const ask = (message: string, label: string, run: () => void) => setPending({ message, label, run });
+	const dialog = pending && (
+		<Dialog title={pending.label} onClose={() => setPending(null)}>
+			<p className="m-0 mb-5 text-sm text-soft">{pending.message}</p>
+			<div className="flex justify-end gap-2">
+				<button
+					type="button"
+					onClick={() => setPending(null)}
+					className="min-h-11 cursor-pointer rounded-full border-0 bg-transparent px-4 font-body text-sm font-bold text-soft"
+				>
+					{t("common.cancel")}
+				</button>
+				<button
+					type="button"
+					onClick={() => {
+						const { run } = pending;
+						setPending(null);
+						run();
+					}}
+					className="min-h-11 cursor-pointer rounded-full border-0 bg-bad px-5 font-body text-sm font-bold text-bg"
+				>
+					{pending.label}
+				</button>
+			</div>
+		</Dialog>
+	);
+	return { ask, dialog };
 }
 
 export const PrimaryButton = ({ children, ...p }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (

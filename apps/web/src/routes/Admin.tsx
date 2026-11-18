@@ -2,7 +2,7 @@
 import type { AdminHousehold, AdminUser } from "@lumo/api-client";
 import { t } from "@lumo/i18n";
 import { type FormEvent, type ReactNode, useState } from "react";
-import { Field, fieldClass, PageTitle, PrimaryButton } from "../components/ui";
+import { Field, fieldClass, PageTitle, PrimaryButton, useConfirm } from "../components/ui";
 import { api } from "../lib/api";
 import { useAdminHouseholds, useAdminSettings, useAdminUsers, useAdminWrite } from "../lib/hooks";
 import { showToast } from "../lib/toast";
@@ -26,6 +26,7 @@ function UserRow({ user, households }: { user: AdminUser; households: AdminHouse
 	const update = useAdminWrite(({ input }: { input: Parameters<typeof api.adminUpdateUser>[1] }) =>
 		api.adminUpdateUser(user.id, input),
 	);
+	const confirm = useConfirm();
 	const remove = useAdminWrite(() => api.adminDeleteUser(user.id));
 	const assign = useAdminWrite((householdId: string) =>
 		api.adminAssignHousehold(user.id, { householdId, role: "member" }),
@@ -84,13 +85,15 @@ function UserRow({ user, households }: { user: AdminUser; households: AdminHouse
 					type="button"
 					className={danger}
 					onClick={() => {
-						if (window.confirm(t("admin.user.deleteConfirm", { name: user.displayName })))
-							remove.mutate(undefined, { onSuccess: saved });
+						confirm.ask(t("admin.user.deleteConfirm", { name: user.displayName }), t("admin.user.delete"), () =>
+							remove.mutate(undefined, { onSuccess: saved }),
+						);
 					}}
 				>
 					{t("admin.user.delete")}
 				</button>
 			</span>
+			{confirm.dialog}
 		</li>
 	);
 }
@@ -123,6 +126,7 @@ function InviteUser() {
 
 function HouseholdRow({ household }: { household: AdminHousehold }) {
 	const rename = useAdminWrite((name: string) => api.adminRenameHousehold(household.id, name));
+	const confirm = useConfirm();
 	const archive = useAdminWrite((archived: boolean) => api.adminArchiveHousehold(household.id, archived));
 	const adjust = useAdminWrite((input: { amount: number; note: string }) => api.adminAdjustPot(household.id, input));
 	const [pot, setPot] = useState(false);
@@ -164,8 +168,12 @@ function HouseholdRow({ household }: { household: AdminHousehold }) {
 					type="button"
 					className={household.archived ? ghost : danger}
 					onClick={() => {
-						if (household.archived || window.confirm(t("admin.household.archiveConfirm", { name: household.name })))
-							archive.mutate(!household.archived, { onSuccess: saved });
+						if (household.archived) return archive.mutate(false, { onSuccess: saved });
+						confirm.ask(
+							t("admin.household.archiveConfirm", { name: household.name }),
+							t("admin.household.archive"),
+							() => archive.mutate(true, { onSuccess: saved }),
+						);
 					}}
 				>
 					{household.archived ? t("admin.household.unarchive") : t("admin.household.archive")}
@@ -184,6 +192,7 @@ function HouseholdRow({ household }: { household: AdminHousehold }) {
 					</PrimaryButton>
 				</form>
 			)}
+			{confirm.dialog}
 		</li>
 	);
 }
