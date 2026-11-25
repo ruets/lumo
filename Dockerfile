@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Single image: Fastify API + static web front end + scheduled jobs. Node 22, non-root user.
 
-FROM node:22-bookworm-slim AS build
+FROM node:25-bookworm-slim AS build
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
 RUN corepack enable \
  && apt-get update \
@@ -14,7 +14,7 @@ RUN pnpm install --frozen-lockfile --filter "@lumo/api..." --filter "@lumo/web..
 RUN pnpm turbo run build --filter=@lumo/api --filter=@lumo/web
 RUN pnpm --filter @lumo/api --prod deploy --legacy /out
 
-FROM node:22-bookworm-slim AS runtime
+FROM node:25-bookworm-slim AS runtime
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \
